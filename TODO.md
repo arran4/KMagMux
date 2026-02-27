@@ -35,13 +35,13 @@
 
 ### 1.2 “Add Torrent/Magnet” dialog (the core flow)
 
-* [ ] Inputs:
+* [x] Inputs:
 
-  * [ ] Destination folder picker
-  * [ ] Routing target selector (default + “remember per source/label”)
-  * [ ] Buttons: **Dispatch**, **Queue**, **Schedule**, **Save for later**
-  * [ ] Schedule controls (date/time + timezone)
-  * [ ] Checkbox: **Delete original torrent file after action**
+  * [x] Destination folder picker
+  * [x] Routing target selector (default + “remember per source/label”)
+  * [x] Buttons: **Dispatch**, **Queue**, **Schedule**, **Save for later**
+  * [x] Schedule controls (date/time + timezone)
+  * [x] Checkbox: **Delete original torrent file after action**
 * [ ] Behavior requirement:
 
   * [ ] If “delete after” is checked and user chooses Queue/Schedule/Save:
@@ -233,7 +233,7 @@ Start with local clients; keep interface generic.
 ## Concrete deliverable checklist for “MVP”
 
 * [x] Magnet and `.torrent` open into app (Via CLI)
-* [ ] Add dialog: destination + Dispatch/Queue/Schedule/Hold + delete-after
+* [x] Add dialog: destination + Dispatch/Queue/Schedule/Hold + delete-after
 * [x] Unprocessed list + Queue list
 * [x] File-based storage with readable metadata
 * [ ] One working connector

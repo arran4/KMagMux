@@ -119,9 +119,6 @@ bool AddItemDialog::shouldDeleteOriginal() const {
 
 void AddItemDialog::onDispatchClicked() {
     m_item = getItem();
-    m_item.state = ItemState::Dispatched; // Or Queue if engine picks it up? Let's say Dispatched implies immediate attempt or high priority queue
-    // Actually, usually "Dispatch Now" might just mean "Queue with high priority" or "Queue".
-    // But let's set to Queued for the engine to pick it up immediately.
     m_item.state = ItemState::Queued;
     accept();
 }
