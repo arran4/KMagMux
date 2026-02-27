@@ -18,6 +18,7 @@ add_executable(KMagMux
     src/core/Engine.cpp
     src/core/ItemModel.cpp
     src/ui/MainWindow.cpp
+    src/ui/AddItemDialog.cpp
 )
 
 target_link_libraries(KMagMux PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)

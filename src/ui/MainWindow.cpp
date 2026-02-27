@@ -1,7 +1,12 @@
 #include "MainWindow.h"
+#include "AddItemDialog.h"
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QDebug>
+#include <QPushButton>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QDateTime>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
     : QMainWindow(parent), m_storage(storage) {
@@ -26,6 +31,10 @@ void MainWindow::setupUi() {
 
     QVBoxLayout *layout = new QVBoxLayout(centralWidget);
 
+    QPushButton *addBtn = new QPushButton("Add Torrent/Magnet...", this);
+    connect(addBtn, &QPushButton::clicked, this, &MainWindow::onAddItem);
+    layout->addWidget(addBtn);
+
     m_tabWidget = new QTabWidget(this);
     layout->addWidget(m_tabWidget);
 
@@ -42,6 +51,7 @@ void MainWindow::setupUi() {
     m_unprocessedView = new QTableView(this);
     m_unprocessedModel = new ItemModel(this);
     setupView(m_unprocessedView, m_unprocessedModel, "Unprocessed");
+    connect(m_unprocessedView, &QTableView::doubleClicked, this, &MainWindow::onProcessItem);
 
     // Queue Tab
     m_queueView = new QTableView(this);
@@ -68,6 +78,7 @@ void MainWindow::loadData() {
                 break;
             case ItemState::Queued:
             case ItemState::Scheduled:
+            case ItemState::Held:
                 queueItems.push_back(item);
                 break;
             case ItemState::Archived:
@@ -76,7 +87,7 @@ void MainWindow::loadData() {
                 archiveItems.push_back(item);
                 break;
             default:
-                break; // Should probably handle hold
+                break;
         }
     }
 
@@ -105,12 +116,17 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     if (!index.isValid()) return;
 
     QMenu menu(this);
+
+    // If we are in the Unprocessed view, offer a "Process..." action
+    if (view == m_unprocessedView) {
+        QAction *processAction = menu.addAction("Process...");
+        connect(processAction, &QAction::triggered, this, &MainWindow::onProcessItem);
+        menu.addSeparator();
+    }
+
     QAction *queueAction = menu.addAction("Queue");
     QAction *holdAction = menu.addAction("Hold");
     QAction *archiveAction = menu.addAction("Archive");
-
-    // Check which tab we are on to disable redundant actions
-    // (This logic can be more sophisticated)
 
     connect(queueAction, &QAction::triggered, this, [this](){ onItemAction(ItemState::Queued); });
     connect(holdAction, &QAction::triggered, this, [this](){ onItemAction(ItemState::Held); });
@@ -143,12 +159,69 @@ void MainWindow::onItemAction(ItemState newState) {
 }
 
 void MainWindow::onItemAdded(const Item &item) {
-    // Determine which model gets the new item
-    // In a real app, we might optimize by just inserting into the model directly
-    // instead of reloading everything, but loadData() is safer for consistency for now
     loadData();
 }
 
 void MainWindow::onItemUpdated(const Item &item) {
     loadData();
+}
+
+void MainWindow::onAddItem() {
+    bool ok;
+    QString text = QInputDialog::getText(this, tr("Add Item"),
+                                         tr("Enter Magnet Link or File Path:"), QLineEdit::Normal,
+                                         "", &ok);
+    if (ok && !text.isEmpty()) {
+        Item newItem;
+        newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_manual";
+        newItem.state = ItemState::Unprocessed;
+        newItem.sourcePath = text;
+        newItem.createdTime = QDateTime::currentDateTime();
+
+        // Open the dialog immediately for the new item
+        openProcessDialog(newItem);
+    }
+}
+
+void MainWindow::onProcessItem() {
+    QTableView *view = getCurrentView();
+    if (!view) return;
+
+    ItemModel *model = getCurrentModel();
+    if (!model) return;
+
+    QModelIndexList selection = view->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
+
+    int row = selection.first().row();
+    Item item = model->getItem(row);
+
+    openProcessDialog(item);
+}
+
+void MainWindow::openProcessDialog(Item &item) {
+    AddItemDialog dialog(item, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        Item updatedItem = dialog.getItem();
+
+        bool success = true;
+
+        if (dialog.shouldDeleteOriginal()) {
+             // Move logic
+             if (!m_storage->moveToManaged(updatedItem, true)) {
+                 QMessageBox::warning(this, "Error", "Failed to move original file to managed storage.");
+                 success = false; // Should we abort saving? Maybe just warn.
+             }
+        } else {
+             // Just save. If it's a new item, we should save it anyway.
+        }
+
+        if (success) {
+            if (m_storage->saveItem(updatedItem)) {
+                 qDebug() << "Item processed and saved:" << updatedItem.id;
+            } else {
+                 QMessageBox::warning(this, "Error", "Failed to save item metadata.");
+            }
+        }
+    }
 }
