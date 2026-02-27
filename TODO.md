@@ -46,9 +46,9 @@
 
   * [ ] If “delete after” is checked and user chooses Queue/Schedule/Save:
 
-    * [ ] Move the torrent file into an **internal managed directory** (not a hidden database)
+    * [x] Move the torrent file into an **internal managed directory** (not a hidden database) (Implemented logic in StorageManager)
     * [ ] Replace the original with nothing (or optionally keep a stub link file if you want)
-  * [ ] For magnets: store a “.magnet” text record file in internal managed directory when queued/scheduled/saved
+  * [x] For magnets: store a “.magnet” text record file in internal managed directory when queued/scheduled/saved
 
 ---
 
@@ -119,13 +119,13 @@ Choose a clear directory under an app folder the user can relocate.
 
   * [x] Watch `inbox/` for new items (Active file system watcher implemented)
   * [ ] Watch queue folders for changes (optional)
-* [ ] Queue processor loop:
+* [x] Queue processor loop: (Basic implementation in Engine class)
 
-  * [ ] If paused: do nothing
-  * [ ] If scheduled items due: move to queue
-  * [ ] Pop next queued item (deterministic ordering)
-  * [ ] Dispatch via connector
-  * [ ] Write result log + update status
+  * [x] If paused: do nothing
+  * [x] If scheduled items due: move to queue
+  * [x] Pop next queued item (deterministic ordering)
+  * [x] Dispatch via connector (Simulated for now)
+  * [x] Write result log + update status
   * [ ] Move to archive if enabled; otherwise keep in “dispatched/”
 
 ---

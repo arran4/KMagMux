@@ -15,6 +15,7 @@ add_executable(KMagMux
     src/main.cpp
     src/core/Item.cpp
     src/core/StorageManager.cpp
+    src/core/Engine.cpp
     src/core/ItemModel.cpp
     src/ui/MainWindow.cpp
 )

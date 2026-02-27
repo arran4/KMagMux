@@ -21,6 +21,7 @@ public:
     QString getInboxDir() const;
     QString getQueueDir() const;
     QString getDataDir() const;
+    QString getManagedDir() const; // New: Directory for managed torrent/magnet files
 
     // Persistence
     bool saveItem(const Item &item);
@@ -29,6 +30,9 @@ public:
 
     // Scanning
     QStringList scanInbox() const;
+
+    // File Management
+    bool moveToManaged(Item &item, bool deleteOriginal);
 
 signals:
     void itemAdded(const Item &item);
@@ -46,6 +50,7 @@ private:
     QString m_archiveDir;
     QString m_dataDir;
     QString m_logsDir;
+    QString m_managedDir; // New
 
     QFileSystemWatcher *m_watcher;
     QStringList m_knownFiles; // To track new files vs existing

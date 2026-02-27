@@ -8,6 +8,9 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
     setupUi();
     loadData();
 
+    m_engine = new Engine(m_storage, this);
+    m_engine->start();
+
     connect(m_storage, &StorageManager::itemAdded, this, &MainWindow::onItemAdded);
     connect(m_storage, &StorageManager::itemUpdated, this, &MainWindow::onItemUpdated);
 }

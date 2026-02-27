@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QDirIterator>
 #include <QDateTime>
+#include <QFileInfo>
 
 StorageManager::StorageManager(QObject *parent) : QObject(parent) {
     // Set base directory to ~/.local/share/KMagMux
@@ -22,6 +23,7 @@ StorageManager::StorageManager(QObject *parent) : QObject(parent) {
     m_archiveDir = m_baseDir + "/archive";
     m_dataDir = m_baseDir + "/data";
     m_logsDir = m_baseDir + "/logs";
+    m_managedDir = m_baseDir + "/managed"; // New folder for managed payloads
 
     m_watcher = new QFileSystemWatcher(this);
     connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, &StorageManager::onDirectoryChanged);
@@ -37,6 +39,7 @@ bool StorageManager::init() {
     success &= createDirIfNotExists(m_archiveDir);
     success &= createDirIfNotExists(m_dataDir);
     success &= createDirIfNotExists(m_logsDir);
+    success &= createDirIfNotExists(m_managedDir);
 
     if (success) {
         qDebug() << "Storage initialized at:" << m_baseDir;
@@ -76,6 +79,7 @@ QString StorageManager::getBaseDir() const { return m_baseDir; }
 QString StorageManager::getInboxDir() const { return m_inboxDir; }
 QString StorageManager::getQueueDir() const { return m_queueDir; }
 QString StorageManager::getDataDir() const { return m_dataDir; }
+QString StorageManager::getManagedDir() const { return m_managedDir; }
 
 QString StorageManager::getItemPath(const QString &id) const {
     // Basic sanitization
@@ -173,11 +177,81 @@ void StorageManager::processNewFile(const QString &filePath) {
     Item newItem;
     newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" + info.fileName();
     newItem.state = ItemState::Unprocessed;
-    newItem.sourcePath = filePath; // In a real app, we might copy this to a managed location immediately
+    newItem.sourcePath = filePath;
     newItem.createdTime = QDateTime::currentDateTime();
+
+    // Attempt to move to managed storage immediately (per "everything is files" philosophy)
+    // Or just register it. For now, we register it.
+    // The "move" action is typically user-initiated or policy-driven.
 
     if (saveItem(newItem)) {
         emit itemAdded(newItem);
         qDebug() << "New item added from inbox watcher:" << newItem.id;
+    }
+}
+
+bool StorageManager::moveToManaged(Item &item, bool deleteOriginal) {
+    if (item.sourcePath.startsWith("magnet:")) {
+        // For magnets, we just create a .magnet file in managed dir
+        QString filename = item.id + ".magnet";
+        QString managedPath = m_managedDir + "/" + filename;
+        QFile file(managedPath);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            file.write(item.sourcePath.toUtf8());
+            file.close();
+            // Update item to point to managed file? Or keep original source as "magnet:"?
+            // The prompt says "store a .magnet text record file... when queued/scheduled/saved"
+            // We can keep sourcePath as the magnet link, but maybe store the managed file path in metadata
+            QJsonObject meta = item.metadata;
+            meta["managedFile"] = managedPath;
+            item.metadata = meta;
+            return saveItem(item);
+        }
+        return false;
+    } else {
+        // For .torrent files
+        QFileInfo sourceInfo(item.sourcePath);
+        if (!sourceInfo.exists()) return false;
+
+        QString filename = sourceInfo.fileName();
+        // Maybe ensure uniqueness
+        QString managedPath = m_managedDir + "/" + item.id + "_" + filename;
+
+        bool success = false;
+        if (deleteOriginal) {
+            // Move
+            // Qt's rename is a move
+            if (QFile::rename(item.sourcePath, managedPath)) {
+                success = true;
+            } else {
+                // If rename fails (cross-filesystem), try copy+remove
+                if (QFile::copy(item.sourcePath, managedPath)) {
+                    if (QFile::remove(item.sourcePath)) {
+                        success = true;
+                    }
+                }
+            }
+        } else {
+            // Copy
+            if (QFile::copy(item.sourcePath, managedPath)) {
+                success = true;
+            }
+        }
+
+        if (success) {
+            // Update item to point to managed file?
+            // "Replace original with nothing (or optionally keep a stub...)"
+            // The item object should probably track where the actual payload is now.
+            // Let's update sourcePath to the managed path if it was moved.
+            if (deleteOriginal) {
+                item.sourcePath = managedPath;
+            } else {
+                 QJsonObject meta = item.metadata;
+                 meta["managedFile"] = managedPath;
+                 item.metadata = meta;
+            }
+            return saveItem(item);
+        }
+        return false;
     }
 }

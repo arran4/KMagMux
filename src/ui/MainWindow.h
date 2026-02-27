@@ -8,6 +8,7 @@
 #include <QAction>
 #include "../core/ItemModel.h"
 #include "../core/StorageManager.h"
+#include "../core/Engine.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -24,6 +25,7 @@ private slots:
 
 private:
     StorageManager *m_storage;
+    Engine *m_engine;
     QTabWidget *m_tabWidget;
 
     // Models
