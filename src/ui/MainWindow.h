@@ -22,6 +22,8 @@ private slots:
     void onItemAction(ItemState newState);
     void onItemAdded(const Item &item);
     void onItemUpdated(const Item &item);
+    void onProcessItem();
+    void onAddItem();
 
 private:
     StorageManager *m_storage;
@@ -42,6 +44,7 @@ private:
     void loadData();
     QTableView* getCurrentView() const;
     ItemModel* getCurrentModel() const;
+    void openProcessDialog(Item &item);
 };
 
 #endif // MAINWINDOW_H
