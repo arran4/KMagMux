@@ -72,49 +72,49 @@
 
 Choose a clear directory under an app folder the user can relocate.
 
-* [ ] Decide base directory (example): `~/.local/share/<appname>/`
-* [ ] Create subfolders:
+* [x] Decide base directory (example): `~/.local/share/<appname>/`
+* [x] Create subfolders:
 
-  * [ ] `inbox/` (unprocessed items)
-  * [ ] `queue/` (queued items ready to process)
-  * [ ] `scheduled/` (future)
-  * [ ] `hold/` (saved for later)
-  * [ ] `archive/` (past items; optional feature toggle)
-  * [ ] `data/` (per-item metadata files)
-  * [ ] `logs/` (dispatch logs per item)
-* [ ] Per item file convention:
+  * [x] `inbox/` (unprocessed items)
+  * [x] `queue/` (queued items ready to process)
+  * [x] `scheduled/` (future)
+  * [x] `hold/` (saved for later)
+  * [x] `archive/` (past items; optional feature toggle)
+  * [x] `data/` (per-item metadata files)
+  * [x] `logs/` (dispatch logs per item)
+* [x] Per item file convention:
 
-  * [ ] A stable item id: timestamp + short hash (e.g., `20260227-142233_ab12cd`)
-  * [ ] Payload file:
+  * [x] A stable item id: timestamp + short hash (e.g., `20260227-142233_ab12cd`)
+  * [x] Payload file:
 
-    * [ ] `.torrent` file OR `.magnet` text file
-  * [ ] Metadata file (JSON/YAML/TOML—pick one):
+    * [x] `.torrent` file OR `.magnet` text file
+  * [x] Metadata file (JSON/YAML/TOML—pick one):
 
-    * [ ] source type (torrent/magnet)
-    * [ ] original path / source app
-    * [ ] chosen destination path
-    * [ ] target connector
-    * [ ] labels/tags
-    * [ ] created time, scheduled time
-    * [ ] user choice (dispatch/queue/schedule/hold)
-    * [ ] delete_original flag + what happened (moved/deleted)
-  * [ ] Status file (or in metadata):
+    * [x] source type (torrent/magnet)
+    * [x] original path / source app
+    * [x] chosen destination path
+    * [x] target connector
+    * [x] labels/tags
+    * [x] created time, scheduled time
+    * [x] user choice (dispatch/queue/schedule/hold)
+    * [x] delete_original flag + what happened (moved/deleted)
+  * [x] Status file (or in metadata):
 
-    * [ ] state: unprocessed|queued|scheduled|held|dispatched|failed|archived
-    * [ ] last result, last error, retries count
+    * [x] state: unprocessed|queued|scheduled|held|dispatched|failed|archived
+    * [x] last result, last error, retries count
 * [ ] Provide “Open storage folder” in settings so users can see/edit files
 
 ---
 
 ## 4) Core engine: state machine + queue processor
 
-* [ ] Define state transitions (explicit, testable):
+* [x] Define state transitions (explicit, testable):
 
-  * [ ] Incoming → Unprocessed
-  * [ ] Unprocessed → Queued / Scheduled / Held / Dispatched / Archived
-  * [ ] Scheduled → Queued when time reached
-  * [ ] Queued → Dispatched or Failed
-  * [ ] Failed → Queued (retry) or Archived (manual)
+  * [x] Incoming → Unprocessed
+  * [x] Unprocessed → Queued / Scheduled / Held / Dispatched / Archived
+  * [x] Scheduled → Queued when time reached
+  * [x] Queued → Dispatched or Failed
+  * [x] Failed → Queued (retry) or Archived (manual)
 * [ ] Implement file watcher:
 
   * [ ] Watch `inbox/` for new items
@@ -202,9 +202,9 @@ Start with local clients; keep interface generic.
 
 * [ ] Unit tests for:
 
-  * [ ] state transitions
-  * [ ] metadata serialization
-  * [ ] file moves (delete-after behavior)
+  * [x] state transitions
+  * [x] metadata serialization
+  * [x] file moves (delete-after behavior)
   * [ ] scheduling logic (timezone-safe)
 * [ ] Integration tests for connectors (mock server for RPC)
 * [ ] Manual test matrix:
@@ -218,7 +218,7 @@ Start with local clients; keep interface generic.
 
 ## 9) Implementation order (recommended)
 
-1. [ ] Storage layout + item model + state machine (no UI)
+1. [x] Storage layout + item model + state machine (no UI)
 2. [ ] URL/mime handler integration → inbox ingestion
 3. [ ] Basic UI list: Unprocessed + simple “Dispatch/Queue/Hold”
 4. [ ] Move-to-managed-dir behavior + delete-after checkbox
@@ -235,7 +235,7 @@ Start with local clients; keep interface generic.
 * [ ] Magnet and `.torrent` open into app
 * [ ] Add dialog: destination + Dispatch/Queue/Schedule/Hold + delete-after
 * [ ] Unprocessed list + Queue list
-* [ ] File-based storage with readable metadata
+* [x] File-based storage with readable metadata
 * [ ] One working connector
 * [ ] Logs + visible success/failure status
 * [ ] Restart-safe queue persistence
@@ -547,7 +547,7 @@ These let you offload torrent fetching to their cloud, then pull the completed f
 * **Description:** Cloud torrent fetch/download service — paste magnet/torrent link to start a transfer; files live in user’s cloud storage. ([put.io][3])
 * **API:** Well-documented, supports OAuth2 + REST for transfers and file management. (Docs at [https://api.put.io](https://api.put.io) — not always publicly indexed but official).
 * **Auth:** OAuth2 tokens (client ID/Client Secret + user consent).
-* **Typical Use:** Create a *transfer* from a magnet or torrent, monitor its status, list files, then fetch via HTTP/WebDAV. ([guides.viren070.me][4])
+* **Typical Use:** Create a *transfer* (add magnet/torrent to cloud), list files, then fetch via HTTP/WebDAV. ([guides.viren070.me][4])
 
 ## **Premiumize.me**
 
