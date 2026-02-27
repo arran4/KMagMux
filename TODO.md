@@ -139,7 +139,7 @@ Start with local clients; keep interface generic.
 * [ ] Define a connector contract:
 
   * [ ] `capabilities` (magnet/torrent, labels, download-dir, paused, category)
-  * [ ] `dispatch(item, destination, options) -> result`
+  * [x] `dispatch(item, destination, options) -> result`
   * [ ] `healthcheck()`
 * [ ] Store connector configs as files:
 
@@ -147,7 +147,7 @@ Start with local clients; keep interface generic.
 
 ### 5.2 Initial connectors (practical first)
 
-* [ ] **qBittorrent** (Web API)
+* [x] **qBittorrent** (Web API)
 * [ ] **Transmission** (RPC)
 * [ ] **aria2** (RPC, if you want a “download-manager feel”)
 * [ ] “Custom command” connector:
@@ -236,8 +236,8 @@ Start with local clients; keep interface generic.
 * [x] Add dialog: destination + Dispatch/Queue/Schedule/Hold + delete-after
 * [x] Unprocessed list + Queue list
 * [x] File-based storage with readable metadata
-* [ ] One working connector
-* [ ] Logs + visible success/failure status
+* [x] One working connector
+* [x] Logs + visible success/failure status
 * [x] Restart-safe queue persistence (Basic persistence implemented)
 
 ## Self-hosted targets to route torrents/magnets to (with API docs)

@@ -3,7 +3,9 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QMap>
 #include "StorageManager.h"
+#include "Connector.h"
 
 class Engine : public QObject {
     Q_OBJECT
@@ -15,11 +17,13 @@ public:
 
 private slots:
     void processQueue();
+    void onDispatchFinished(const QString &itemId, bool success, const QString &message);
 
 private:
     StorageManager *m_storage;
     QTimer *m_timer;
     bool m_paused;
+    QMap<QString, Connector*> m_connectors;
 
     void dispatchItem(Item &item);
 };

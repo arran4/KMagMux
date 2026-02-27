@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "QBittorrentConnector.h"
 #include <QDebug>
 
 Engine::Engine(StorageManager *storage, QObject *parent)
@@ -7,6 +8,11 @@ Engine::Engine(StorageManager *storage, QObject *parent)
     // Check queue every 5 seconds (configurable later)
     m_timer->setInterval(5000);
     connect(m_timer, &QTimer::timeout, this, &Engine::processQueue);
+
+    // Register qBittorrent connector
+    QBittorrentConnector *qb = new QBittorrentConnector(this);
+    m_connectors.insert("qBittorrent", qb);
+    connect(qb, &Connector::dispatchFinished, this, &Engine::onDispatchFinished);
 }
 
 void Engine::start() {
@@ -30,10 +36,8 @@ void Engine::processQueue() {
 
     for (auto &item : items) {
         if (item.state == ItemState::Queued) {
-            // Process the item!
             dispatchItem(item);
-            // Process one at a time per tick? Or all?
-            // Let's break after one for now to simulate serial processing
+            // Process one at a time per tick
             break;
         }
 
@@ -52,21 +56,50 @@ void Engine::processQueue() {
 void Engine::dispatchItem(Item &item) {
     qDebug() << "Dispatching item:" << item.id << "Source:" << item.sourcePath;
 
-    // Here we would use the Connector interface to send to qBittorrent/etc.
-    // For MVP, we simulate success after "dispatching".
+    Connector *connector = nullptr;
+    if (!item.connectorId.isEmpty() && m_connectors.contains(item.connectorId)) {
+        connector = m_connectors[item.connectorId];
+    } else {
+        // Fallback to qBittorrent if connectorId is not found or is "Default"
+        // In AddItemDialog we add "Default" and "qBittorrent".
+        // If "Default" is selected, we use qBittorrent for now.
+        if (m_connectors.contains("qBittorrent")) {
+             connector = m_connectors["qBittorrent"];
+        }
+    }
 
-    // Update state to Dispatched
-    item.state = ItemState::Dispatched;
+    if (connector) {
+        connector->dispatch(item);
+    } else {
+        qWarning() << "No connector found for item:" << item.id << " ConnectorId:" << item.connectorId;
+        // Directly fail it here because we can't dispatch
+        onDispatchFinished(item.id, false, "No suitable connector found.");
+    }
+}
 
-    // Update metadata with result
+void Engine::onDispatchFinished(const QString &itemId, bool success, const QString &message) {
+    auto itemOpt = m_storage->loadItem(itemId);
+    if (!itemOpt) {
+        qWarning() << "Finished dispatch for unknown item:" << itemId;
+        return;
+    }
+
+    Item item = *itemOpt;
+
+    // Update metadata
     QJsonObject meta = item.metadata;
     meta["lastDispatchTime"] = QDateTime::currentDateTime().toString(Qt::ISODate);
-    meta["dispatchResult"] = "Simulated Success";
+    meta["dispatchResult"] = message;
+
+    if (success) {
+        item.state = ItemState::Dispatched;
+        qDebug() << "Item dispatched successfully:" << itemId;
+    } else {
+        item.state = ItemState::Failed;
+        meta["error"] = message;
+        qWarning() << "Item dispatch failed:" << itemId << "Reason:" << message;
+    }
     item.metadata = meta;
 
-    if (m_storage->saveItem(item)) {
-        qDebug() << "Item dispatched successfully:" << item.id;
-    } else {
-        qWarning() << "Failed to save dispatched state for:" << item.id;
-    }
+    m_storage->saveItem(item);
 }
