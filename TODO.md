@@ -682,3 +682,4 @@ Use KWallet to store all **secrets**:
 
 ---
 
+Full github CI/CD pipeline
