@@ -1,4 +1,4 @@
-## To-do list for implementing your VARAI torrent/magnet router (KDE app)
+## To-do list for implementing [KMagMux](https://github.com/arran4/KMagMux) (KDE app)
 
 ### 0) Scope and guiding rules
 
