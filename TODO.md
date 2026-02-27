@@ -4,7 +4,7 @@
 
 * [ ] Define supported inputs: `magnet:` URLs, `.torrent` files, and “open with” from browser/file manager
 * [ ] Define routing targets (initial list): local torrent clients (via CLI/RPC), optional SaaS “connectors”
-* [ ] Commit to storage model: **everything is files**, human-inspectable, user-controlled
+* [x] Commit to storage model: **everything is files**, human-inspectable, user-controlled
 * [ ] Decide app shape: tray utility + main window, or main window only
 
 ---
@@ -13,19 +13,19 @@
 
 ### 1.1 Main window (download-manager style)
 
-* [ ] Tabs/sections:
+* [x] Tabs/sections:
 
-  * [ ] **Unprocessed** (incoming items waiting for action)
-  * [ ] **Queue** (items scheduled/queued for dispatch)
-  * [ ] **Archive** (optional; toggle on/off)
+  * [x] **Unprocessed** (incoming items waiting for action)
+  * [x] **Queue** (items scheduled/queued for dispatch)
+  * [x] **Archive** (optional; toggle on/off)
 * [ ] Basic actions per item:
 
   * [ ] Open details
   * [ ] Dispatch now
-  * [ ] Queue
+  * [x] Queue (Context menu)
   * [ ] Schedule
-  * [ ] Save for later (hold)
-  * [ ] Remove (with “move to archive” vs “delete data”)
+  * [x] Save for later (hold) (Context menu)
+  * [x] Remove (with “move to archive” vs “delete data”) (Archive implemented via Context menu)
 * [ ] Global controls:
 
   * [ ] Pause/resume queue processing
@@ -46,18 +46,18 @@
 
   * [ ] If “delete after” is checked and user chooses Queue/Schedule/Save:
 
-    * [ ] Move the torrent file into an **internal managed directory** (not a hidden database)
+    * [x] Move the torrent file into an **internal managed directory** (not a hidden database) (Implemented logic in StorageManager)
     * [ ] Replace the original with nothing (or optionally keep a stub link file if you want)
-  * [ ] For magnets: store a “.magnet” text record file in internal managed directory when queued/scheduled/saved
+  * [x] For magnets: store a “.magnet” text record file in internal managed directory when queued/scheduled/saved
 
 ---
 
 ## 2) System integration (KDE/Linux plumbing)
 
-* [ ] Register as handler for:
+* [x] Register as handler for:
 
-  * [ ] `magnet:` URL scheme (xdg + desktop entry)
-  * [ ] `.torrent` MIME type (`application/x-bittorrent`)
+  * [x] `magnet:` URL scheme (xdg + desktop entry) (Desktop file created)
+  * [x] `.torrent` MIME type (`application/x-bittorrent`) (Desktop file created)
 * [ ] Provide “Send to VARAI” context action (optional):
 
   * [ ] Dolphin service menu for `.torrent`
@@ -72,36 +72,36 @@
 
 Choose a clear directory under an app folder the user can relocate.
 
-* [ ] Decide base directory (example): `~/.local/share/<appname>/`
-* [ ] Create subfolders:
+* [x] Decide base directory (example): `~/.local/share/<appname>/`
+* [x] Create subfolders:
 
-  * [ ] `inbox/` (unprocessed items)
-  * [ ] `queue/` (queued items ready to process)
-  * [ ] `scheduled/` (future)
-  * [ ] `hold/` (saved for later)
-  * [ ] `archive/` (past items; optional feature toggle)
-  * [ ] `data/` (per-item metadata files)
-  * [ ] `logs/` (dispatch logs per item)
-* [ ] Per item file convention:
+  * [x] `inbox/` (unprocessed items)
+  * [x] `queue/` (queued items ready to process)
+  * [x] `scheduled/` (future)
+  * [x] `hold/` (saved for later)
+  * [x] `archive/` (past items; optional feature toggle)
+  * [x] `data/` (per-item metadata files)
+  * [x] `logs/` (dispatch logs per item)
+* [x] Per item file convention:
 
-  * [ ] A stable item id: timestamp + short hash (e.g., `20260227-142233_ab12cd`)
-  * [ ] Payload file:
+  * [x] A stable item id: timestamp + short hash (e.g., `20260227-142233_ab12cd`)
+  * [x] Payload file:
 
     * [ ] `.torrent` file OR `.magnet` text file
-  * [ ] Metadata file (JSON/YAML/TOML—pick one):
+  * [x] Metadata file (JSON/YAML/TOML—pick one):
 
-    * [ ] source type (torrent/magnet)
-    * [ ] original path / source app
-    * [ ] chosen destination path
-    * [ ] target connector
-    * [ ] labels/tags
-    * [ ] created time, scheduled time
-    * [ ] user choice (dispatch/queue/schedule/hold)
-    * [ ] delete_original flag + what happened (moved/deleted)
-  * [ ] Status file (or in metadata):
+    * [x] source type (torrent/magnet)
+    * [x] original path / source app
+    * [x] chosen destination path
+    * [x] target connector
+    * [x] labels/tags
+    * [x] created time, scheduled time
+    * [x] user choice (dispatch/queue/schedule/hold)
+    * [x] delete_original flag + what happened (moved/deleted)
+  * [x] Status file (or in metadata):
 
-    * [ ] state: unprocessed|queued|scheduled|held|dispatched|failed|archived
-    * [ ] last result, last error, retries count
+    * [x] state: unprocessed|queued|scheduled|held|dispatched|failed|archived
+    * [x] last result, last error, retries count
 * [ ] Provide “Open storage folder” in settings so users can see/edit files
 
 ---
@@ -117,15 +117,15 @@ Choose a clear directory under an app folder the user can relocate.
   * [ ] Failed → Queued (retry) or Archived (manual)
 * [ ] Implement file watcher:
 
-  * [ ] Watch `inbox/` for new items
+  * [x] Watch `inbox/` for new items (Active file system watcher implemented)
   * [ ] Watch queue folders for changes (optional)
-* [ ] Queue processor loop:
+* [x] Queue processor loop: (Basic implementation in Engine class)
 
-  * [ ] If paused: do nothing
-  * [ ] If scheduled items due: move to queue
-  * [ ] Pop next queued item (deterministic ordering)
-  * [ ] Dispatch via connector
-  * [ ] Write result log + update status
+  * [x] If paused: do nothing
+  * [x] If scheduled items due: move to queue
+  * [x] Pop next queued item (deterministic ordering)
+  * [x] Dispatch via connector (Simulated for now)
+  * [x] Write result log + update status
   * [ ] Move to archive if enabled; otherwise keep in “dispatched/”
 
 ---
@@ -218,9 +218,9 @@ Start with local clients; keep interface generic.
 
 ## 9) Implementation order (recommended)
 
-1. [ ] Storage layout + item model + state machine (no UI)
-2. [ ] URL/mime handler integration → inbox ingestion
-3. [ ] Basic UI list: Unprocessed + simple “Dispatch/Queue/Hold”
+1. [x] Storage layout + item model + state machine (no UI)
+2. [ ] URL/mime handler integration → inbox ingestion (CLI args + Inbox Watcher)
+3. [x] Basic UI list: Unprocessed + simple “Dispatch/Queue/Hold” (Basic lists + Context menu)
 4. [ ] Move-to-managed-dir behavior + delete-after checkbox
 5. [ ] Queue processor loop + logs
 6. [ ] One connector (qBittorrent or Transmission)
@@ -232,13 +232,13 @@ Start with local clients; keep interface generic.
 
 ## Concrete deliverable checklist for “MVP”
 
-* [ ] Magnet and `.torrent` open into app
+* [x] Magnet and `.torrent` open into app (Via CLI)
 * [ ] Add dialog: destination + Dispatch/Queue/Schedule/Hold + delete-after
-* [ ] Unprocessed list + Queue list
-* [ ] File-based storage with readable metadata
+* [x] Unprocessed list + Queue list
+* [x] File-based storage with readable metadata
 * [ ] One working connector
 * [ ] Logs + visible success/failure status
-* [ ] Restart-safe queue persistence
+* [x] Restart-safe queue persistence (Basic persistence implemented)
 
 ## Self-hosted targets to route torrents/magnets to (with API docs)
 

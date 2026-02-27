@@ -1,0 +1,257 @@
+#include "StorageManager.h"
+#include <QStandardPaths>
+#include <QDebug>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QDirIterator>
+#include <QDateTime>
+#include <QFileInfo>
+
+StorageManager::StorageManager(QObject *parent) : QObject(parent) {
+    // Set base directory to ~/.local/share/KMagMux
+    m_baseDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (m_baseDir.isEmpty()) {
+        // Fallback for systems that might not return AppDataLocation correctly, though unlikely with Qt
+        m_baseDir = QDir::homePath() + "/.local/share/KMagMux";
+    }
+
+    m_inboxDir = m_baseDir + "/inbox";
+    m_queueDir = m_baseDir + "/queue";
+    m_scheduledDir = m_baseDir + "/scheduled";
+    m_holdDir = m_baseDir + "/hold";
+    m_archiveDir = m_baseDir + "/archive";
+    m_dataDir = m_baseDir + "/data";
+    m_logsDir = m_baseDir + "/logs";
+    m_managedDir = m_baseDir + "/managed"; // New folder for managed payloads
+
+    m_watcher = new QFileSystemWatcher(this);
+    connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, &StorageManager::onDirectoryChanged);
+}
+
+bool StorageManager::init() {
+    bool success = true;
+    success &= createDirIfNotExists(m_baseDir);
+    success &= createDirIfNotExists(m_inboxDir);
+    success &= createDirIfNotExists(m_queueDir);
+    success &= createDirIfNotExists(m_scheduledDir);
+    success &= createDirIfNotExists(m_holdDir);
+    success &= createDirIfNotExists(m_archiveDir);
+    success &= createDirIfNotExists(m_dataDir);
+    success &= createDirIfNotExists(m_logsDir);
+    success &= createDirIfNotExists(m_managedDir);
+
+    if (success) {
+        qDebug() << "Storage initialized at:" << m_baseDir;
+        // Start watching inbox
+        if (m_watcher->addPath(m_inboxDir)) {
+             qDebug() << "Watching inbox:" << m_inboxDir;
+             // Initial scan to populate known files and process existing ones
+             m_knownFiles = scanInbox();
+             for (const QString &file : m_knownFiles) {
+                 // In a real scenario, we might want to process existing files on startup
+                 // For now, we'll just log them to acknowledge existence.
+                 // processNewFile(m_inboxDir + "/" + file);
+                 qDebug() << "Found existing file in inbox:" << file;
+             }
+        } else {
+             qWarning() << "Failed to watch inbox:" << m_inboxDir;
+        }
+    } else {
+        qWarning() << "Failed to initialize storage at:" << m_baseDir;
+    }
+    return success;
+}
+
+bool StorageManager::createDirIfNotExists(const QString &path) {
+    QDir dir(path);
+    if (!dir.exists()) {
+        if (!dir.mkpath(".")) {
+            qWarning() << "Failed to create directory:" << path;
+            return false;
+        }
+        qDebug() << "Created directory:" << path;
+    }
+    return true;
+}
+
+QString StorageManager::getBaseDir() const { return m_baseDir; }
+QString StorageManager::getInboxDir() const { return m_inboxDir; }
+QString StorageManager::getQueueDir() const { return m_queueDir; }
+QString StorageManager::getDataDir() const { return m_dataDir; }
+QString StorageManager::getManagedDir() const { return m_managedDir; }
+
+QString StorageManager::getItemPath(const QString &id) const {
+    // Basic sanitization
+    QString safeId = id;
+    safeId.replace("/", "_").replace("\\", "_");
+    return m_dataDir + "/" + safeId + ".json";
+}
+
+bool StorageManager::saveItem(const Item &item) {
+    if (item.id.isEmpty()) {
+        qWarning() << "Cannot save item with empty ID";
+        return false;
+    }
+
+    QString path = getItemPath(item.id);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "Failed to open file for writing:" << path;
+        return false;
+    }
+
+    QJsonDocument doc(item.toJson());
+    if (file.write(doc.toJson()) == -1) {
+        qWarning() << "Failed to write to file:" << path;
+        return false;
+    }
+
+    // Notify updates
+    emit itemUpdated(item);
+
+    return true;
+}
+
+std::optional<Item> StorageManager::loadItem(const QString &id) {
+    QString path = getItemPath(id);
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open file for reading:" << path;
+        return std::nullopt;
+    }
+
+    QByteArray data = file.readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (doc.isNull() || !doc.isObject()) {
+        qWarning() << "Failed to parse JSON from file:" << path;
+        return std::nullopt;
+    }
+
+    return Item::fromJson(doc.object());
+}
+
+std::vector<Item> StorageManager::loadAllItems() {
+    std::vector<Item> items;
+    QDirIterator it(m_dataDir, QStringList() << "*.json", QDir::Files);
+    while (it.hasNext()) {
+        QString path = it.next();
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray data = file.readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (!doc.isNull() && doc.isObject()) {
+                items.push_back(Item::fromJson(doc.object()));
+            }
+        }
+    }
+    return items;
+}
+
+QStringList StorageManager::scanInbox() const {
+    QDir dir(m_inboxDir);
+    return dir.entryList(QDir::Files | QDir::NoDotAndDotDot);
+}
+
+void StorageManager::onDirectoryChanged(const QString &path) {
+    if (path == m_inboxDir) {
+        QStringList currentFiles = scanInbox();
+
+        // Find new files
+        for (const QString &file : currentFiles) {
+            if (!m_knownFiles.contains(file)) {
+                processNewFile(m_inboxDir + "/" + file);
+            }
+        }
+
+        m_knownFiles = currentFiles;
+    }
+}
+
+void StorageManager::processNewFile(const QString &filePath) {
+    QFileInfo info(filePath);
+    if (!info.exists() || !info.isFile()) return;
+
+    qDebug() << "Processing new file in inbox:" << filePath;
+
+    Item newItem;
+    newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" + info.fileName();
+    newItem.state = ItemState::Unprocessed;
+    newItem.sourcePath = filePath;
+    newItem.createdTime = QDateTime::currentDateTime();
+
+    // Attempt to move to managed storage immediately (per "everything is files" philosophy)
+    // Or just register it. For now, we register it.
+    // The "move" action is typically user-initiated or policy-driven.
+
+    if (saveItem(newItem)) {
+        emit itemAdded(newItem);
+        qDebug() << "New item added from inbox watcher:" << newItem.id;
+    }
+}
+
+bool StorageManager::moveToManaged(Item &item, bool deleteOriginal) {
+    if (item.sourcePath.startsWith("magnet:")) {
+        // For magnets, we just create a .magnet file in managed dir
+        QString filename = item.id + ".magnet";
+        QString managedPath = m_managedDir + "/" + filename;
+        QFile file(managedPath);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            file.write(item.sourcePath.toUtf8());
+            file.close();
+            // Update item to point to managed file? Or keep original source as "magnet:"?
+            // The prompt says "store a .magnet text record file... when queued/scheduled/saved"
+            // We can keep sourcePath as the magnet link, but maybe store the managed file path in metadata
+            QJsonObject meta = item.metadata;
+            meta["managedFile"] = managedPath;
+            item.metadata = meta;
+            return saveItem(item);
+        }
+        return false;
+    } else {
+        // For .torrent files
+        QFileInfo sourceInfo(item.sourcePath);
+        if (!sourceInfo.exists()) return false;
+
+        QString filename = sourceInfo.fileName();
+        // Maybe ensure uniqueness
+        QString managedPath = m_managedDir + "/" + item.id + "_" + filename;
+
+        bool success = false;
+        if (deleteOriginal) {
+            // Move
+            // Qt's rename is a move
+            if (QFile::rename(item.sourcePath, managedPath)) {
+                success = true;
+            } else {
+                // If rename fails (cross-filesystem), try copy+remove
+                if (QFile::copy(item.sourcePath, managedPath)) {
+                    if (QFile::remove(item.sourcePath)) {
+                        success = true;
+                    }
+                }
+            }
+        } else {
+            // Copy
+            if (QFile::copy(item.sourcePath, managedPath)) {
+                success = true;
+            }
+        }
+
+        if (success) {
+            // Update item to point to managed file?
+            // "Replace original with nothing (or optionally keep a stub...)"
+            // The item object should probably track where the actual payload is now.
+            // Let's update sourcePath to the managed path if it was moved.
+            if (deleteOriginal) {
+                item.sourcePath = managedPath;
+            } else {
+                 QJsonObject meta = item.metadata;
+                 meta["managedFile"] = managedPath;
+                 item.metadata = meta;
+            }
+            return saveItem(item);
+        }
+        return false;
+    }
+}
