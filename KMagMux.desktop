@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=KMagMux
+Comment=Torrent and Magnet link router and manager
+Exec=KMagMux %u
+Icon=applications-internet
+Type=Application
+Terminal=false
+Categories=Network;FileTransfer;Qt;KDE;
+MimeType=x-scheme-handler/magnet;application/x-bittorrent;
+SingleMainWindow=true

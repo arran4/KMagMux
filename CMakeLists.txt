@@ -20,3 +20,6 @@ add_executable(KMagMux
 )
 
 target_link_libraries(KMagMux PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+
+install(TARGETS KMagMux DESTINATION bin)
+install(FILES KMagMux.desktop DESTINATION share/applications)

@@ -54,10 +54,10 @@
 
 ## 2) System integration (KDE/Linux plumbing)
 
-* [ ] Register as handler for:
+* [x] Register as handler for:
 
-  * [ ] `magnet:` URL scheme (xdg + desktop entry)
-  * [ ] `.torrent` MIME type (`application/x-bittorrent`)
+  * [x] `magnet:` URL scheme (xdg + desktop entry) (Desktop file created)
+  * [x] `.torrent` MIME type (`application/x-bittorrent`) (Desktop file created)
 * [ ] Provide “Send to VARAI” context action (optional):
 
   * [ ] Dolphin service menu for `.torrent`
