@@ -26,7 +26,8 @@ private slots:
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);
   void onProcessItem();
-  void onAddItem();
+  void onAddFiles();
+  void onAddLinks();
   void onPreferences();
   void onAbout();
 
@@ -49,7 +50,7 @@ private:
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
-  void openProcessDialog(Item &item);
+  void openProcessDialog(const std::vector<Item> &items);
 };
 
 #endif // MAINWINDOW_H
