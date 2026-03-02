@@ -15,7 +15,8 @@ class AddItemDialog : public QDialog {
   Q_OBJECT
 
 public:
-  explicit AddItemDialog(Item &item, const QStringList& connectors, QWidget *parent = nullptr);
+  explicit AddItemDialog(Item &item, const QStringList &connectors,
+                         QWidget *parent = nullptr);
 
   Item getItem() const;
   bool shouldDeleteOriginal() const;

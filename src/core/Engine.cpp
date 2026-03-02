@@ -1,7 +1,7 @@
 #include "Engine.h"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
-#include <QCoreApplication>
 #include <QPluginLoader>
 
 Engine::Engine(StorageManager *storage, QObject *parent)
@@ -16,7 +16,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 
   // Create if it doesn't exist
   if (!pluginsDir.exists()) {
-      pluginsDir.mkpath(".");
+    pluginsDir.mkpath(".");
   }
 
   qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
@@ -30,20 +30,21 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         qDebug() << "Loaded connector plugin:" << connector->getName();
         m_connectors.insert(connector->getId(), connector);
         // Connect to its signals via QObject cast
-        connect(plugin, SIGNAL(dispatchFinished(QString,bool,QString)),
-                this, SLOT(onDispatchFinished(QString,bool,QString)));
+        connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)), this,
+                SLOT(onDispatchFinished(QString, bool, QString)));
       } else {
         qWarning() << "Plugin" << fileName << "is not a Connector.";
         pluginLoader.unload();
       }
     } else {
-        qWarning() << "Failed to load plugin" << fileName << ":" << pluginLoader.errorString();
+      qWarning() << "Failed to load plugin" << fileName << ":"
+                 << pluginLoader.errorString();
     }
   }
 }
 
 QStringList Engine::getAvailableConnectors() const {
-    return m_connectors.keys();
+  return m_connectors.keys();
 }
 
 void Engine::start() {

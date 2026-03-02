@@ -4,9 +4,9 @@
 #include "core/Connector.h"
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QObject>
 #include <QUrl>
 #include <QtPlugin>
-#include <QObject>
 
 class QBittorrentConnector : public QObject, public Connector {
   Q_OBJECT
@@ -41,7 +41,8 @@ private:
   void performDispatch(const Item &item);
 
 signals:
-  void dispatchFinished(const QString &itemId, bool success, const QString &message);
+  void dispatchFinished(const QString &itemId, bool success,
+                        const QString &message);
 };
 
 #endif // QBITTORRENTCONNECTOR_H

@@ -5,8 +5,8 @@
 #include "StorageManager.h"
 #include <QMap>
 #include <QObject>
-#include <QTimer>
 #include <QStringList>
+#include <QTimer>
 
 class Engine : public QObject {
   Q_OBJECT

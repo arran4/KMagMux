@@ -5,7 +5,8 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
-AddItemDialog::AddItemDialog(Item &item, const QStringList& connectors, QWidget *parent)
+AddItemDialog::AddItemDialog(Item &item, const QStringList &connectors,
+                             QWidget *parent)
     : QDialog(parent), m_item(item) {
   setupUi();
   setWindowTitle("Process Item");
@@ -17,8 +18,8 @@ AddItemDialog::AddItemDialog(Item &item, const QStringList& connectors, QWidget 
 
   // Dynamic connector handling
   m_connectorCombo->addItem("Default");
-  for (const QString& connector : connectors) {
-      m_connectorCombo->addItem(connector);
+  for (const QString &connector : connectors) {
+    m_connectorCombo->addItem(connector);
   }
 
   if (!m_item.connectorId.isEmpty()) {
