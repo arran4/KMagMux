@@ -10,31 +10,31 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QStringList>
+#include <QTableWidget>
+#include <vector>
 
 class AddItemDialog : public QDialog {
   Q_OBJECT
 
 public:
-  explicit AddItemDialog(Item &item, const QStringList &connectors,
+  explicit AddItemDialog(const std::vector<Item> &items,
+                         const QStringList &connectors,
                          QWidget *parent = nullptr);
 
-  Item getItem() const;
+  std::vector<Item> getItems() const;
   bool shouldDeleteOriginal() const;
 
 private slots:
-  void onDispatchClicked();
-  void onQueueClicked();
-  void onScheduleClicked();
-  void onHoldClicked();
+  void onProcessClicked();
 
 private:
-  Item m_item;
+  std::vector<Item> m_items;
 
-  QLineEdit *m_sourceEdit;
-  QLineEdit *m_destEdit;
+  QTableWidget *m_itemsTable;
   QComboBox *m_connectorCombo;
   QLineEdit *m_labelsEdit;
   QCheckBox *m_deleteOriginalCheck;
+  QCheckBox *m_enableScheduleCheck;
   QDateTimeEdit *m_scheduleEdit;
 
   void setupUi();
