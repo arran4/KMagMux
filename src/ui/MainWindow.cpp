@@ -4,9 +4,12 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
+#include <QDialogButtonBox>
+#include <QFileDialog>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
 
@@ -32,10 +35,15 @@ void MainWindow::setupUi() {
 
   // Setup Menu Bar
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-  QAction *addAction = fileMenu->addAction(QIcon::fromTheme("list-add"),
-                                           tr("&Add Torrent/Magnet..."), this,
-                                           &MainWindow::onAddItem);
-  addAction->setShortcut(QKeySequence("Ctrl+O"));
+  QAction *addFilesAction =
+      fileMenu->addAction(QIcon::fromTheme("document-open"),
+                          tr("&Add File(s)..."), this, &MainWindow::onAddFiles);
+  addFilesAction->setShortcut(QKeySequence("Ctrl+O"));
+
+  QAction *addLinksAction =
+      fileMenu->addAction(QIcon::fromTheme("insert-link"),
+                          tr("&Add Link(s)..."), this, &MainWindow::onAddLinks);
+  addLinksAction->setShortcut(QKeySequence("Ctrl+L"));
 
   fileMenu->addSeparator();
   QAction *quitAction =
@@ -55,7 +63,8 @@ void MainWindow::setupUi() {
 
   // Setup Tool Bar
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
-  mainToolBar->addAction(addAction);
+  mainToolBar->addAction(addFilesAction);
+  mainToolBar->addAction(addLinksAction);
   mainToolBar->addSeparator();
   mainToolBar->addAction(quitAction);
 
@@ -206,21 +215,65 @@ void MainWindow::onItemAdded(const Item &item) { loadData(); }
 
 void MainWindow::onItemUpdated(const Item &item) { loadData(); }
 
-void MainWindow::onAddItem() {
-  bool ok;
-  QString text = QInputDialog::getText(this, tr("Add Item"),
-                                       tr("Enter Magnet Link or File Path:"),
-                                       QLineEdit::Normal, "", &ok);
-  if (ok && !text.isEmpty()) {
-    Item newItem;
-    newItem.id =
-        QString::number(QDateTime::currentMSecsSinceEpoch()) + "_manual";
-    newItem.state = ItemState::Unprocessed;
-    newItem.sourcePath = text;
-    newItem.createdTime = QDateTime::currentDateTime();
+void MainWindow::onAddFiles() {
+  QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Files"));
+  if (files.isEmpty())
+    return;
 
-    // Open the dialog immediately for the new item
-    openProcessDialog(newItem);
+  std::vector<Item> items;
+  qint64 now = QDateTime::currentMSecsSinceEpoch();
+  int idx = 0;
+  for (const QString &file : files) {
+    Item newItem;
+    newItem.id = QString::number(now) + "_" + QString::number(idx++) + "_file";
+    newItem.state = ItemState::Unprocessed;
+    newItem.sourcePath = file;
+    newItem.createdTime = QDateTime::currentDateTime();
+    items.push_back(newItem);
+  }
+
+  openProcessDialog(items);
+}
+
+void MainWindow::onAddLinks() {
+  QDialog dialog(this);
+  dialog.setWindowTitle(tr("Add Links"));
+  dialog.resize(400, 300);
+
+  QVBoxLayout *layout = new QVBoxLayout(&dialog);
+  QPlainTextEdit *textEdit = new QPlainTextEdit(&dialog);
+  textEdit->setPlaceholderText(tr("Paste links here (one per line)..."));
+  layout->addWidget(textEdit);
+
+  QDialogButtonBox *buttonBox = new QDialogButtonBox(
+      QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+  layout->addWidget(buttonBox);
+
+  connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+  if (dialog.exec() == QDialog::Accepted) {
+    QStringList lines = textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+    std::vector<Item> items;
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    int idx = 0;
+    for (QString line : lines) {
+      line = line.trimmed();
+      if (line.isEmpty())
+        continue;
+
+      Item newItem;
+      newItem.id =
+          QString::number(now) + "_" + QString::number(idx++) + "_link";
+      newItem.state = ItemState::Unprocessed;
+      newItem.sourcePath = line;
+      newItem.createdTime = QDateTime::currentDateTime();
+      items.push_back(newItem);
+    }
+
+    if (!items.empty()) {
+      openProcessDialog(items);
+    }
   }
 }
 
@@ -237,35 +290,46 @@ void MainWindow::onProcessItem() {
   if (selection.isEmpty())
     return;
 
-  int row = selection.first().row();
-  Item item = model->getItem(row);
+  std::vector<Item> selectedItems;
+  for (const QModelIndex &index : selection) {
+    selectedItems.push_back(model->getItem(index.row()));
+  }
 
-  openProcessDialog(item);
+  openProcessDialog(selectedItems);
 }
 
-void MainWindow::openProcessDialog(Item &item) {
-  AddItemDialog dialog(item, m_engine->getAvailableConnectors(), this);
+void MainWindow::openProcessDialog(std::vector<Item> &items) {
+  if (items.empty())
+    return;
+
+  AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
-    Item updatedItem = dialog.getItem();
+    std::vector<Item> updatedItems = dialog.getItems();
 
-    bool success = true;
+    for (Item &updatedItem : updatedItems) {
+      bool success = true;
 
-    if (dialog.shouldDeleteOriginal()) {
-      // Move logic
-      if (!m_storage->moveToManaged(updatedItem, true)) {
-        QMessageBox::warning(
-            this, "Error", "Failed to move original file to managed storage.");
-        success = false; // Should we abort saving? Maybe just warn.
-      }
-    } else {
-      // Just save. If it's a new item, we should save it anyway.
-    }
-
-    if (success) {
-      if (m_storage->saveItem(updatedItem)) {
-        qDebug() << "Item processed and saved:" << updatedItem.id;
+      if (dialog.shouldDeleteOriginal()) {
+        // Move logic
+        if (!m_storage->moveToManaged(updatedItem, true)) {
+          QMessageBox::warning(
+              this, "Error",
+              QString("Failed to move original file to managed storage: %1")
+                  .arg(updatedItem.sourcePath));
+          success = false; // Should we abort saving? Maybe just warn.
+        }
       } else {
-        QMessageBox::warning(this, "Error", "Failed to save item metadata.");
+        // Just save. If it's a new item, we should save it anyway.
+      }
+
+      if (success) {
+        if (m_storage->saveItem(updatedItem)) {
+          qDebug() << "Item processed and saved:" << updatedItem.id;
+        } else {
+          QMessageBox::warning(this, "Error",
+                               QString("Failed to save item metadata: %1")
+                                   .arg(updatedItem.sourcePath));
+        }
       }
     }
   }
