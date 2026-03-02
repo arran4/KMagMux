@@ -7,6 +7,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QDateTime>
+#include <QApplication>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
     : QMainWindow(parent), m_storage(storage) {
@@ -26,14 +27,31 @@ void MainWindow::setupUi() {
     setWindowTitle("KMagMux");
     resize(1000, 600);
 
+    // Setup Menu Bar
+    QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
+    QAction *addAction = fileMenu->addAction(tr("&Add Torrent/Magnet..."), this, &MainWindow::onAddItem);
+    fileMenu->addSeparator();
+    QAction *quitAction = fileMenu->addAction(tr("&Quit"), qApp, &QApplication::quit);
+
+    QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
+    editMenu->addAction(tr("&Preferences"), this, &MainWindow::onPreferences);
+
+    QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
+    helpMenu->addAction(tr("&About KMagMux"), this, &MainWindow::onAbout);
+
+    // Setup Tool Bar
+    QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
+    mainToolBar->addAction(addAction);
+    mainToolBar->addSeparator();
+    mainToolBar->addAction(quitAction);
+
+    // Setup Status Bar
+    statusBar()->showMessage(tr("Ready"));
+
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
     QVBoxLayout *layout = new QVBoxLayout(centralWidget);
-
-    QPushButton *addBtn = new QPushButton("Add Torrent/Magnet...", this);
-    connect(addBtn, &QPushButton::clicked, this, &MainWindow::onAddItem);
-    layout->addWidget(addBtn);
 
     m_tabWidget = new QTabWidget(this);
     layout->addWidget(m_tabWidget);
@@ -224,4 +242,12 @@ void MainWindow::openProcessDialog(Item &item) {
             }
         }
     }
+}
+
+void MainWindow::onPreferences() {
+    QMessageBox::information(this, tr("Preferences"), tr("Preferences dialog is not yet implemented."));
+}
+
+void MainWindow::onAbout() {
+    QMessageBox::about(this, tr("About KMagMux"), tr("KMagMux\nTorrent and Magnet file handler and router."));
 }

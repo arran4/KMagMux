@@ -6,6 +6,9 @@
 #include <QTableView>
 #include <QMenu>
 #include <QAction>
+#include <QMenuBar>
+#include <QToolBar>
+#include <QStatusBar>
 #include "../core/ItemModel.h"
 #include "../core/StorageManager.h"
 #include "../core/Engine.h"
@@ -24,6 +27,8 @@ private slots:
     void onItemUpdated(const Item &item);
     void onProcessItem();
     void onAddItem();
+    void onPreferences();
+    void onAbout();
 
 private:
     StorageManager *m_storage;
