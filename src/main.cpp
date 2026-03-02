@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setApplicationName("KMagMux");
     app.setOrganizationName("KMagMux");
+    app.setWindowIcon(QIcon(":/icons/kmagmux.svg"));
 
     // Initialize Core Storage
     StorageManager storage;
