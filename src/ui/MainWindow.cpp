@@ -234,7 +234,7 @@ void MainWindow::onProcessItem() {
 }
 
 void MainWindow::openProcessDialog(Item &item) {
-  AddItemDialog dialog(item, this);
+  AddItemDialog dialog(item, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
     Item updatedItem = dialog.getItem();
 

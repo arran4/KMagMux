@@ -5,7 +5,8 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
-AddItemDialog::AddItemDialog(Item &item, QWidget *parent)
+AddItemDialog::AddItemDialog(Item &item, const QStringList &connectors,
+                             QWidget *parent)
     : QDialog(parent), m_item(item) {
   setupUi();
   setWindowTitle("Process Item");
@@ -15,10 +16,12 @@ AddItemDialog::AddItemDialog(Item &item, QWidget *parent)
   m_sourceEdit->setText(m_item.sourcePath);
   m_destEdit->setText(m_item.destinationPath);
 
-  // Default connector handling (simple for now)
+  // Dynamic connector handling
   m_connectorCombo->addItem("Default");
-  m_connectorCombo->addItem("qBittorrent");
-  m_connectorCombo->addItem("Transmission");
+  for (const QString &connector : connectors) {
+    m_connectorCombo->addItem(connector);
+  }
+
   if (!m_item.connectorId.isEmpty()) {
     int index = m_connectorCombo->findText(m_item.connectorId);
     if (index >= 0)
