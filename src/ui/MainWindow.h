@@ -26,8 +26,7 @@ private slots:
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);
   void onProcessItem();
-  void onAddFiles();
-  void onAddLinks();
+  void onAddItems();
   void onPreferences();
   void onAbout();
 

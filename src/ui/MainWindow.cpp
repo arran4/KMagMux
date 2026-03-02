@@ -36,15 +36,10 @@ void MainWindow::setupUi() {
 
   // Setup Menu Bar
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-  QAction *addFilesAction =
+  QAction *addItemsAction =
       fileMenu->addAction(QIcon::fromTheme("document-open"),
-                          tr("&Add File(s)..."), this, &MainWindow::onAddFiles);
-  addFilesAction->setShortcut(QKeySequence("Ctrl+O"));
-
-  QAction *addLinksAction =
-      fileMenu->addAction(QIcon::fromTheme("insert-link"),
-                          tr("&Add Link(s)..."), this, &MainWindow::onAddLinks);
-  addLinksAction->setShortcut(QKeySequence("Ctrl+L"));
+                          tr("&Add Item(s)..."), this, &MainWindow::onAddItems);
+  addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
 
   fileMenu->addSeparator();
   QAction *quitAction =
@@ -64,8 +59,7 @@ void MainWindow::setupUi() {
 
   // Setup Tool Bar
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
-  mainToolBar->addAction(addFilesAction);
-  mainToolBar->addAction(addLinksAction);
+  mainToolBar->addAction(addItemsAction);
   mainToolBar->addSeparator();
   mainToolBar->addAction(quitAction);
 
@@ -216,39 +210,48 @@ void MainWindow::onItemAdded(const Item &item) { loadData(); }
 
 void MainWindow::onItemUpdated(const Item &item) { loadData(); }
 
-void MainWindow::onAddFiles() {
-  QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Files"));
-  if (files.isEmpty())
-    return;
-
-  std::vector<Item> items;
-  qint64 now = QDateTime::currentMSecsSinceEpoch();
-  int idx = 0;
-  for (const QString &file : files) {
-    Item newItem;
-    newItem.id = QString::number(now) + "_" + QString::number(idx++) + "_file";
-    newItem.state = ItemState::Unprocessed;
-    newItem.sourcePath = file;
-    newItem.createdTime = QDateTime::currentDateTime();
-    items.push_back(newItem);
-  }
-
-  openProcessDialog(items);
-}
-
-void MainWindow::onAddLinks() {
+void MainWindow::onAddItems() {
   QDialog dialog(this);
-  dialog.setWindowTitle(tr("Add Links"));
-  dialog.resize(400, 300);
+  dialog.setWindowTitle(tr("Add Items"));
+  dialog.resize(500, 400);
 
   QVBoxLayout *layout = new QVBoxLayout(&dialog);
+
+  QLabel *label = new QLabel(
+      tr("Paste links, paths, or use 'Browse Files...' to add items:"),
+      &dialog);
+  layout->addWidget(label);
+
   QPlainTextEdit *textEdit = new QPlainTextEdit(&dialog);
-  textEdit->setPlaceholderText(tr("Paste links here (one per line)..."));
+  textEdit->setPlaceholderText(
+      tr("file://...\n/path/to/file\nhttp://...\nhttps://...\nmagnet:..."));
   layout->addWidget(textEdit);
+
+  QHBoxLayout *buttonLayout = new QHBoxLayout();
+  QPushButton *browseBtn = new QPushButton(tr("Browse Files..."), &dialog);
+  buttonLayout->addWidget(browseBtn);
+  buttonLayout->addStretch();
 
   QDialogButtonBox *buttonBox = new QDialogButtonBox(
       QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-  layout->addWidget(buttonBox);
+  buttonLayout->addWidget(buttonBox);
+
+  layout->addLayout(buttonLayout);
+
+  connect(browseBtn, &QPushButton::clicked, this, [textEdit, this]() {
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Files"));
+    if (!files.isEmpty()) {
+      QString currentText = textEdit->toPlainText();
+      if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
+        currentText += '\n';
+      }
+      currentText = std::accumulate(files.begin(), files.end(), currentText,
+                                    [](const QString &a, const QString &b) {
+                                      return a + "file://" + b + "\n";
+                                    });
+      textEdit->setPlainText(currentText);
+    }
+  });
 
   connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
   connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -258,18 +261,75 @@ void MainWindow::onAddLinks() {
     std::vector<Item> items;
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     int idx = 0;
-    for (QString line : lines) {
+
+    auto processLine = [&](QString line) {
       line = line.trimmed();
       if (line.isEmpty())
-        continue;
+        return;
 
+      QString pathToCheck = line;
+      if (line.startsWith("file://")) {
+        pathToCheck = line.mid(7);
+      }
+
+      // Check if it's a local file that might contain links (.txt or .html)
+      QFileInfo fileInfo(pathToCheck);
+      if (fileInfo.exists() && fileInfo.isFile()) {
+        QString ext = fileInfo.suffix().toLower();
+        if (ext == "txt" || ext == "html" || ext == "htm") {
+          QFile file(pathToCheck);
+          if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            while (!in.atEnd()) {
+              QString fileLine = in.readLine().trimmed();
+              if (fileLine.isEmpty())
+                continue;
+
+              if (ext == "html" || ext == "htm") {
+                // simple naive regex to extract href
+                QRegularExpression re("href=[\"']([^\"']+)[\"']");
+                QRegularExpressionMatchIterator i = re.globalMatch(fileLine);
+                while (i.hasNext()) {
+                  QRegularExpressionMatch match = i.next();
+                  QString link = match.captured(1).trimmed();
+                  if (!link.isEmpty()) {
+                    Item newItem;
+                    newItem.id = QString::number(now) + "_" +
+                                 QString::number(idx++) + "_item";
+                    newItem.state = ItemState::Unprocessed;
+                    newItem.sourcePath = link;
+                    newItem.createdTime = QDateTime::currentDateTime();
+                    items.push_back(newItem);
+                  }
+                }
+              } else {
+                // txt file
+                Item newItem;
+                newItem.id = QString::number(now) + "_" +
+                             QString::number(idx++) + "_item";
+                newItem.state = ItemState::Unprocessed;
+                newItem.sourcePath = fileLine;
+                newItem.createdTime = QDateTime::currentDateTime();
+                items.push_back(newItem);
+              }
+            }
+          }
+          return; // Skip adding the .txt/.html file itself as an item
+        }
+      }
+
+      // Not a text/html file (or doesn't exist locally), treat as regular item
       Item newItem;
       newItem.id =
-          QString::number(now) + "_" + QString::number(idx++) + "_link";
+          QString::number(now) + "_" + QString::number(idx++) + "_item";
       newItem.state = ItemState::Unprocessed;
       newItem.sourcePath = line;
       newItem.createdTime = QDateTime::currentDateTime();
       items.push_back(newItem);
+    };
+
+    for (const QString &line : lines) {
+      processLine(line);
     }
 
     if (!items.empty()) {

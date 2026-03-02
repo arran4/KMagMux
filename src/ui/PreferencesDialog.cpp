@@ -83,7 +83,7 @@ void PreferencesDialog::createShortcutsPage() {
   table->setSelectionBehavior(QAbstractItemView::SelectRows);
   table->verticalHeader()->setVisible(false);
 
-  table->setItem(0, 0, new QTableWidgetItem(tr("Add Torrent/Magnet...")));
+  table->setItem(0, 0, new QTableWidgetItem(tr("Add Item(s)...")));
   table->setItem(0, 1, new QTableWidgetItem(tr("Ctrl+O")));
 
   table->setItem(1, 0, new QTableWidgetItem(tr("Preferences")));
