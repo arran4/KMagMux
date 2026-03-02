@@ -50,7 +50,7 @@ private:
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
-  void openProcessDialog(std::vector<Item> &items);
+  void openProcessDialog(const std::vector<Item> &items);
 };
 
 #endif // MAINWINDOW_H
