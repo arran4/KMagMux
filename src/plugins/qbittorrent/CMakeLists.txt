@@ -8,4 +8,4 @@ set_target_properties(qbittorrent PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
 )
 
-install(TARGETS qbittorrent DESTINATION bin/plugins)
+install(TARGETS qbittorrent DESTINATION ${CMAKE_INSTALL_LIBDIR}/kmagmux/plugins)

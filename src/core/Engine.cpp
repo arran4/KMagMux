@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QLibrary>
 #include <QPluginLoader>
 
 Engine::Engine(StorageManager *storage, QObject *parent)
@@ -12,33 +13,48 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   connect(m_timer, &QTimer::timeout, this, &Engine::processQueue);
 
   // Load plugins
-  QDir pluginsDir(QCoreApplication::applicationDirPath() + "/plugins");
+  QStringList pluginPaths;
+  pluginPaths << QDir::cleanPath(QCoreApplication::applicationDirPath() + "/plugins");
+#ifdef KMAGMUX_PLUGIN_DIR
+  pluginPaths << QStringLiteral(KMAGMUX_PLUGIN_DIR);
+#endif
 
-  // Create if it doesn't exist
-  if (!pluginsDir.exists()) {
-    pluginsDir.mkpath(".");
-  }
+  for (const QString &path : pluginPaths) {
+    QDir pluginsDir(path);
+    if (!pluginsDir.exists()) {
+      continue;
+    }
 
-  qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
+    qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
 
-  for (QString fileName : pluginsDir.entryList(QDir::Files)) {
-    QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
-    QObject *plugin = pluginLoader.instance();
-    if (plugin) {
-      Connector *connector = qobject_cast<Connector *>(plugin);
-      if (connector) {
-        qDebug() << "Loaded connector plugin:" << connector->getName();
-        m_connectors.insert(connector->getId(), connector);
-        // Connect to its signals via QObject cast
-        connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)), this,
-                SLOT(onDispatchFinished(QString, bool, QString)));
+    for (QString fileName : pluginsDir.entryList(QDir::Files)) {
+      QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
+      QObject *plugin = pluginLoader.instance();
+      if (plugin) {
+        Connector *connector = qobject_cast<Connector *>(plugin);
+        if (connector) {
+          if (!m_connectors.contains(connector->getId())) {
+            qDebug() << "Loaded connector plugin:" << connector->getName() << "from" << pluginsDir.absolutePath();
+            m_connectors.insert(connector->getId(), connector);
+            // Connect to its signals via QObject cast
+            connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)), this,
+                    SLOT(onDispatchFinished(QString, bool, QString)));
+          } else {
+            // Already loaded this connector (e.g. from dev path instead of install path)
+            pluginLoader.unload();
+          }
+        } else {
+          qWarning() << "Plugin" << fileName << "is not a Connector.";
+          pluginLoader.unload();
+        }
       } else {
-        qWarning() << "Plugin" << fileName << "is not a Connector.";
-        pluginLoader.unload();
+        // Since we iterate through everything, it might fail to load non-plugin files
+        // but we only warn if it really is a library that failed.
+        if (QLibrary::isLibrary(fileName)) {
+          qWarning() << "Failed to load plugin" << fileName << ":"
+                     << pluginLoader.errorString();
+        }
       }
-    } else {
-      qWarning() << "Failed to load plugin" << fileName << ":"
-                 << pluginLoader.errorString();
     }
   }
 }
