@@ -1,41 +1,41 @@
 #ifndef ADDITEMDIALOG_H
 #define ADDITEMDIALOG_H
 
-#include <QDialog>
-#include <QLineEdit>
-#include <QComboBox>
-#include <QCheckBox>
-#include <QPushButton>
-#include <QLabel>
-#include <QDateTimeEdit>
 #include "../core/Item.h"
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDateTimeEdit>
+#include <QDialog>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 
 class AddItemDialog : public QDialog {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit AddItemDialog(Item &item, QWidget *parent = nullptr);
+  explicit AddItemDialog(Item &item, QWidget *parent = nullptr);
 
-    Item getItem() const;
-    bool shouldDeleteOriginal() const;
+  Item getItem() const;
+  bool shouldDeleteOriginal() const;
 
 private slots:
-    void onDispatchClicked();
-    void onQueueClicked();
-    void onScheduleClicked();
-    void onHoldClicked();
+  void onDispatchClicked();
+  void onQueueClicked();
+  void onScheduleClicked();
+  void onHoldClicked();
 
 private:
-    Item m_item;
+  Item m_item;
 
-    QLineEdit *m_sourceEdit;
-    QLineEdit *m_destEdit;
-    QComboBox *m_connectorCombo;
-    QLineEdit *m_labelsEdit;
-    QCheckBox *m_deleteOriginalCheck;
-    QDateTimeEdit *m_scheduleEdit;
+  QLineEdit *m_sourceEdit;
+  QLineEdit *m_destEdit;
+  QComboBox *m_connectorCombo;
+  QLineEdit *m_labelsEdit;
+  QCheckBox *m_deleteOriginalCheck;
+  QDateTimeEdit *m_scheduleEdit;
 
-    void setupUi();
+  void setupUi();
 };
 
 #endif // ADDITEMDIALOG_H
