@@ -9,7 +9,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
 
 add_executable(KMagMux
     src/main.cpp
@@ -17,11 +17,13 @@ add_executable(KMagMux
     src/core/StorageManager.cpp
     src/core/Engine.cpp
     src/core/ItemModel.cpp
+    src/core/Connector.cpp
+    src/core/QBittorrentConnector.cpp
     src/ui/MainWindow.cpp
     src/ui/AddItemDialog.cpp
 )
 
-target_link_libraries(KMagMux PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(KMagMux PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network)
 
 install(TARGETS KMagMux DESTINATION bin)
 install(FILES KMagMux.desktop DESTINATION share/applications)
