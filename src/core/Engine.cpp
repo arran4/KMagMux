@@ -14,7 +14,8 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 
   // Load plugins
   QStringList pluginPaths;
-  pluginPaths << QDir::cleanPath(QCoreApplication::applicationDirPath() + "/plugins");
+  pluginPaths << QDir::cleanPath(QCoreApplication::applicationDirPath() +
+                                 "/plugins");
 #ifdef KMAGMUX_PLUGIN_DIR
   pluginPaths << QStringLiteral(KMAGMUX_PLUGIN_DIR);
 #endif
@@ -34,13 +35,15 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         Connector *connector = qobject_cast<Connector *>(plugin);
         if (connector) {
           if (!m_connectors.contains(connector->getId())) {
-            qDebug() << "Loaded connector plugin:" << connector->getName() << "from" << pluginsDir.absolutePath();
+            qDebug() << "Loaded connector plugin:" << connector->getName()
+                     << "from" << pluginsDir.absolutePath();
             m_connectors.insert(connector->getId(), connector);
             // Connect to its signals via QObject cast
-            connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)), this,
-                    SLOT(onDispatchFinished(QString, bool, QString)));
+            connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
+                    this, SLOT(onDispatchFinished(QString, bool, QString)));
           } else {
-            // Already loaded this connector (e.g. from dev path instead of install path)
+            // Already loaded this connector (e.g. from dev path instead of
+            // install path)
             pluginLoader.unload();
           }
         } else {
@@ -48,8 +51,8 @@ Engine::Engine(StorageManager *storage, QObject *parent)
           pluginLoader.unload();
         }
       } else {
-        // Since we iterate through everything, it might fail to load non-plugin files
-        // but we only warn if it really is a library that failed.
+        // Since we iterate through everything, it might fail to load non-plugin
+        // files but we only warn if it really is a library that failed.
         if (QLibrary::isLibrary(fileName)) {
           qWarning() << "Failed to load plugin" << fileName << ":"
                      << pluginLoader.errorString();
