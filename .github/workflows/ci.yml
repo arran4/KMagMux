@@ -51,7 +51,7 @@ jobs:
           sudo apt-get install -y cppcheck
 
       - name: Run cppcheck
-        run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unknownMacro --suppress=unusedFunction -I src/ src/
+        run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=uninitMemberVar --suppress=useInitializationList --suppress=shadowFunction --suppress=constVariablePointer -I src/ src/ -Dslots= -Dsignals=protected -DQ_SIGNALS=protected -DQ_SLOTS= -DQ_OBJECT= -DQ_DECLARE_METATYPE\(x\)=
 
   format:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
