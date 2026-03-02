@@ -1,6 +1,8 @@
 #include "Engine.h"
-#include "QBittorrentConnector.h"
 #include <QDebug>
+#include <QDir>
+#include <QCoreApplication>
+#include <QPluginLoader>
 
 Engine::Engine(StorageManager *storage, QObject *parent)
     : QObject(parent), m_storage(storage), m_paused(false) {
@@ -9,10 +11,39 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   m_timer->setInterval(5000);
   connect(m_timer, &QTimer::timeout, this, &Engine::processQueue);
 
-  // Register qBittorrent connector
-  QBittorrentConnector *qb = new QBittorrentConnector(this);
-  m_connectors.insert("qBittorrent", qb);
-  connect(qb, &Connector::dispatchFinished, this, &Engine::onDispatchFinished);
+  // Load plugins
+  QDir pluginsDir(QCoreApplication::applicationDirPath() + "/plugins");
+
+  // Create if it doesn't exist
+  if (!pluginsDir.exists()) {
+      pluginsDir.mkpath(".");
+  }
+
+  qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
+
+  for (QString fileName : pluginsDir.entryList(QDir::Files)) {
+    QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
+    QObject *plugin = pluginLoader.instance();
+    if (plugin) {
+      Connector *connector = qobject_cast<Connector *>(plugin);
+      if (connector) {
+        qDebug() << "Loaded connector plugin:" << connector->getName();
+        m_connectors.insert(connector->getId(), connector);
+        // Connect to its signals via QObject cast
+        connect(plugin, SIGNAL(dispatchFinished(QString,bool,QString)),
+                this, SLOT(onDispatchFinished(QString,bool,QString)));
+      } else {
+        qWarning() << "Plugin" << fileName << "is not a Connector.";
+        pluginLoader.unload();
+      }
+    } else {
+        qWarning() << "Failed to load plugin" << fileName << ":" << pluginLoader.errorString();
+    }
+  }
+}
+
+QStringList Engine::getAvailableConnectors() const {
+    return m_connectors.keys();
 }
 
 void Engine::start() {

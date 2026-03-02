@@ -1,13 +1,17 @@
 #ifndef QBITTORRENTCONNECTOR_H
 #define QBITTORRENTCONNECTOR_H
 
-#include "Connector.h"
+#include "core/Connector.h"
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QUrl>
+#include <QtPlugin>
+#include <QObject>
 
-class QBittorrentConnector : public Connector {
+class QBittorrentConnector : public QObject, public Connector {
   Q_OBJECT
+  Q_INTERFACES(Connector)
+  Q_PLUGIN_METADATA(IID "com.kmagmux.Connector/1.0" FILE "qbittorrent.json")
 
 public:
   explicit QBittorrentConnector(QObject *parent = nullptr);
@@ -35,6 +39,9 @@ private:
 
   void login();
   void performDispatch(const Item &item);
+
+signals:
+  void dispatchFinished(const QString &itemId, bool success, const QString &message);
 };
 
 #endif // QBITTORRENTCONNECTOR_H

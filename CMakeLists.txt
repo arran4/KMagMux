@@ -11,22 +11,29 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
 
-add_executable(KMagMux
-    src/main.cpp
+# Create Core Library
+add_library(KMagMuxCore SHARED
     src/core/Item.cpp
     src/core/StorageManager.cpp
     src/core/Engine.cpp
     src/core/ItemModel.cpp
-    src/core/Connector.cpp
-    src/core/QBittorrentConnector.cpp
+)
+target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network)
+target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set_target_properties(KMagMuxCore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+add_executable(KMagMux
+    src/main.cpp
     src/ui/MainWindow.cpp
     src/ui/AddItemDialog.cpp
     resources/resources.qrc
 )
 
-target_link_libraries(KMagMux PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network)
+target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets)
 
-install(TARGETS KMagMux DESTINATION bin)
+add_subdirectory(src/plugins/qbittorrent)
+
+install(TARGETS KMagMux KMagMuxCore DESTINATION bin)
 install(FILES KMagMux.desktop DESTINATION share/applications)
 
 # Install icons

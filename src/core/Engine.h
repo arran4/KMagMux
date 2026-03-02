@@ -6,6 +6,7 @@
 #include <QMap>
 #include <QObject>
 #include <QTimer>
+#include <QStringList>
 
 class Engine : public QObject {
   Q_OBJECT
@@ -14,6 +15,7 @@ public:
   explicit Engine(StorageManager *storage, QObject *parent = nullptr);
   void start();
   void stop();
+  QStringList getAvailableConnectors() const;
 
 private slots:
   void processQueue();

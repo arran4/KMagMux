@@ -1,15 +1,15 @@
 #include "QBittorrentConnector.h"
 #include <QDebug>
+#include <QHttpMultiPart>
 #include <QFile>
 #include <QFileInfo>
-#include <QHttpMultiPart>
 #include <QHttpPart>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QUrlQuery>
 
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
-    : Connector(parent), m_isPending(false) {
+    : QObject(parent), m_isPending(false) {
   m_networkManager = new QNetworkAccessManager(this);
   m_baseUrl = "http://localhost:8080";
   m_username = "admin";

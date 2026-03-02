@@ -2,23 +2,18 @@
 #define CONNECTOR_H
 
 #include "Item.h"
-#include <QObject>
 #include <QString>
 
-class Connector : public QObject {
-  Q_OBJECT
-
+class Connector {
 public:
-  explicit Connector(QObject *parent = nullptr);
-  virtual ~Connector();
+  virtual ~Connector() = default;
 
   virtual QString getId() const = 0;
   virtual QString getName() const = 0;
   virtual void dispatch(const Item &item) = 0;
-
-signals:
-  void dispatchFinished(const QString &itemId, bool success,
-                        const QString &message);
 };
+
+#define Connector_iid "com.kmagmux.Connector/1.0"
+Q_DECLARE_INTERFACE(Connector, Connector_iid)
 
 #endif // CONNECTOR_H
