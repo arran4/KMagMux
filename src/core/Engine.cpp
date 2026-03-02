@@ -13,11 +13,16 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   connect(m_timer, &QTimer::timeout, this, &Engine::processQueue);
 
   // Load plugins
+  QString appDir = QCoreApplication::applicationDirPath();
   QStringList pluginPaths;
-  pluginPaths << QDir::cleanPath(QCoreApplication::applicationDirPath() +
-                                 "/plugins");
-#ifdef KMAGMUX_PLUGIN_DIR
-  pluginPaths << QStringLiteral(KMAGMUX_PLUGIN_DIR);
+
+  // Dev path
+  pluginPaths << QDir::cleanPath(appDir + "/plugins");
+
+  // Install path (relative to executable)
+#ifdef KMAGMUX_REL_PLUGIN_DIR
+  pluginPaths << QDir::cleanPath(appDir + "/" +
+                                 QStringLiteral(KMAGMUX_REL_PLUGIN_DIR));
 #endif
 
   for (const QString &path : pluginPaths) {

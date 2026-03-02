@@ -22,7 +22,12 @@ add_library(KMagMuxCore SHARED
 )
 target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network)
 target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_compile_definitions(KMagMuxCore PRIVATE KMAGMUX_PLUGIN_DIR=\"${CMAKE_INSTALL_FULL_LIBDIR}/kmagmux/plugins\")
+
+file(RELATIVE_PATH REL_PLUGIN_DIR
+     "${CMAKE_INSTALL_FULL_BINDIR}"
+     "${CMAKE_INSTALL_FULL_LIBDIR}/kmagmux/plugins")
+target_compile_definitions(KMagMuxCore PRIVATE KMAGMUX_REL_PLUGIN_DIR=\"${REL_PLUGIN_DIR}\")
+
 set_target_properties(KMagMuxCore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 add_executable(KMagMux
