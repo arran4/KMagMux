@@ -2,7 +2,7 @@
 Name=KMagMux
 Comment=Torrent and Magnet link router and manager
 Exec=KMagMux %u
-Icon=applications-internet
+Icon=kmagmux
 Type=Application
 Terminal=false
 Categories=Network;FileTransfer;Qt;KDE;

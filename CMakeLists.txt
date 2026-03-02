@@ -21,9 +21,20 @@ add_executable(KMagMux
     src/core/QBittorrentConnector.cpp
     src/ui/MainWindow.cpp
     src/ui/AddItemDialog.cpp
+    resources/resources.qrc
 )
 
 target_link_libraries(KMagMux PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network)
 
 install(TARGETS KMagMux DESTINATION bin)
 install(FILES KMagMux.desktop DESTINATION share/applications)
+
+# Install icons
+install(FILES resources/icons/kmagmux.svg DESTINATION share/icons/hicolor/scalable/apps)
+install(FILES resources/icons/kmagmux-16.png DESTINATION share/icons/hicolor/16x16/apps RENAME kmagmux.png)
+install(FILES resources/icons/kmagmux-32.png DESTINATION share/icons/hicolor/32x32/apps RENAME kmagmux.png)
+install(FILES resources/icons/kmagmux-48.png DESTINATION share/icons/hicolor/48x48/apps RENAME kmagmux.png)
+install(FILES resources/icons/kmagmux-64.png DESTINATION share/icons/hicolor/64x64/apps RENAME kmagmux.png)
+install(FILES resources/icons/kmagmux-128.png DESTINATION share/icons/hicolor/128x128/apps RENAME kmagmux.png)
+install(FILES resources/icons/kmagmux-256.png DESTINATION share/icons/hicolor/256x256/apps RENAME kmagmux.png)
+install(FILES resources/icons/kmagmux-512.png DESTINATION share/icons/hicolor/512x512/apps RENAME kmagmux.png)
