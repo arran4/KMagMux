@@ -1,0 +1,143 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "**" ]
+    tags: [ "v*.*.*" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: 'Run auto-format and auto-fix, then submit a PR'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev qt6-base-private-dev libqt6widgets6 libqt6network6 cmake g++ make
+
+      - name: Configure CMake
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test
+        run: |
+          cd build
+          ctest --output-on-failure
+
+  vet:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+
+      - name: Run cppcheck
+        run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=unknownMacro -I src/ src/
+
+  format:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Run clang-format check
+        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format --Werror --dry-run
+
+  lint:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install clang-tidy and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy qt6-base-dev qt6-base-private-dev libqt6widgets6 libqt6network6 cmake
+
+      - name: Configure CMake for compile_commands.json
+        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy
+        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    needs: [test, vet, format, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev qt6-base-private-dev libqt6widgets6 libqt6network6 cmake g++ make
+
+      - name: Configure CMake
+        run: cmake -B build
+
+      - name: Build release
+        run: cmake --build build --config Release -j$(nproc)
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/KMagMux
+          draft: false
+          prerelease: false
+
+  fix:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.fix }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install formatting and linting tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format clang-tidy qt6-base-dev qt6-base-private-dev libqt6widgets6 libqt6network6 cmake
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Auto-format code
+        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format -i
+
+      - name: Auto-fix linting issues
+        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/ --fix-errors || true
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: auto-format and fix linting issues"
+          title: "Automated format and lint fixes"
+          body: "Automated changes applied by clang-format and clang-tidy."
+          branch: "chore/auto-fixes-${{ github.run_id }}"
+          base: ${{ github.ref_name }}
