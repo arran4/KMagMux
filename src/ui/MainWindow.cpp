@@ -12,6 +12,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <algorithm>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
     : QMainWindow(parent), m_storage(storage) {
@@ -291,14 +292,17 @@ void MainWindow::onProcessItem() {
     return;
 
   std::vector<Item> selectedItems;
-  for (const QModelIndex &index : selection) {
-    selectedItems.push_back(model->getItem(index.row()));
-  }
+  selectedItems.reserve(selection.size());
+  std::transform(selection.begin(), selection.end(),
+                 std::back_inserter(selectedItems),
+                 [model](const QModelIndex &index) {
+                   return model->getItem(index.row());
+                 });
 
   openProcessDialog(selectedItems);
 }
 
-void MainWindow::openProcessDialog(std::vector<Item> &items) {
+void MainWindow::openProcessDialog(const std::vector<Item> &items) {
   if (items.empty())
     return;
 
