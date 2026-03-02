@@ -217,11 +217,14 @@ void MainWindow::onAddItems() {
 
   QVBoxLayout *layout = new QVBoxLayout(&dialog);
 
-  QLabel *label = new QLabel(tr("Paste links, paths, or use 'Browse Files...' to add items:"), &dialog);
+  QLabel *label = new QLabel(
+      tr("Paste links, paths, or use 'Browse Files...' to add items:"),
+      &dialog);
   layout->addWidget(label);
 
   QPlainTextEdit *textEdit = new QPlainTextEdit(&dialog);
-  textEdit->setPlaceholderText(tr("file://...\n/path/to/file\nhttp://...\nhttps://...\nmagnet:..."));
+  textEdit->setPlaceholderText(
+      tr("file://...\n/path/to/file\nhttp://...\nhttps://...\nmagnet:..."));
   layout->addWidget(textEdit);
 
   QHBoxLayout *buttonLayout = new QHBoxLayout();
@@ -242,9 +245,10 @@ void MainWindow::onAddItems() {
       if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
         currentText += '\n';
       }
-      for (const QString &file : files) {
-        currentText += "file://" + file + "\n";
-      }
+      currentText = std::accumulate(files.begin(), files.end(), currentText,
+                                    [](const QString &a, const QString &b) {
+                                      return a + "file://" + b + "\n";
+                                    });
       textEdit->setPlainText(currentText);
     }
   });
@@ -278,15 +282,17 @@ void MainWindow::onAddItems() {
             QTextStream in(&file);
             while (!in.atEnd()) {
               QString fileLine = in.readLine().trimmed();
-              if (fileLine.isEmpty()) continue;
+              if (fileLine.isEmpty())
+                continue;
 
               // In a real HTML parser we'd extract hrefs, but here we
               // just naively assume it might contain lines that are links
               // or we just add it and let the processor figure it out.
-              // To match "mixed mode", we just add each non-empty line as an Item.
-              // Wait, the prompt says "text file of direct links to torrent files,
-              // and multiple magnent or torrent files html file with links, but otherwise like text files a torrent file"
-              // So we can extract href="..." from html, or just treat each line.
+              // To match "mixed mode", we just add each non-empty line as an
+              // Item. Wait, the prompt says "text file of direct links to
+              // torrent files, and multiple magnent or torrent files html file
+              // with links, but otherwise like text files a torrent file" So we
+              // can extract href="..." from html, or just treat each line.
               // Actually, a simple regex or just adding the line:
               if (ext == "html" || ext == "htm") {
                 // simple naive regex to extract href
@@ -297,7 +303,8 @@ void MainWindow::onAddItems() {
                   QString link = match.captured(1).trimmed();
                   if (!link.isEmpty()) {
                     Item newItem;
-                    newItem.id = QString::number(now) + "_" + QString::number(idx++) + "_item";
+                    newItem.id = QString::number(now) + "_" +
+                                 QString::number(idx++) + "_item";
                     newItem.state = ItemState::Unprocessed;
                     newItem.sourcePath = link;
                     newItem.createdTime = QDateTime::currentDateTime();
@@ -307,7 +314,8 @@ void MainWindow::onAddItems() {
               } else {
                 // txt file
                 Item newItem;
-                newItem.id = QString::number(now) + "_" + QString::number(idx++) + "_item";
+                newItem.id = QString::number(now) + "_" +
+                             QString::number(idx++) + "_item";
                 newItem.state = ItemState::Unprocessed;
                 newItem.sourcePath = fileLine;
                 newItem.createdTime = QDateTime::currentDateTime();
@@ -321,7 +329,8 @@ void MainWindow::onAddItems() {
 
       // Not a text/html file (or doesn't exist locally), treat as regular item
       Item newItem;
-      newItem.id = QString::number(now) + "_" + QString::number(idx++) + "_item";
+      newItem.id =
+          QString::number(now) + "_" + QString::number(idx++) + "_item";
       newItem.state = ItemState::Unprocessed;
       newItem.sourcePath = line;
       newItem.createdTime = QDateTime::currentDateTime();
