@@ -14,7 +14,8 @@ class QBittorrentConnector : public QObject, public Connector {
   Q_PLUGIN_METADATA(IID "com.kmagmux.Connector/1.0" FILE "qbittorrent.json")
 
 public:
-  explicit QBittorrentConnector(QObject *parent = nullptr);
+  QBittorrentConnector();
+  explicit QBittorrentConnector(QObject *parent);
   QString getId() const override;
   QString getName() const override;
   void dispatch(const Item &item) override;
