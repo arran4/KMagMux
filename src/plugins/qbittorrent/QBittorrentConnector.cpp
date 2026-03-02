@@ -13,8 +13,7 @@ QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
       m_baseUrl("http://localhost:8080"), m_username("admin"),
-      m_password("adminadmin"), m_pendingItem(), m_isPending(false) {
-}
+      m_password("adminadmin"), m_pendingItem(), m_isPending(false) {}
 
 QString QBittorrentConnector::getId() const { return "qBittorrent"; }
 

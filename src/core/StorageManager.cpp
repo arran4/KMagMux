@@ -9,8 +9,8 @@
 #include <QStandardPaths>
 
 StorageManager::StorageManager(QObject *parent)
-    : QObject(parent),
-      m_baseDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)) {
+    : QObject(parent), m_baseDir(QStandardPaths::writableLocation(
+                           QStandardPaths::AppDataLocation)) {
   // Set base directory to ~/.local/share/KMagMux
   if (m_baseDir.isEmpty()) {
     // Fallback for systems that might not return AppDataLocation correctly,
