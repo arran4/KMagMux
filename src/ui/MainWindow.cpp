@@ -171,7 +171,7 @@ void MainWindow::onItemAction(ItemState newState) {
   if (!view)
     return;
 
-  ItemModel *model = getCurrentModel();
+  const ItemModel *model = getCurrentModel();
   if (!model)
     return;
 
@@ -219,7 +219,7 @@ void MainWindow::onProcessItem() {
   if (!view)
     return;
 
-  ItemModel *model = getCurrentModel();
+  const ItemModel *model = getCurrentModel();
   if (!model)
     return;
 

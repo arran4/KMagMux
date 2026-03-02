@@ -8,9 +8,10 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 
-StorageManager::StorageManager(QObject *parent) : QObject(parent) {
+StorageManager::StorageManager(QObject *parent)
+    : QObject(parent),
+      m_baseDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)) {
   // Set base directory to ~/.local/share/KMagMux
-  m_baseDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
   if (m_baseDir.isEmpty()) {
     // Fallback for systems that might not return AppDataLocation correctly,
     // though unlikely with Qt
