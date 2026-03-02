@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "AddItemDialog.h"
+#include "PreferencesDialog.h"
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -31,17 +32,26 @@ void MainWindow::setupUi() {
 
   // Setup Menu Bar
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-  QAction *addAction = fileMenu->addAction(tr("&Add Torrent/Magnet..."), this,
+  QAction *addAction = fileMenu->addAction(QIcon::fromTheme("list-add"),
+                                           tr("&Add Torrent/Magnet..."), this,
                                            &MainWindow::onAddItem);
+  addAction->setShortcut(QKeySequence("Ctrl+O"));
+
   fileMenu->addSeparator();
   QAction *quitAction =
-      fileMenu->addAction(tr("&Quit"), qApp, &QApplication::quit);
+      fileMenu->addAction(QIcon::fromTheme("application-exit"), tr("&Quit"),
+                          qApp, &QApplication::quit);
+  quitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
   QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
-  editMenu->addAction(tr("&Preferences"), this, &MainWindow::onPreferences);
+  QAction *prefAction =
+      editMenu->addAction(QIcon::fromTheme("preferences-system"),
+                          tr("&Preferences"), this, &MainWindow::onPreferences);
+  prefAction->setShortcut(QKeySequence("Ctrl+,"));
 
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
-  helpMenu->addAction(tr("&About KMagMux"), this, &MainWindow::onAbout);
+  helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
+                      this, &MainWindow::onAbout);
 
   // Setup Tool Bar
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
@@ -262,18 +272,7 @@ void MainWindow::openProcessDialog(Item &item) {
 }
 
 void MainWindow::onPreferences() {
-  QDialog dialog(this);
-  dialog.setWindowTitle(tr("Preferences"));
-  dialog.resize(300, 200);
-
-  QVBoxLayout *layout = new QVBoxLayout(&dialog);
-  QLabel *label = new QLabel(tr("Preferences settings will go here."), &dialog);
-  layout->addWidget(label);
-
-  QPushButton *closeBtn = new QPushButton(tr("Close"), &dialog);
-  connect(closeBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
-  layout->addWidget(closeBtn);
-
+  PreferencesDialog dialog(this);
   dialog.exec();
 }
 

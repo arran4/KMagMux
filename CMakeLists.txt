@@ -26,6 +26,7 @@ add_executable(KMagMux
     src/main.cpp
     src/ui/MainWindow.cpp
     src/ui/AddItemDialog.cpp
+    src/ui/PreferencesDialog.cpp
     resources/resources.qrc
 )
 
