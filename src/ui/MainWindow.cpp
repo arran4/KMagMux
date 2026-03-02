@@ -285,15 +285,6 @@ void MainWindow::onAddItems() {
               if (fileLine.isEmpty())
                 continue;
 
-              // In a real HTML parser we'd extract hrefs, but here we
-              // just naively assume it might contain lines that are links
-              // or we just add it and let the processor figure it out.
-              // To match "mixed mode", we just add each non-empty line as an
-              // Item. Wait, the prompt says "text file of direct links to
-              // torrent files, and multiple magnent or torrent files html file
-              // with links, but otherwise like text files a torrent file" So we
-              // can extract href="..." from html, or just treat each line.
-              // Actually, a simple regex or just adding the line:
               if (ext == "html" || ext == "htm") {
                 // simple naive regex to extract href
                 QRegularExpression re("href=[\"']([^\"']+)[\"']");
