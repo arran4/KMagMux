@@ -35,6 +35,14 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 
     for (QString fileName : pluginsDir.entryList(QDir::Files)) {
       QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
+
+      // Check metadata before instantiating to avoid loading non-plugin
+      // libraries blockingly
+      QJsonObject meta = pluginLoader.metaData();
+      if (meta.value("IID").toString() != "com.kmagmux.Connector/1.0") {
+        continue;
+      }
+
       QObject *plugin = pluginLoader.instance();
       if (plugin) {
         Connector *connector = qobject_cast<Connector *>(plugin);
