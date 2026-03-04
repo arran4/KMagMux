@@ -129,6 +129,9 @@ void Engine::dispatchItem(Item &item) {
     // Fallback to default connector if connectorId is not found or is "Default"
     if (m_connectors.contains(m_defaultConnectorId)) {
       connector = m_connectors[m_defaultConnectorId];
+    } else if (!m_connectors.isEmpty()) {
+      // If the default is not available, pick the first available connector
+      connector = m_connectors.first();
     }
   }
 
