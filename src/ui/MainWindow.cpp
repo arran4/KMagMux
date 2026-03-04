@@ -369,13 +369,15 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
   AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
     std::vector<Item> updatedItems = dialog.getItems();
+    std::vector<Item> itemsToSave;
+    itemsToSave.reserve(updatedItems.size());
 
     for (Item &updatedItem : updatedItems) {
       bool success = true;
 
       if (dialog.shouldDeleteOriginal()) {
         // Move logic
-        if (!m_storage->moveToManaged(updatedItem, true)) {
+        if (!m_storage->moveToManaged(updatedItem, true, true)) {
           QMessageBox::warning(
               this, "Error",
               QString("Failed to move original file to managed storage: %1")
@@ -387,14 +389,13 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
       }
 
       if (success) {
-        if (m_storage->saveItem(updatedItem)) {
-          qDebug() << "Item processed and saved:" << updatedItem.id;
-        } else {
-          QMessageBox::warning(this, "Error",
-                               QString("Failed to save item metadata: %1")
-                                   .arg(updatedItem.sourcePath));
-        }
+        itemsToSave.push_back(updatedItem);
+        qDebug() << "Item queued for saving:" << updatedItem.id;
       }
+    }
+
+    if (!itemsToSave.empty()) {
+      m_storage->saveItems(itemsToSave);
     }
   }
 }
