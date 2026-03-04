@@ -1,6 +1,5 @@
 #include "StorageManager.h"
 #include <QDateTime>
-#include <utility>
 #include <QDebug>
 #include <QDirIterator>
 #include <QFile>
@@ -8,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
+#include <utility>
 
 StorageManager::StorageManager(QObject *parent)
     : QObject(parent), m_baseDir(QStandardPaths::writableLocation(
