@@ -40,6 +40,7 @@ add_executable(KMagMux
 
 target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets)
 
+include(CTest)
 add_subdirectory(src/plugins/qbittorrent)
 
 install(TARGETS KMagMux KMagMuxCore DESTINATION bin)

@@ -9,3 +9,7 @@ set_target_properties(qbittorrent PROPERTIES
 )
 
 install(TARGETS qbittorrent DESTINATION ${CMAKE_INSTALL_LIBDIR}/kmagmux/plugins)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
