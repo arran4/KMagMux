@@ -202,9 +202,8 @@ void StorageManager::processNewFile(const QString &filePath) {
   newItem.sourcePath = filePath;
   newItem.createdTime = QDateTime::currentDateTime();
 
-  // Attempt to move to managed storage immediately (per "everything is files"
-  // philosophy) Or just register it. For now, we register it. The "move" action
-  // is typically user-initiated or policy-driven.
+  // TODO: Implement policy for automated vs user-initiated moves to managed
+  // storage. For now, we only register the item.
 
   if (saveItem(newItem)) {
     emit itemAdded(newItem);
