@@ -42,6 +42,11 @@ target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widget
 
 add_subdirectory(src/plugins/qbittorrent)
 
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
+
 install(TARGETS KMagMux KMagMuxCore DESTINATION bin)
 install(FILES KMagMux.desktop DESTINATION share/applications)
 
