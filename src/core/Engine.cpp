@@ -126,11 +126,12 @@ void Engine::dispatchItem(Item &item) {
   if (!item.connectorId.isEmpty() && m_connectors.contains(item.connectorId)) {
     connector = m_connectors[item.connectorId];
   } else {
-    // Fallback to qBittorrent if connectorId is not found or is "Default"
-    // In AddItemDialog we add "Default" and "qBittorrent".
-    // If "Default" is selected, we use qBittorrent for now.
-    if (m_connectors.contains("qBittorrent")) {
-      connector = m_connectors["qBittorrent"];
+    // Fallback to default connector if connectorId is not found or is "Default"
+    if (m_connectors.contains(m_defaultConnectorId)) {
+      connector = m_connectors[m_defaultConnectorId];
+    } else if (!m_connectors.isEmpty()) {
+      // If the default is not available, pick the first available connector
+      connector = m_connectors.first();
     }
   }
 

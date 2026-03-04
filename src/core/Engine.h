@@ -17,6 +17,9 @@ public:
   void stop();
   QStringList getAvailableConnectors() const;
 
+  QString defaultConnectorId() const { return m_defaultConnectorId; }
+  void setDefaultConnectorId(const QString &id) { m_defaultConnectorId = id; }
+
 private slots:
   void processQueue();
   void onDispatchFinished(const QString &itemId, bool success,
@@ -27,6 +30,7 @@ private:
   QTimer *m_timer;
   bool m_paused;
   QMap<QString, Connector *> m_connectors;
+  QString m_defaultConnectorId{"qBittorrent"};
 
   void dispatchItem(Item &item);
 };
