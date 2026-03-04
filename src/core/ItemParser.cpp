@@ -52,8 +52,8 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
             } else {
               // txt file
               Item newItem;
-              newItem.id = QString::number(now) + "_" +
-                           QString::number(idx++) + "_item";
+              newItem.id =
+                  QString::number(now) + "_" + QString::number(idx++) + "_item";
               newItem.state = ItemState::Unprocessed;
               newItem.sourcePath = fileLine;
               newItem.createdTime = QDateTime::currentDateTime();

@@ -7,7 +7,7 @@
 
 class ItemParser {
 public:
-    static std::vector<Item> parseLines(const QStringList &lines);
+  static std::vector<Item> parseLines(const QStringList &lines);
 };
 
 #endif // ITEMPARSER_H
