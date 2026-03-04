@@ -27,6 +27,7 @@ public:
 
   // Persistence
   bool saveItem(const Item &item);
+  void saveItems(const std::vector<Item> &items);
   std::optional<Item> loadItem(const QString &id);
   std::vector<Item> loadAllItems();
 
@@ -34,7 +35,7 @@ public:
   QStringList scanInbox() const;
 
   // File Management
-  bool moveToManaged(Item &item, bool deleteOriginal);
+  bool moveToManaged(Item &item, bool deleteOriginal, bool skipSave = false);
 
 signals:
   void itemAdded(const Item &item);

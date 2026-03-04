@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
+#include <QtConcurrent>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
@@ -118,6 +119,17 @@ bool StorageManager::saveItem(const Item &item) {
   return true;
 }
 
+void StorageManager::saveItems(const std::vector<Item> &items) {
+  if (items.empty()) {
+    return;
+  }
+  (void)QtConcurrent::run([this, items]() {
+    for (const Item &item : items) {
+      saveItem(item);
+    }
+  });
+}
+
 std::optional<Item> StorageManager::loadItem(const QString &id) {
   QString path = getItemPath(id);
   QFile file(path);
@@ -200,7 +212,8 @@ void StorageManager::processNewFile(const QString &filePath) {
   }
 }
 
-bool StorageManager::moveToManaged(Item &item, bool deleteOriginal) {
+bool StorageManager::moveToManaged(Item &item, bool deleteOriginal,
+                                   bool skipSave) {
   if (item.sourcePath.startsWith("magnet:")) {
     // For magnets, we just create a .magnet file in managed dir
     QString filename = item.id + ".magnet";
@@ -216,6 +229,9 @@ bool StorageManager::moveToManaged(Item &item, bool deleteOriginal) {
       QJsonObject meta = item.metadata;
       meta["managedFile"] = managedPath;
       item.metadata = meta;
+      if (skipSave) {
+        return true;
+      }
       return saveItem(item);
     }
     return false;
@@ -261,6 +277,9 @@ bool StorageManager::moveToManaged(Item &item, bool deleteOriginal) {
         QJsonObject meta = item.metadata;
         meta["managedFile"] = managedPath;
         item.metadata = meta;
+      }
+      if (skipSave) {
+        return true;
       }
       return saveItem(item);
     }

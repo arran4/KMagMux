@@ -9,7 +9,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
 
 include(GNUInstallDirs)
 
@@ -20,7 +20,7 @@ add_library(KMagMuxCore SHARED
     src/core/Engine.cpp
     src/core/ItemModel.cpp
 )
-target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network)
+target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)
 target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 file(RELATIVE_PATH REL_PLUGIN_DIR
