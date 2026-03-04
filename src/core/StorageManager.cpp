@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
+#include <utility>
 
 StorageManager::StorageManager(QObject *parent)
     : QObject(parent), m_baseDir(QStandardPaths::writableLocation(
@@ -50,8 +51,9 @@ bool StorageManager::init() {
     if (m_watcher->addPath(m_inboxDir)) {
       qDebug() << "Watching inbox:" << m_inboxDir;
       // Initial scan to populate known files and process existing ones
-      m_knownFiles = scanInbox();
-      for (const QString &file : m_knownFiles) {
+      QStringList initialFiles = scanInbox();
+      m_knownFiles = QSet<QString>(initialFiles.begin(), initialFiles.end());
+      for (const QString &file : std::as_const(m_knownFiles)) {
         // In a real scenario, we might want to process existing files on
         // startup For now, we'll just log them to acknowledge existence.
         // processNewFile(m_inboxDir + "/" + file);
@@ -158,13 +160,16 @@ QStringList StorageManager::scanInbox() const {
 
 void StorageManager::onDirectoryChanged(const QString &path) {
   if (path == m_inboxDir) {
-    QStringList currentFiles = scanInbox();
+    QStringList currentFilesList = scanInbox();
+    QSet<QString> currentFiles(currentFilesList.begin(),
+                               currentFilesList.end());
 
     // Find new files
-    for (const QString &file : currentFiles) {
-      if (!m_knownFiles.contains(file)) {
-        processNewFile(m_inboxDir + "/" + file);
-      }
+    QSet<QString> newFiles = currentFiles;
+    newFiles.subtract(m_knownFiles);
+
+    for (const QString &file : std::as_const(newFiles)) {
+      processNewFile(m_inboxDir + "/" + file);
     }
 
     m_knownFiles = currentFiles;

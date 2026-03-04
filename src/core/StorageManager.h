@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QFileSystemWatcher>
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <optional>
 #include <vector>
@@ -54,7 +55,7 @@ private:
   QString m_managedDir; // New
 
   QFileSystemWatcher *m_watcher;
-  QStringList m_knownFiles; // To track new files vs existing
+  QSet<QString> m_knownFiles; // To track new files vs existing
 
   bool createDirIfNotExists(const QString &path);
   QString getItemPath(const QString &id) const;
