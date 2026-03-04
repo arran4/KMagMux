@@ -13,7 +13,7 @@
 class MockQBitServer : public QTcpServer {
   Q_OBJECT
 public:
-  MockQBitServer(QObject *parent = nullptr)
+  explicit MockQBitServer(QObject *parent = nullptr)
       : QTcpServer(parent), m_loginSuccess(true), m_addSuccess(true),
         m_lastAddedUrl(""), m_lastAddedPath("") {}
 

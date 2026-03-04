@@ -36,7 +36,7 @@ jobs:
       - name: Test
         run: |
           cd build
-          ctest --output-on-failure
+          QT_QPA_PLATFORM=offscreen ctest --output-on-failure
 
   vet:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
@@ -82,6 +82,9 @@ jobs:
 
       - name: Configure CMake for compile_commands.json
         run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build to generate MOC files
+        run: cmake --build build -j$(nproc)
 
       - name: Run clang-tidy
         run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/
