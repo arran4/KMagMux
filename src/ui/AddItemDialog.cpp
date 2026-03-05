@@ -28,7 +28,7 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
   }
 
   // Dynamic connector handling
-  m_connectorCombo->addItem(Constants::DefaultConnectorId);
+  m_connectorCombo->addItem(Constants::DefaultActionName);
   for (const QString &connector : connectors) {
     m_connectorCombo->addItem(connector);
   }
