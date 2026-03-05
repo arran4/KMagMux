@@ -24,3 +24,8 @@ else()
 endif()
 
 add_test(NAME TestEngine COMMAND TestEngine)
+
+add_executable(TestStorageManager TestStorageManager.cpp)
+target_link_libraries(TestStorageManager PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
+target_include_directories(TestStorageManager PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+add_test(NAME TestStorageManager COMMAND TestStorageManager)
