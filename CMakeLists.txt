@@ -19,6 +19,7 @@ add_library(KMagMuxCore SHARED
     src/core/StorageManager.cpp
     src/core/Engine.cpp
     src/core/ItemModel.cpp
+    src/core/ItemParser.cpp
 )
 target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)
 target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
