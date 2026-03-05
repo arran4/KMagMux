@@ -30,7 +30,7 @@ private:
   QTimer *m_timer;
   bool m_paused;
   QMap<QString, Connector *> m_connectors;
-  QString m_defaultConnectorId{"Save for later"};
+  QString m_defaultConnectorId{"qBittorrent"};
 
   void dispatchItem(Item &item);
 };

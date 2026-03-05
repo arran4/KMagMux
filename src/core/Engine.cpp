@@ -129,6 +129,14 @@ void Engine::dispatchItem(Item &item) {
     // Fallback to default connector if connectorId is not found or is "Default"
     if (m_connectors.contains(m_defaultConnectorId)) {
       connector = m_connectors[m_defaultConnectorId];
+    } else if (m_defaultConnectorId == "Save for later") {
+      // Handle built-in fallback
+      item.state = ItemState::Queued;
+      item.connectorId = "";
+      m_storage->saveItem(item);
+      qDebug() << "Item" << item.id << "saved for later.";
+      onDispatchFinished(item.id, true, "Saved for later");
+      return;
     }
   }
 
