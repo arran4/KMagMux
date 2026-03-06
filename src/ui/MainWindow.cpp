@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
+#include "LinkExtractorDialog.h"
 #include "PreferencesDialog.h"
 #include <QApplication>
 #include <QDateTime>
@@ -80,7 +81,10 @@ void MainWindow::setupUi() {
   auto setupView = [this](QTableView *view, ItemModel *model,
                           const QString &title) {
     view->setModel(model);
-    view->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    view->horizontalHeader()->setStretchLastSection(true);
+    view->setTextElideMode(Qt::ElideNone);
+    view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(view, &QTableView::customContextMenuRequested, this,
@@ -88,10 +92,10 @@ void MainWindow::setupUi() {
     m_tabWidget->addTab(view, title);
   };
 
-  // Unprocessed Tab
+  // Inbox Tab
   m_unprocessedView = new QTableView(this);
   m_unprocessedModel = new ItemModel(this);
-  setupView(m_unprocessedView, m_unprocessedModel, "Unprocessed");
+  setupView(m_unprocessedView, m_unprocessedModel, "Inbox");
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
 
@@ -170,7 +174,7 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
   QMenu menu(this);
 
-  // If we are in the Unprocessed view, offer a "Process..." action
+  // If we are in the Inbox view, offer a "Process..." action
   if (view == m_unprocessedView) {
     QAction *processAction = menu.addAction("Process...");
     connect(processAction, &QAction::triggered, this,
@@ -247,13 +251,16 @@ void MainWindow::onAddItems() {
   layout->addWidget(label);
 
   QPlainTextEdit *textEdit = new QPlainTextEdit(&dialog);
+  textEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
   textEdit->setPlaceholderText(
       tr("file://...\n/path/to/file\nhttp://...\nhttps://...\nmagnet:..."));
   layout->addWidget(textEdit);
 
   QHBoxLayout *buttonLayout = new QHBoxLayout();
   QPushButton *browseBtn = new QPushButton(tr("Browse Files..."), &dialog);
+  QPushButton *openListBtn = new QPushButton(tr("Open List/HTML"), &dialog);
   buttonLayout->addWidget(browseBtn);
+  buttonLayout->addWidget(openListBtn);
   buttonLayout->addStretch();
 
   QDialogButtonBox *buttonBox = new QDialogButtonBox(
@@ -276,6 +283,63 @@ void MainWindow::onAddItems() {
       textEdit->setPlainText(currentText);
     }
   });
+
+  connect(
+      openListBtn, &QPushButton::clicked, this, [&dialog, textEdit, this]() {
+        QDialog openDialog(&dialog);
+        openDialog.setWindowTitle(tr("Open List/HTML"));
+        QVBoxLayout *olLayout = new QVBoxLayout(&openDialog);
+
+        QLabel *olLabel = new QLabel(
+            tr("Enter URLs or local file paths to text lists or HTML files:"),
+            &openDialog);
+        olLayout->addWidget(olLabel);
+
+        QPlainTextEdit *olTextEdit = new QPlainTextEdit(&openDialog);
+        olTextEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
+        olLayout->addWidget(olTextEdit);
+
+        QCheckBox *extractMagnetsCb =
+            new QCheckBox(tr("Extract magnet links"), &openDialog);
+        extractMagnetsCb->setChecked(true);
+        olLayout->addWidget(extractMagnetsCb);
+
+        QCheckBox *extractTorrentsCb =
+            new QCheckBox(tr("Extract torrent links"), &openDialog);
+        extractTorrentsCb->setChecked(true);
+        olLayout->addWidget(extractTorrentsCb);
+
+        QDialogButtonBox *olButtonBox = new QDialogButtonBox(
+            QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &openDialog);
+        olLayout->addWidget(olButtonBox);
+
+        connect(olButtonBox, &QDialogButtonBox::accepted, &openDialog,
+                &QDialog::accept);
+        connect(olButtonBox, &QDialogButtonBox::rejected, &openDialog,
+                &QDialog::reject);
+
+        if (openDialog.exec() == QDialog::Accepted) {
+          QStringList lines = olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+          if (!lines.isEmpty()) {
+            LinkExtractorDialog extractor(lines, extractMagnetsCb->isChecked(),
+                                          extractTorrentsCb->isChecked(),
+                                          &dialog);
+            if (extractor.exec() == QDialog::Accepted) {
+              if (extractor.wasModified()) {
+                QString expanded = extractor.getExpandedLines().join('\n');
+                if (!expanded.isEmpty()) {
+                  QString currentText = textEdit->toPlainText();
+                  if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
+                    currentText += '\n';
+                  }
+                  currentText += expanded + '\n';
+                  textEdit->setPlainText(currentText);
+                }
+              }
+            }
+          }
+        }
+      });
 
   connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
   connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -341,7 +405,7 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
     for (Item &updatedItem : updatedItems) {
       bool success = true;
 
-      if (dialog.shouldDeleteOriginal()) {
+      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
         // Move logic
         if (!m_storage->moveToManaged(updatedItem, true, true)) {
           QMessageBox::warning(
@@ -350,8 +414,11 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
                   .arg(updatedItem.sourcePath));
           success = false; // Should we abort saving? Maybe just warn.
         }
-      } else {
-        // Just save. If it's a new item, we should save it anyway.
+
+        // Remove the temporary internal flag before saving
+        QJsonObject meta = updatedItem.metadata;
+        meta.remove("delete_source_file");
+        updatedItem.metadata = meta;
       }
 
       if (success) {
