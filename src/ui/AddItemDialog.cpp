@@ -9,6 +9,8 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QVBoxLayout>
+#include <QMenu>
+#include <QMessageBox>
 
 namespace {
 QString getDisplayName(const QString &sourcePath) {
@@ -87,6 +89,9 @@ void AddItemDialog::setupUi() {
                                                          QHeaderView::Interactive);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
+  m_itemsTable->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(m_itemsTable, &QTableWidget::customContextMenuRequested, this,
+          &AddItemDialog::onCustomContextMenuRequested);
   mainLayout->addWidget(m_itemsTable);
 
   QFormLayout *formLayout = new QFormLayout();
@@ -175,4 +180,23 @@ void AddItemDialog::onProcessClicked() {
 
   m_items = processedItems;
   accept();
+}
+
+void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
+  QTableWidgetItem *item = m_itemsTable->itemAt(pos);
+  if (!item)
+    return;
+
+  int row = item->row();
+  if (row < 0 || static_cast<size_t>(row) >= m_items.size())
+    return;
+
+  QMenu menu(this);
+  QAction *infoAction = menu.addAction("Get Info");
+  connect(infoAction, &QAction::triggered, this, [this, row]() {
+    QMessageBox::information(this, "Item Information",
+                             QString("Source Path:\n%1").arg(m_items[row].sourcePath));
+  });
+
+  menu.exec(m_itemsTable->viewport()->mapToGlobal(pos));
 }
