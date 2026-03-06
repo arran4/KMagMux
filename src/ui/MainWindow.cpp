@@ -4,9 +4,12 @@
 #include "LinkExtractorDialog.h"
 #include "PreferencesDialog.h"
 #include <QApplication>
+#include <QCloseEvent>
 #include <QDateTime>
 #include <QDebug>
 #include <QDialogButtonBox>
+#include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFutureWatcher>
 #include <QHeaderView>
@@ -14,12 +17,22 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSettings>
+#include <QSystemTrayIcon>
+#include <QTextStream>
 #include <QVBoxLayout>
 #include <QtConcurrent>
 #include <algorithm>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
-    : QMainWindow(parent), m_storage(storage) {
+    : QMainWindow(parent), m_storage(storage), m_closeToTray(false),
+      m_autoStart(false) {
+  QSettings settings;
+  m_closeToTray = settings.value("closeToTray", false).toBool();
+  m_autoStart = settings.value("autoStart", false).toBool();
+
+  qApp->setQuitOnLastWindowClosed(false);
+
   setupUi();
   loadData();
 
@@ -33,6 +46,16 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 }
 
 MainWindow::~MainWindow() {}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+  if (m_closeToTray && m_trayIcon->isVisible()) {
+    hide();
+    event->ignore();
+  } else {
+    event->accept();
+    qApp->quit();
+  }
+}
 
 void MainWindow::setupUi() {
   setWindowTitle("KMagMux");
@@ -81,7 +104,8 @@ void MainWindow::setupUi() {
   auto setupView = [this](QTableView *view, ItemModel *model,
                           const QString &title) {
     view->setModel(model);
-    view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    view->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
     view->setTextElideMode(Qt::ElideNone);
     view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -113,6 +137,124 @@ void MainWindow::setupUi() {
   m_errorView = new QTableView(this);
   m_errorModel = new ItemModel(this);
   setupView(m_errorView, m_errorModel, "Errors");
+
+  // System Tray Setup
+  m_trayIcon = new QSystemTrayIcon(this);
+  m_trayIcon->setIcon(QIcon(":/icons/kmagmux.svg"));
+  if (m_trayIcon->icon().isNull()) {
+    m_trayIcon->setIcon(QIcon::fromTheme("kmagmux"));
+  }
+
+  m_trayIconMenu = new QMenu(this);
+
+  m_restoreAction = new QAction(tr("&Restore"), this);
+  connect(m_restoreAction, &QAction::triggered, this,
+          &MainWindow::restoreWindow);
+  m_trayIconMenu->addAction(m_restoreAction);
+
+  m_minimizeAction = new QAction(tr("&Minimize to Tray"), this);
+  connect(m_minimizeAction, &QAction::triggered, this,
+          &MainWindow::minimizeToTray);
+  m_trayIconMenu->addAction(m_minimizeAction);
+
+  m_trayIconMenu->addSeparator();
+
+  m_closeToTrayAction = new QAction(tr("&Close to Tray"), this);
+  m_closeToTrayAction->setCheckable(true);
+  m_closeToTrayAction->setChecked(m_closeToTray);
+  connect(m_closeToTrayAction, &QAction::toggled, this,
+          &MainWindow::toggleCloseToTray);
+  m_trayIconMenu->addAction(m_closeToTrayAction);
+
+  m_autoStartAction = new QAction(tr("Add to &Auto Start"), this);
+  m_autoStartAction->setCheckable(true);
+  m_autoStartAction->setChecked(m_autoStart);
+  connect(m_autoStartAction, &QAction::toggled, this,
+          &MainWindow::toggleAutoStart);
+  m_trayIconMenu->addAction(m_autoStartAction);
+
+  m_trayIconMenu->addSeparator();
+
+  m_quitAction = new QAction(tr("&Quit"), this);
+  connect(m_quitAction, &QAction::triggered, qApp, &QApplication::quit);
+  m_trayIconMenu->addAction(m_quitAction);
+
+  m_trayIcon->setContextMenu(m_trayIconMenu);
+  m_trayIcon->show();
+
+  connect(m_trayIcon, &QSystemTrayIcon::activated, this,
+          &MainWindow::onTrayIconActivated);
+}
+
+void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
+  if (reason == QSystemTrayIcon::DoubleClick ||
+      reason == QSystemTrayIcon::Trigger) {
+    if (isVisible()) {
+      minimizeToTray();
+    } else {
+      restoreWindow();
+    }
+  }
+}
+
+void MainWindow::minimizeToTray() { hide(); }
+
+void MainWindow::restoreWindow() {
+  showNormal();
+  activateWindow();
+}
+
+void MainWindow::toggleCloseToTray(bool checked) {
+  m_closeToTray = checked;
+  QSettings settings;
+  settings.setValue("closeToTray", m_closeToTray);
+}
+
+void MainWindow::toggleAutoStart(bool checked) {
+  m_autoStart = checked;
+  QSettings settings;
+  settings.setValue("autoStart", m_autoStart);
+
+#ifdef Q_OS_WIN
+  QSettings bootUpSettings(
+      "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+      QSettings::NativeFormat);
+  if (m_autoStart) {
+    QString appPath =
+        QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+    bootUpSettings.setValue("KMagMux", "\"" + appPath + "\"");
+  } else {
+    bootUpSettings.remove("KMagMux");
+  }
+#elif defined(Q_OS_LINUX)
+  QString autostartPath = QDir::homePath() + "/.config/autostart";
+  QDir dir(autostartPath);
+  if (!dir.exists()) {
+    dir.mkpath(".");
+  }
+
+  QString desktopFilePath = autostartPath + "/kmagmux.desktop";
+  QFile file(desktopFilePath);
+
+  if (m_autoStart) {
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+      QTextStream out(&file);
+      out << "[Desktop Entry]\n"
+          << "Type=Application\n"
+          << "Exec=\"" << QCoreApplication::applicationFilePath() << "\"\n"
+          << "Hidden=false\n"
+          << "NoDisplay=false\n"
+          << "X-GNOME-Autostart-enabled=true\n"
+          << "Name=KMagMux\n"
+          << "Comment=Start KMagMux\n";
+      file.close();
+    }
+  } else {
+    if (file.exists()) {
+      file.remove();
+    }
+  }
+#endif
 }
 
 void MainWindow::loadData() {
@@ -319,7 +461,8 @@ void MainWindow::onAddItems() {
                 &QDialog::reject);
 
         if (openDialog.exec() == QDialog::Accepted) {
-          QStringList lines = olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+          QStringList lines =
+              olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
           if (!lines.isEmpty()) {
             LinkExtractorDialog extractor(lines, extractMagnetsCb->isChecked(),
                                           extractTorrentsCb->isChecked(),
@@ -435,7 +578,18 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
 
 void MainWindow::onPreferences() {
   PreferencesDialog dialog(this);
-  dialog.exec();
+  if (dialog.exec() == QDialog::Accepted) {
+    QSettings settings;
+    bool newCloseToTray = settings.value("closeToTray", false).toBool();
+    if (newCloseToTray != m_closeToTray) {
+      m_closeToTrayAction->setChecked(newCloseToTray);
+    }
+
+    bool newAutoStart = settings.value("autoStart", false).toBool();
+    if (newAutoStart != m_autoStart) {
+      m_autoStartAction->setChecked(newAutoStart);
+    }
+  }
 }
 
 void MainWindow::onAbout() {

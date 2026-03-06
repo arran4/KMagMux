@@ -1,10 +1,12 @@
 #include "PreferencesDialog.h"
 
+#include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QListWidget>
+#include <QSettings>
 #include <QStackedWidget>
 #include <QTableWidget>
 #include <QVBoxLayout>
@@ -37,7 +39,12 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) : QDialog(parent) {
   m_buttonBox = new QDialogButtonBox(
       QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel,
       this);
-  connect(m_buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+  connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
+    QSettings settings;
+    settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
+    settings.setValue("autoStart", m_autoStartCb->isChecked());
+    accept();
+  });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
   QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -60,6 +67,16 @@ void PreferencesDialog::createGeneralPage() {
   QVBoxLayout *layout = new QVBoxLayout(page);
   QLabel *label = new QLabel(tr("General Settings"), page);
   layout->addWidget(label);
+
+  QSettings settings;
+  m_closeToTrayCb = new QCheckBox(tr("Close to system tray"), page);
+  m_closeToTrayCb->setChecked(settings.value("closeToTray", false).toBool());
+  layout->addWidget(m_closeToTrayCb);
+
+  m_autoStartCb = new QCheckBox(tr("Start KMagMux automatically"), page);
+  m_autoStartCb->setChecked(settings.value("autoStart", false).toBool());
+  layout->addWidget(m_autoStartCb);
+
   layout->addStretch();
   m_pagesWidget->addWidget(page);
 

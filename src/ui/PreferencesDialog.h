@@ -3,6 +3,7 @@
 
 #include <QDialog>
 
+class QCheckBox;
 class QListWidget;
 class QListWidgetItem;
 class QStackedWidget;
@@ -25,6 +26,9 @@ private:
   QListWidget *m_categoriesList;
   QStackedWidget *m_pagesWidget;
   QDialogButtonBox *m_buttonBox;
+
+  QCheckBox *m_closeToTrayCb;
+  QCheckBox *m_autoStartCb;
 };
 
 #endif // PREFERENCESDIALOG_H
