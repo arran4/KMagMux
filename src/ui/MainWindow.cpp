@@ -288,12 +288,13 @@ void MainWindow::onAddItems() {
         QVBoxLayout *olLayout = new QVBoxLayout(&openDialog);
 
         QLabel *olLabel = new QLabel(
-            tr("Enter URL or local file path to a text list or HTML file:"),
+            tr("Enter URLs or local file paths to text lists or HTML files:"),
             &openDialog);
         olLayout->addWidget(olLabel);
 
-        QLineEdit *olLineEdit = new QLineEdit(&openDialog);
-        olLayout->addWidget(olLineEdit);
+        QPlainTextEdit *olTextEdit = new QPlainTextEdit(&openDialog);
+        olTextEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
+        olLayout->addWidget(olTextEdit);
 
         QCheckBox *extractMagnetsCb =
             new QCheckBox(tr("Extract magnet links"), &openDialog);
@@ -315,9 +316,8 @@ void MainWindow::onAddItems() {
                 &QDialog::reject);
 
         if (openDialog.exec() == QDialog::Accepted) {
-          QString urlStr = olLineEdit->text().trimmed();
-          if (!urlStr.isEmpty()) {
-            QStringList lines = {urlStr};
+          QStringList lines = olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+          if (!lines.isEmpty()) {
             LinkExtractorDialog extractor(lines, extractMagnetsCb->isChecked(),
                                           extractTorrentsCb->isChecked(),
                                           &dialog);
