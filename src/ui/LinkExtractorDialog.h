@@ -7,6 +7,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QStringList>
+#include <QCheckBox>
 
 class LinkExtractorDialog : public QDialog {
   Q_OBJECT
@@ -40,6 +41,8 @@ private:
 
   QPlainTextEdit *m_logEdit;
   QPushButton *m_cancelBtn;
+  QCheckBox *m_extractMagnetsCb;
+  QCheckBox *m_extractTorrentsCb;
 };
 
 #endif // LINKEXTRACTORDIALOG_H

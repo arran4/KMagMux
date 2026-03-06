@@ -18,14 +18,28 @@ QString getDisplayName(const QString &sourcePath) {
     QUrl url(sourcePath);
     QUrlQuery query(url);
     if (query.hasQueryItem("dn")) {
-      return query.queryItemValue("dn");
+      return QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
+    } else if (query.hasQueryItem("tr")) {
+      return "Magnet Link (No Name)";
+    } else {
+      // maybe xt infohash?
+      QString fullQuery = url.query();
+      int xtIdx = fullQuery.indexOf("xt=");
+      if (xtIdx != -1) {
+        int endIdx = fullQuery.indexOf('&', xtIdx);
+        if (endIdx == -1) endIdx = fullQuery.length();
+        return fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
+      }
     }
     return "Magnet Link";
   }
 
   QFileInfo fi(sourcePath);
   QString name = fi.fileName();
-  return name.isEmpty() ? sourcePath : name;
+  if (!name.isEmpty()) {
+    return QUrl::fromPercentEncoding(name.toUtf8());
+  }
+  return sourcePath;
 }
 } // namespace
 
@@ -34,7 +48,7 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     : QDialog(parent), m_items(items) {
   setupUi();
   setWindowTitle("Process Items");
-  resize(700, 500);
+  resize(850, 500);
 
   // Populate table
   m_itemsTable->setRowCount(m_items.size());
@@ -45,10 +59,14 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     m_itemsTable->setItem(i, 0, checkItem);
 
     QString displayName = getDisplayName(m_items[i].sourcePath);
-    QTableWidgetItem *sourceItem = new QTableWidgetItem(displayName);
-    sourceItem->setToolTip(m_items[i].sourcePath);
-    sourceItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    m_itemsTable->setItem(i, 1, sourceItem);
+    QTableWidgetItem *nameItem = new QTableWidgetItem(displayName);
+    nameItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    m_itemsTable->setItem(i, 1, nameItem);
+
+    QTableWidgetItem *linkItem = new QTableWidgetItem(m_items[i].sourcePath);
+    linkItem->setToolTip(m_items[i].sourcePath);
+    linkItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    m_itemsTable->setItem(i, 2, linkItem);
   }
 
   // Dynamic connector handling
@@ -81,12 +99,14 @@ void AddItemDialog::setupUi() {
 
   // Table
   m_itemsTable = new QTableWidget(this);
-  m_itemsTable->setColumnCount(2);
-  m_itemsTable->setHorizontalHeaderLabels({"Enable", "Source"});
+  m_itemsTable->setColumnCount(3);
+  m_itemsTable->setHorizontalHeaderLabels({"Enable", "Name", "Link"});
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       0, QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       1, QHeaderView::Interactive);
+  m_itemsTable->horizontalHeader()->setSectionResizeMode(
+      2, QHeaderView::Stretch);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
   m_itemsTable->setContextMenuPolicy(Qt::CustomContextMenu);

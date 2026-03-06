@@ -19,6 +19,16 @@ LinkExtractorDialog::LinkExtractorDialog(const QStringList &lines,
 
   QVBoxLayout *layout = new QVBoxLayout(this);
 
+  QHBoxLayout *optionsLayout = new QHBoxLayout();
+  m_extractMagnetsCb = new QCheckBox(tr("Extract magnet links"), this);
+  m_extractMagnetsCb->setChecked(true);
+  m_extractTorrentsCb = new QCheckBox(tr("Extract torrent links"), this);
+  m_extractTorrentsCb->setChecked(true);
+  optionsLayout->addWidget(m_extractMagnetsCb);
+  optionsLayout->addWidget(m_extractTorrentsCb);
+  optionsLayout->addStretch();
+  layout->addLayout(optionsLayout);
+
   m_logEdit = new QPlainTextEdit(this);
   m_logEdit->setReadOnly(true);
   layout->addWidget(m_logEdit);
@@ -179,8 +189,11 @@ void LinkExtractorDialog::extractFromHtml(const QString &content,
       QString resolvedStr = linkUrl.toString();
 
       // Only add magnet or torrent links
-      if (resolvedStr.startsWith("magnet:") ||
-          resolvedStr.endsWith(".torrent")) {
+      bool isMagnet = resolvedStr.startsWith("magnet:");
+      bool isTorrent = resolvedStr.endsWith(".torrent");
+
+      if ((isMagnet && m_extractMagnetsCb->isChecked()) ||
+          (isTorrent && m_extractTorrentsCb->isChecked())) {
         m_expandedLines.append(resolvedStr);
         addedCount++;
       }
@@ -195,8 +208,35 @@ void LinkExtractorDialog::extractFromTxt(const QString &content) {
   for (const QString &line : lines) {
     QString trimmed = line.trimmed();
     if (!trimmed.isEmpty()) {
-      m_expandedLines.append(trimmed);
-      addedCount++;
+      bool isMagnet = trimmed.startsWith("magnet:");
+      bool isTorrent = trimmed.endsWith(".torrent");
+
+      // For TXT, we might want to extract all non-empty lines if they are URLs,
+      // but to match the checkbox logic, we should filter magnets and torrents.
+      // If it's neither, we probably still want to add it as it was directly in a text file
+      // assuming the user knows what they're doing. Wait, user said "all of the links provided... assumed to be either magnet links, or direct paths to torrents".
+      // Let's filter TXT files the same way we do HTML, but if it doesn't end with .torrent and isn't a magnet, we check if it's a URL or file path.
+      // Actually, let's just apply the same checkbox filters to be safe and consistent.
+      // But what if it's a generic http link that the server resolves to a torrent?
+      // Let's just append it if the respective checkboxes are checked or if it doesn't look like a magnet/torrent explicitly.
+      // Actually, if they checked the boxes, they explicitly want to filter.
+      // Let's filter based on checkboxes if it's a magnet or ends with .torrent.
+      // If it's a generic link, keep it if torrents are enabled.
+
+      bool shouldAdd = false;
+      if (isMagnet) {
+          shouldAdd = m_extractMagnetsCb->isChecked();
+      } else if (isTorrent) {
+          shouldAdd = m_extractTorrentsCb->isChecked();
+      } else {
+          // If it's neither explicitly, we assume it's a link to a torrent/file
+          shouldAdd = m_extractTorrentsCb->isChecked();
+      }
+
+      if (shouldAdd) {
+        m_expandedLines.append(trimmed);
+        addedCount++;
+      }
     }
   }
   appendLog(tr("Extracted %1 links from TXT.").arg(addedCount));
