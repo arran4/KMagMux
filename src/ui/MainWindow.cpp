@@ -178,6 +178,18 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addSeparator();
   }
 
+  if (view == m_errorView) {
+    QAction *reprocessAction = menu.addAction("Reprocess");
+    connect(reprocessAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Queued); });
+
+    QAction *dismissAction = menu.addAction("Dismiss");
+    connect(dismissAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Archived); });
+
+    menu.addSeparator();
+  }
+
   QAction *queueAction = menu.addAction("Queue");
   QAction *holdAction = menu.addAction("Hold");
   QAction *archiveAction = menu.addAction("Archive");
