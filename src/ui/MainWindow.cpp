@@ -371,7 +371,7 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
     for (Item &updatedItem : updatedItems) {
       bool success = true;
 
-      if (dialog.shouldDeleteOriginal()) {
+      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
         // Move logic
         if (!m_storage->moveToManaged(updatedItem, true, true)) {
           QMessageBox::warning(
@@ -380,8 +380,11 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
                   .arg(updatedItem.sourcePath));
           success = false; // Should we abort saving? Maybe just warn.
         }
-      } else {
-        // Just save. If it's a new item, we should save it anyway.
+
+        // Remove the temporary internal flag before saving
+        QJsonObject meta = updatedItem.metadata;
+        meta.remove("delete_source_file");
+        updatedItem.metadata = meta;
       }
 
       if (success) {

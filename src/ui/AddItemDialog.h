@@ -22,7 +22,6 @@ public:
                          QWidget *parent = nullptr);
 
   std::vector<Item> getItems() const;
-  bool shouldDeleteOriginal() const;
 
 private slots:
   void onProcessClicked();
@@ -32,11 +31,6 @@ private:
   std::vector<Item> m_items;
 
   QTableWidget *m_itemsTable;
-  QComboBox *m_connectorCombo;
-  QLineEdit *m_labelsEdit;
-  QCheckBox *m_deleteOriginalCheck;
-  QCheckBox *m_enableScheduleCheck;
-  QDateTimeEdit *m_scheduleEdit;
 
   void setupUi();
 };

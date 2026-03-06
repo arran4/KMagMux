@@ -43,6 +43,10 @@ QString getDisplayName(const QString &sourcePath) {
 }
 } // namespace
 
+#include <QClipboard>
+#include <QGuiApplication>
+#include <QLabel>
+
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
                              const QStringList &connectors, QWidget *parent)
     : QDialog(parent), m_items(items) {
@@ -63,34 +67,25 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     nameItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     m_itemsTable->setItem(i, 1, nameItem);
 
+    QLabel *linkLabel = new QLabel(QString("<a href=\"%1\">%1</a>").arg(m_items[i].sourcePath));
+    linkLabel->setOpenExternalLinks(false); // We want to show it, not necessarily open a browser directly
+    linkLabel->setTextFormat(Qt::RichText);
+    linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    m_itemsTable->setCellWidget(i, 2, linkLabel);
+
+    // Keep the actual data in the item for easy retrieval
     QTableWidgetItem *linkItem = new QTableWidgetItem(m_items[i].sourcePath);
-    linkItem->setToolTip(m_items[i].sourcePath);
-    linkItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     m_itemsTable->setItem(i, 2, linkItem);
-  }
 
-  // Dynamic connector handling
-  m_connectorCombo->addItem(Constants::DefaultActionName);
-  for (const QString &connector : connectors) {
-    m_connectorCombo->addItem(connector);
-  }
-
-  // Common metadata? We just default to empty for now.
-  // If there's only 1 item and it has metadata, load it.
-  if (m_items.size() == 1) {
-    if (!m_items[0].connectorId.isEmpty()) {
-      int index = m_connectorCombo->findText(m_items[0].connectorId);
-      if (index >= 0)
-        m_connectorCombo->setCurrentIndex(index);
+    bool isLocalFile = QFileInfo(m_items[i].sourcePath).exists();
+    QTableWidgetItem *deleteItem = new QTableWidgetItem();
+    deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+    if (isLocalFile) {
+        deleteItem->setCheckState(Qt::Unchecked);
+    } else {
+        deleteItem->setFlags(Qt::NoItemFlags); // Disable checkbox for non-local files
     }
-    if (m_items[0].metadata.contains("labels")) {
-      m_labelsEdit->setText(m_items[0].metadata["labels"].toString());
-    }
-    if (m_items[0].scheduledTime.isValid()) {
-      m_scheduleEdit->setDateTime(m_items[0].scheduledTime);
-      m_enableScheduleCheck->setChecked(true);
-      m_scheduleEdit->setEnabled(true);
-    }
+    m_itemsTable->setItem(i, 3, deleteItem);
   }
 }
 
@@ -99,14 +94,12 @@ void AddItemDialog::setupUi() {
 
   // Table
   m_itemsTable = new QTableWidget(this);
-  m_itemsTable->setColumnCount(3);
-  m_itemsTable->setHorizontalHeaderLabels({"Enable", "Name", "Link"});
+  m_itemsTable->setColumnCount(4);
+  m_itemsTable->setHorizontalHeaderLabels({"Enable", "Name", "Link", "Delete file"});
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
-      0, QHeaderView::ResizeToContents);
-  m_itemsTable->horizontalHeader()->setSectionResizeMode(
-      1, QHeaderView::Interactive);
-  m_itemsTable->horizontalHeader()->setSectionResizeMode(
-      2, QHeaderView::Stretch);
+      QHeaderView::ResizeToContents);
+  m_itemsTable->horizontalHeader()->setStretchLastSection(true);
+  m_itemsTable->setTextElideMode(Qt::ElideNone); // Do not truncate
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
   m_itemsTable->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -114,40 +107,10 @@ void AddItemDialog::setupUi() {
           &AddItemDialog::onCustomContextMenuRequested);
   mainLayout->addWidget(m_itemsTable);
 
-  QFormLayout *formLayout = new QFormLayout();
-
-  m_connectorCombo = new QComboBox(this);
-  formLayout->addRow("Action:", m_connectorCombo);
-
-  m_labelsEdit = new QLineEdit(this);
-  m_labelsEdit->setPlaceholderText("comma, separated, labels");
-  formLayout->addRow("Labels:", m_labelsEdit);
-
-  m_deleteOriginalCheck = new QCheckBox("Delete source list?", this);
-  formLayout->addRow("", m_deleteOriginalCheck);
-
-  QHBoxLayout *scheduleLayout = new QHBoxLayout();
-  m_enableScheduleCheck = new QCheckBox(this);
-  m_scheduleEdit =
-      new QDateTimeEdit(QDateTime::currentDateTime().addSecs(3600), this);
-  m_scheduleEdit->setDisplayFormat("yyyy-MM-dd HH:mm:ss");
-  m_scheduleEdit->setCalendarPopup(true);
-  m_scheduleEdit->setEnabled(false);
-
-  connect(m_enableScheduleCheck, &QCheckBox::toggled, m_scheduleEdit,
-          &QWidget::setEnabled);
-
-  scheduleLayout->addWidget(m_enableScheduleCheck);
-  scheduleLayout->addWidget(m_scheduleEdit);
-
-  formLayout->addRow("Proceed to next action after:", scheduleLayout);
-
-  mainLayout->addLayout(formLayout);
-
   // Action Buttons
   QHBoxLayout *btnLayout = new QHBoxLayout();
 
-  QPushButton *processBtn = new QPushButton("Process", this);
+  QPushButton *processBtn = new QPushButton("Add to Unprocessed", this);
   connect(processBtn, &QPushButton::clicked, this,
           &AddItemDialog::onProcessClicked);
 
@@ -163,35 +126,22 @@ void AddItemDialog::setupUi() {
 
 std::vector<Item> AddItemDialog::getItems() const { return m_items; }
 
-bool AddItemDialog::shouldDeleteOriginal() const {
-  return m_deleteOriginalCheck->isChecked();
-}
-
 void AddItemDialog::onProcessClicked() {
-  QString action = m_connectorCombo->currentText();
-  QString labels = m_labelsEdit->text();
-  bool isScheduled = m_enableScheduleCheck->isChecked();
-  QDateTime scheduledTime = m_scheduleEdit->dateTime();
-
   std::vector<Item> processedItems;
 
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
     QTableWidgetItem *checkItem = m_itemsTable->item(i, 0);
     if (checkItem && checkItem->checkState() == Qt::Checked) {
       Item item = m_items[i];
-      item.connectorId = action;
+      item.state = ItemState::Unprocessed;
 
-      QJsonObject meta = item.metadata;
-      meta["labels"] = labels;
-      item.metadata = meta;
-
-      if (isScheduled) {
-        item.state = ItemState::Scheduled;
-        item.scheduledTime = scheduledTime;
-      } else if (action == Constants::DefaultActionName) {
-        item.state = ItemState::Held;
-      } else {
-        item.state = ItemState::Queued;
+      QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+      if (deleteItem && deleteItem->flags() & Qt::ItemIsUserCheckable) {
+          if (deleteItem->checkState() == Qt::Checked) {
+              QJsonObject meta = item.metadata;
+              meta["delete_source_file"] = true;
+              item.metadata = meta;
+          }
       }
 
       processedItems.push_back(item);
@@ -208,10 +158,45 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     return;
 
   int row = item->row();
+  int col = item->column();
   if (row < 0 || static_cast<size_t>(row) >= m_items.size())
     return;
 
   QMenu menu(this);
+
+  if (col == 3) {
+      QAction *selectAllAction = menu.addAction("Select All");
+      connect(selectAllAction, &QAction::triggered, this, [this]() {
+          for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
+              QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+              if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+                  deleteItem->setCheckState(Qt::Checked);
+              }
+          }
+      });
+      QAction *selectNoneAction = menu.addAction("Select None");
+      connect(selectNoneAction, &QAction::triggered, this, [this]() {
+          for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
+              QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+              if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+                  deleteItem->setCheckState(Qt::Unchecked);
+              }
+          }
+      });
+      menu.addSeparator();
+  }
+
+  QAction *copyAction = menu.addAction("Copy cell");
+  connect(copyAction, &QAction::triggered, this, [this, item, row, col]() {
+    QString text;
+    if (col == 2) {
+       text = m_items[row].sourcePath;
+    } else {
+       text = item->text();
+    }
+    QGuiApplication::clipboard()->setText(text);
+  });
+
   QAction *infoAction = menu.addAction("Get Info");
   connect(infoAction, &QAction::triggered, this, [this, row]() {
     QMessageBox::information(
