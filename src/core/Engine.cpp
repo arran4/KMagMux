@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "Constants.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -129,8 +130,8 @@ void Engine::dispatchItem(Item &item) {
     // Fallback to qBittorrent if connectorId is not found or is "Default"
     // In AddItemDialog we add "Default" and "qBittorrent".
     // If "Default" is selected, we use qBittorrent for now.
-    if (m_connectors.contains("qBittorrent")) {
-      connector = m_connectors["qBittorrent"];
+    if (m_connectors.contains(Constants::QBittorrentConnectorId)) {
+      connector = m_connectors[Constants::QBittorrentConnectorId];
     }
   }
 

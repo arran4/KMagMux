@@ -1,4 +1,5 @@
 #include "AddItemDialog.h"
+#include "../core/Constants.h"
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -27,7 +28,7 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
   }
 
   // Dynamic connector handling
-  m_connectorCombo->addItem("Default");
+  m_connectorCombo->addItem(Constants::DefaultActionName);
   for (const QString &connector : connectors) {
     m_connectorCombo->addItem(connector);
   }
