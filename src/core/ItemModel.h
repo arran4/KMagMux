@@ -9,7 +9,15 @@ class ItemModel : public QAbstractTableModel {
   Q_OBJECT
 
 public:
-  enum Columns { ColId = 0, ColState, ColSource, ColCreated, ColError, ColDispatchTime, ColumnCount };
+  enum Columns {
+    ColId = 0,
+    ColState,
+    ColSource,
+    ColCreated,
+    ColError,
+    ColDispatchTime,
+    ColumnCount
+  };
 
   explicit ItemModel(QObject *parent = nullptr);
 

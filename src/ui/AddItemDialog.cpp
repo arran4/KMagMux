@@ -3,14 +3,14 @@
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QUrl>
-#include <QUrlQuery>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QVBoxLayout>
 #include <QMenu>
 #include <QMessageBox>
+#include <QUrl>
+#include <QUrlQuery>
+#include <QVBoxLayout>
 
 namespace {
 QString getDisplayName(const QString &sourcePath) {
@@ -85,8 +85,8 @@ void AddItemDialog::setupUi() {
   m_itemsTable->setHorizontalHeaderLabels({"Enable", "Source"});
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       0, QHeaderView::ResizeToContents);
-  m_itemsTable->horizontalHeader()->setSectionResizeMode(1,
-                                                         QHeaderView::Interactive);
+  m_itemsTable->horizontalHeader()->setSectionResizeMode(
+      1, QHeaderView::Interactive);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
   m_itemsTable->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -194,8 +194,9 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QMenu menu(this);
   QAction *infoAction = menu.addAction("Get Info");
   connect(infoAction, &QAction::triggered, this, [this, row]() {
-    QMessageBox::information(this, "Item Information",
-                             QString("Source Path:\n%1").arg(m_items[row].sourcePath));
+    QMessageBox::information(
+        this, "Item Information",
+        QString("Source Path:\n%1").arg(m_items[row].sourcePath));
   });
 
   menu.exec(m_itemsTable->viewport()->mapToGlobal(pos));

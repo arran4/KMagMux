@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
+#include "LinkExtractorDialog.h"
 #include "PreferencesDialog.h"
 #include <QApplication>
 #include <QDateTime>
@@ -247,6 +248,7 @@ void MainWindow::onAddItems() {
   layout->addWidget(label);
 
   QPlainTextEdit *textEdit = new QPlainTextEdit(&dialog);
+  textEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
   textEdit->setPlaceholderText(
       tr("file://...\n/path/to/file\nhttp://...\nhttps://...\nmagnet:..."));
   layout->addWidget(textEdit);
@@ -277,7 +279,23 @@ void MainWindow::onAddItems() {
     }
   });
 
-  connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::accepted, &dialog,
+          [&dialog, textEdit]() {
+            QStringList lines =
+                textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+            LinkExtractorDialog extractor(lines, &dialog);
+            if (extractor.exec() == QDialog::Accepted) {
+              if (extractor.wasModified()) {
+                QString newText = extractor.getExpandedLines().join('\n');
+                if (!newText.isEmpty() && !newText.endsWith('\n')) {
+                  newText += '\n';
+                }
+                textEdit->setPlainText(newText);
+              } else {
+                dialog.accept();
+              }
+            }
+          });
   connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
   if (dialog.exec() == QDialog::Accepted) {
