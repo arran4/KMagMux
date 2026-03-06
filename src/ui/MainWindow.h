@@ -4,6 +4,7 @@
 #include "../core/Engine.h"
 #include "../core/ItemModel.h"
 #include "../core/StorageManager.h"
+#include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QMainWindow>
 #include <QMenu>
@@ -40,6 +41,12 @@ private:
   ItemModel *m_queueModel;
   ItemModel *m_archiveModel;
   ItemModel *m_errorModel;
+
+  // Proxy Models
+  ItemFilterProxyModel *m_unprocessedProxy;
+  ItemFilterProxyModel *m_queueProxy;
+  ItemFilterProxyModel *m_archiveProxy;
+  ItemFilterProxyModel *m_errorProxy;
 
   // Views
   QTableView *m_unprocessedView;

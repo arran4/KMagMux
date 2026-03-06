@@ -12,6 +12,7 @@
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -78,9 +79,21 @@ void MainWindow::setupUi() {
   m_tabWidget = new QTabWidget(this);
   layout->addWidget(m_tabWidget);
 
-  auto setupView = [this](QTableView *view, ItemModel *model,
+  auto setupView = [this](QTableView *view, ItemModel *model, ItemFilterProxyModel *proxy,
                           const QString &title) {
-    view->setModel(model);
+    QWidget *tab = new QWidget(this);
+    QVBoxLayout *tabLayout = new QVBoxLayout(tab);
+
+    QLineEdit *searchBox = new QLineEdit(tab);
+    searchBox->setPlaceholderText(tr("Search by name, tracker, or label..."));
+    searchBox->setClearButtonEnabled(true);
+    tabLayout->addWidget(searchBox);
+
+    proxy->setSourceModel(model);
+    view->setModel(proxy);
+
+    connect(searchBox, &QLineEdit::textChanged, proxy, &ItemFilterProxyModel::setFilterText);
+
     view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
     view->setTextElideMode(Qt::ElideNone);
@@ -89,30 +102,36 @@ void MainWindow::setupUi() {
     view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(view, &QTableView::customContextMenuRequested, this,
             &MainWindow::onCustomContextMenuRequested);
-    m_tabWidget->addTab(view, title);
+
+    tabLayout->addWidget(view);
+    m_tabWidget->addTab(tab, title);
   };
 
   // Inbox Tab
   m_unprocessedView = new QTableView(this);
   m_unprocessedModel = new ItemModel(this);
-  setupView(m_unprocessedView, m_unprocessedModel, "Inbox");
+  m_unprocessedProxy = new ItemFilterProxyModel(this);
+  setupView(m_unprocessedView, m_unprocessedModel, m_unprocessedProxy, "Inbox");
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
 
   // Queue Tab
   m_queueView = new QTableView(this);
   m_queueModel = new ItemModel(this);
-  setupView(m_queueView, m_queueModel, "Queue");
+  m_queueProxy = new ItemFilterProxyModel(this);
+  setupView(m_queueView, m_queueModel, m_queueProxy, "Queue");
 
   // Archive Tab
   m_archiveView = new QTableView(this);
   m_archiveModel = new ItemModel(this);
-  setupView(m_archiveView, m_archiveModel, "Archive");
+  m_archiveProxy = new ItemFilterProxyModel(this);
+  setupView(m_archiveView, m_archiveModel, m_archiveProxy, "Archive");
 
   // Errors Tab
   m_errorView = new QTableView(this);
   m_errorModel = new ItemModel(this);
-  setupView(m_errorView, m_errorModel, "Errors");
+  m_errorProxy = new ItemFilterProxyModel(this);
+  setupView(m_errorView, m_errorModel, m_errorProxy, "Errors");
 }
 
 void MainWindow::loadData() {
@@ -152,13 +171,20 @@ void MainWindow::loadData() {
 }
 
 QTableView *MainWindow::getCurrentView() const {
-  return qobject_cast<QTableView *>(m_tabWidget->currentWidget());
+  QWidget *currentTab = m_tabWidget->currentWidget();
+  if (currentTab) {
+    return currentTab->findChild<QTableView *>();
+  }
+  return nullptr;
 }
 
 ItemModel *MainWindow::getCurrentModel() const {
   QTableView *view = getCurrentView();
   if (view) {
-    return qobject_cast<ItemModel *>(view->model());
+    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+    if (proxy) {
+      return qobject_cast<ItemModel *>(proxy->sourceModel());
+    }
   }
   return nullptr;
 }
@@ -217,11 +243,16 @@ void MainWindow::onItemAction(ItemState newState) {
   if (!model)
     return;
 
+  ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+  if (!proxy)
+    return;
+
   QModelIndexList selection = view->selectionModel()->selectedRows();
   if (selection.isEmpty())
     return;
 
-  int row = selection.first().row();
+  QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+  int row = sourceIndex.row();
   Item item = model->getItem(row);
 
   qDebug() << "Changing item state for:" << item.id << "to" << (int)newState;
@@ -381,12 +412,17 @@ void MainWindow::onProcessItem() {
   if (selection.isEmpty())
     return;
 
+  ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+  if (!proxy)
+    return;
+
   std::vector<Item> selectedItems;
   selectedItems.reserve(selection.size());
   std::transform(selection.begin(), selection.end(),
                  std::back_inserter(selectedItems),
-                 [model](const QModelIndex &index) {
-                   return model->getItem(index.row());
+                 [model, proxy](const QModelIndex &index) {
+                   QModelIndex sourceIndex = proxy->mapToSource(index);
+                   return model->getItem(sourceIndex.row());
                  });
 
   openProcessDialog(selectedItems);

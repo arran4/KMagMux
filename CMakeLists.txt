@@ -37,6 +37,7 @@ add_executable(KMagMux
     src/ui/AddItemDialog.cpp
     src/ui/PreferencesDialog.cpp
     src/ui/LinkExtractorDialog.cpp
+    src/ui/ItemFilterProxyModel.cpp
     resources/resources.qrc
 )
 
