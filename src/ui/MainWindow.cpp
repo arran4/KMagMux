@@ -52,6 +52,19 @@ void MainWindow::setupUi() {
   quitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
   QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
+
+  // Since processing is ON by default (checked=true), the action should display the Pause icon
+  // to indicate what happens when you click it, or you can just use Pause to represent "Stop processing".
+  // Let's initialize it with Pause since the default state is "Playing".
+  m_toggleProcessingAction = new QAction(QIcon::fromTheme("media-playback-pause"), tr("&Play / Pause"), this);
+  m_toggleProcessingAction->setCheckable(true);
+  m_toggleProcessingAction->setChecked(true);
+  m_toggleProcessingAction->setToolTip(tr("Play / Pause processing items in the list"));
+  m_toggleProcessingAction->setStatusTip(tr("Play / Pause processing items in the list"));
+  connect(m_toggleProcessingAction, &QAction::toggled, this, &MainWindow::onToggleProcessing);
+  editMenu->addAction(m_toggleProcessingAction);
+  editMenu->addSeparator();
+
   QAction *prefAction =
       editMenu->addAction(QIcon::fromTheme("preferences-system"),
                           tr("&Preferences"), this, &MainWindow::onPreferences);
@@ -63,6 +76,8 @@ void MainWindow::setupUi() {
 
   // Setup Tool Bar
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
+  mainToolBar->addAction(m_toggleProcessingAction);
+  mainToolBar->addSeparator();
   mainToolBar->addAction(addItemsAction);
   mainToolBar->addSeparator();
   mainToolBar->addAction(quitAction);
@@ -442,4 +457,17 @@ void MainWindow::onAbout() {
   QMessageBox::about(
       this, tr("About KMagMux"),
       tr("KMagMux\nTorrent and Magnet file handler and router."));
+}
+
+void MainWindow::onToggleProcessing(bool checked) {
+  if (checked) {
+    qDebug() << "Play clicked - refers to processing items in the list";
+    QMessageBox::information(this, tr("Play"), tr("Play action clicked (does nothing yet)."));
+    m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-pause"));
+  } else {
+    qDebug() << "Pause clicked - refers to processing items in the list";
+    QMessageBox::information(this, tr("Pause"), tr("Pause action clicked (does nothing yet)."));
+    m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-start"));
+  }
+  // TODO: Implement processing items pause/play toggle
 }

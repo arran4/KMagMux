@@ -29,6 +29,7 @@ private slots:
   void onAddItems();
   void onPreferences();
   void onAbout();
+  void onToggleProcessing(bool checked);
 
 private:
   StorageManager *m_storage;
@@ -46,6 +47,8 @@ private:
   QTableView *m_queueView;
   QTableView *m_archiveView;
   QTableView *m_errorView;
+
+  QAction *m_toggleProcessingAction;
 
   void setupUi();
   void loadData();
