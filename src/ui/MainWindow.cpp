@@ -81,7 +81,10 @@ void MainWindow::setupUi() {
   auto setupView = [this](QTableView *view, ItemModel *model,
                           const QString &title) {
     view->setModel(model);
-    view->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    view->horizontalHeader()->setStretchLastSection(true);
+    view->setTextElideMode(Qt::ElideNone);
+    view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(view, &QTableView::customContextMenuRequested, this,
@@ -89,10 +92,10 @@ void MainWindow::setupUi() {
     m_tabWidget->addTab(view, title);
   };
 
-  // Unprocessed Tab
+  // Inbox Tab
   m_unprocessedView = new QTableView(this);
   m_unprocessedModel = new ItemModel(this);
-  setupView(m_unprocessedView, m_unprocessedModel, "Unprocessed");
+  setupView(m_unprocessedView, m_unprocessedModel, "Inbox");
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
 
@@ -171,7 +174,7 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
   QMenu menu(this);
 
-  // If we are in the Unprocessed view, offer a "Process..." action
+  // If we are in the Inbox view, offer a "Process..." action
   if (view == m_unprocessedView) {
     QAction *processAction = menu.addAction("Process...");
     connect(processAction, &QAction::triggered, this,

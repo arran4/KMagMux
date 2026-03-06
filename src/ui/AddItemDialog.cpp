@@ -63,10 +63,28 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     checkItem->setCheckState(Qt::Checked);
     m_itemsTable->setItem(i, 0, checkItem);
 
+    bool isLocalFile = false;
+    QString pathToCheck = m_items[i].sourcePath;
+    if (pathToCheck.startsWith("file://")) {
+      pathToCheck = QUrl(pathToCheck).toLocalFile();
+      isLocalFile = QFileInfo(pathToCheck).exists();
+    } else {
+      isLocalFile = QFileInfo(pathToCheck).exists();
+    }
+
+    QTableWidgetItem *deleteItem = new QTableWidgetItem();
+    deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+    if (isLocalFile) {
+        deleteItem->setCheckState(Qt::Unchecked);
+    } else {
+        deleteItem->setFlags(Qt::NoItemFlags); // Disable checkbox for non-local files
+    }
+    m_itemsTable->setItem(i, 1, deleteItem);
+
     QString displayName = getDisplayName(m_items[i].sourcePath);
     QTableWidgetItem *nameItem = new QTableWidgetItem(displayName);
     nameItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    m_itemsTable->setItem(i, 1, nameItem);
+    m_itemsTable->setItem(i, 2, nameItem);
 
     QLabel *linkLabel =
         new QLabel(QString("<a href=\"%1\">%1</a>").arg(m_items[i].sourcePath));
@@ -74,22 +92,23 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
         false); // We want to show it, not necessarily open a browser directly
     linkLabel->setTextFormat(Qt::RichText);
     linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    m_itemsTable->setCellWidget(i, 2, linkLabel);
+    m_itemsTable->setCellWidget(i, 3, linkLabel);
 
     // Keep the actual data in the item for easy retrieval
     QTableWidgetItem *linkItem = new QTableWidgetItem(m_items[i].sourcePath);
-    m_itemsTable->setItem(i, 2, linkItem);
+    m_itemsTable->setItem(i, 3, linkItem);
+  }
 
-    bool isLocalFile = QFileInfo(m_items[i].sourcePath).exists();
-    QTableWidgetItem *deleteItem = new QTableWidgetItem();
-    deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-    if (isLocalFile) {
-      deleteItem->setCheckState(Qt::Unchecked);
-    } else {
-      deleteItem->setFlags(
-          Qt::NoItemFlags); // Disable checkbox for non-local files
-    }
-    m_itemsTable->setItem(i, 3, deleteItem);
+  // Check if any items are local files. If none are, hide the delete column.
+  bool hasLocalFiles = false;
+  for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
+      if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
+          hasLocalFiles = true;
+          break;
+      }
+  }
+  if (!hasLocalFiles) {
+      m_itemsTable->hideColumn(1);
   }
 }
 
@@ -100,11 +119,13 @@ void AddItemDialog::setupUi() {
   m_itemsTable = new QTableWidget(this);
   m_itemsTable->setColumnCount(4);
   m_itemsTable->setHorizontalHeaderLabels(
-      {"Enable", "Name", "Link", "Delete file"});
+      {"Enable", "Delete file", "Name", "Link"});
+  m_itemsTable->horizontalHeaderItem(1)->setToolTip("Delete file after import");
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setStretchLastSection(true);
   m_itemsTable->setTextElideMode(Qt::ElideNone); // Do not truncate
+  m_itemsTable->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
   m_itemsTable->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -115,7 +136,7 @@ void AddItemDialog::setupUi() {
   // Action Buttons
   QHBoxLayout *btnLayout = new QHBoxLayout();
 
-  QPushButton *processBtn = new QPushButton("Add to Unprocessed", this);
+  QPushButton *processBtn = new QPushButton("Add to Inbox", this);
   connect(processBtn, &QPushButton::clicked, this,
           &AddItemDialog::onProcessClicked);
 
@@ -140,7 +161,7 @@ void AddItemDialog::onProcessClicked() {
       Item item = m_items[i];
       item.state = ItemState::Unprocessed;
 
-      QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+      QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
       if (deleteItem && deleteItem->flags() & Qt::ItemIsUserCheckable) {
         if (deleteItem->checkState() == Qt::Checked) {
           QJsonObject meta = item.metadata;
@@ -169,11 +190,11 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
 
   QMenu menu(this);
 
-  if (col == 3) {
+  if (col == 1) {
     QAction *selectAllAction = menu.addAction("Select All");
     connect(selectAllAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
         if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
           deleteItem->setCheckState(Qt::Checked);
         }
@@ -182,7 +203,7 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     QAction *selectNoneAction = menu.addAction("Select None");
     connect(selectNoneAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
         if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
           deleteItem->setCheckState(Qt::Unchecked);
         }
@@ -194,7 +215,7 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QAction *copyAction = menu.addAction("Copy cell");
   connect(copyAction, &QAction::triggered, this, [this, item, row, col]() {
     QString text;
-    if (col == 2) {
+    if (col == 3) {
       text = m_items[row].sourcePath;
     } else {
       text = item->text();
