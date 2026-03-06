@@ -2,18 +2,29 @@
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLineEdit>
+#include <QSettings>
 #include <QUrlQuery>
+#include <QWidget>
 
 QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
       m_baseUrl(""), m_username(""), m_password(""), m_pendingItem(),
-      m_isPending(false) {}
+      m_isPending(false) {
+  QSettings settings;
+  settings.beginGroup("Plugins/qBittorrent");
+  m_baseUrl = settings.value("baseUrl", "http://localhost:8080").toString();
+  m_username = settings.value("username", "").toString();
+  m_password = settings.value("password", "").toString();
+  settings.endGroup();
+}
 
 QString QBittorrentConnector::getId() const { return "qBittorrent"; }
 
@@ -185,4 +196,59 @@ void QBittorrentConnector::onAddTorrentReply() {
                           "Network error: " + reply->errorString());
   }
   reply->deleteLater();
+}
+
+bool QBittorrentConnector::hasSettings() const { return true; }
+
+QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
+  QWidget *widget = new QWidget(parent);
+  QFormLayout *layout = new QFormLayout(widget);
+
+  QSettings settings;
+  settings.beginGroup("Plugins/qBittorrent");
+
+  QLineEdit *urlEdit = new QLineEdit(widget);
+  urlEdit->setObjectName("urlEdit");
+  urlEdit->setText(
+      settings.value("baseUrl", "http://localhost:8080").toString());
+  layout->addRow(tr("Base URL:"), urlEdit);
+
+  QLineEdit *userEdit = new QLineEdit(widget);
+  userEdit->setObjectName("userEdit");
+  userEdit->setText(settings.value("username", "").toString());
+  layout->addRow(tr("Username:"), userEdit);
+
+  QLineEdit *passEdit = new QLineEdit(widget);
+  passEdit->setObjectName("passEdit");
+  passEdit->setEchoMode(QLineEdit::Password);
+  passEdit->setText(settings.value("password", "").toString());
+  layout->addRow(tr("Password:"), passEdit);
+
+  settings.endGroup();
+
+  return widget;
+}
+
+void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
+  if (!settingsWidget)
+    return;
+
+  QLineEdit *urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
+  QLineEdit *userEdit = settingsWidget->findChild<QLineEdit *>("userEdit");
+  QLineEdit *passEdit = settingsWidget->findChild<QLineEdit *>("passEdit");
+
+  QSettings settings;
+  settings.beginGroup("Plugins/qBittorrent");
+
+  if (urlEdit) {
+    settings.setValue("baseUrl", urlEdit->text());
+    setBaseUrl(urlEdit->text());
+  }
+  if (userEdit && passEdit) {
+    settings.setValue("username", userEdit->text());
+    settings.setValue("password", passEdit->text());
+    setCredentials(userEdit->text(), passEdit->text());
+  }
+
+  settings.endGroup();
 }

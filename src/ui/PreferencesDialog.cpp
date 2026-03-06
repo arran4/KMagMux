@@ -1,15 +1,20 @@
 #include "PreferencesDialog.h"
 
+#include "../core/Connector.h"
+#include "../core/Engine.h"
 #include <QDialogButtonBox>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QListWidget>
+#include <QScrollArea>
 #include <QStackedWidget>
 #include <QTableWidget>
 #include <QVBoxLayout>
 
-PreferencesDialog::PreferencesDialog(QWidget *parent) : QDialog(parent) {
+PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
+    : QDialog(parent), m_engine(engine) {
   setWindowTitle(tr("Preferences"));
   resize(600, 400);
 
@@ -24,6 +29,7 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) : QDialog(parent) {
 
   createGeneralPage();
   createShortcutsPage();
+  createPluginsPage();
 
   m_categoriesList->setCurrentRow(0);
 
@@ -98,6 +104,73 @@ void PreferencesDialog::createShortcutsPage() {
   QListWidgetItem *item = new QListWidgetItem(m_categoriesList);
   item->setIcon(QIcon::fromTheme("preferences-desktop-keyboard"));
   item->setText(tr("Shortcuts"));
+  item->setTextAlignment(Qt::AlignHCenter);
+  item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+}
+
+void PreferencesDialog::createPluginsPage() {
+  QWidget *page = new QWidget(this);
+  QVBoxLayout *layout = new QVBoxLayout(page);
+
+  QScrollArea *scrollArea = new QScrollArea(page);
+  scrollArea->setWidgetResizable(true);
+  scrollArea->setFrameShape(QFrame::NoFrame);
+
+  QWidget *scrollContent = new QWidget(scrollArea);
+  QVBoxLayout *scrollLayout = new QVBoxLayout(scrollContent);
+
+  if (m_engine) {
+    QStringList connectors = m_engine->getAvailableConnectors();
+    if (connectors.isEmpty()) {
+      QLabel *noPluginsLabel =
+          new QLabel(tr("No plugins found."), scrollContent);
+      scrollLayout->addWidget(noPluginsLabel);
+    } else {
+      for (const QString &id : connectors) {
+        Connector *connector = m_engine->getConnector(id);
+        if (connector) {
+          QGroupBox *groupBox =
+              new QGroupBox(connector->getName(), scrollContent);
+          QVBoxLayout *groupLayout = new QVBoxLayout(groupBox);
+
+          if (connector->hasSettings()) {
+            QWidget *settingsWidget = connector->createSettingsWidget(groupBox);
+            if (settingsWidget) {
+              groupLayout->addWidget(settingsWidget);
+
+              // We need to save settings when OK/Apply is clicked.
+              // We can connect to the buttonBox accepted signal to call
+              // saveSettings.
+              connect(m_buttonBox, &QDialogButtonBox::accepted, this,
+                      [connector, settingsWidget]() {
+                        connector->saveSettings(settingsWidget);
+                      });
+            } else {
+              groupLayout->addWidget(
+                  new QLabel(tr("Settings widget creation failed.")));
+            }
+          } else {
+            groupLayout->addWidget(new QLabel(tr("No configurable settings.")));
+          }
+
+          scrollLayout->addWidget(groupBox);
+        }
+      }
+    }
+  } else {
+    QLabel *errorLabel = new QLabel(tr("Engine not available."), scrollContent);
+    scrollLayout->addWidget(errorLabel);
+  }
+
+  scrollLayout->addStretch();
+  scrollArea->setWidget(scrollContent);
+  layout->addWidget(scrollArea);
+
+  m_pagesWidget->addWidget(page);
+
+  QListWidgetItem *item = new QListWidgetItem(m_categoriesList);
+  item->setIcon(QIcon::fromTheme("preferences-plugin"));
+  item->setText(tr("Plugins"));
   item->setTextAlignment(Qt::AlignHCenter);
   item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 }

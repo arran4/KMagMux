@@ -76,6 +76,10 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   }
 }
 
+Connector *Engine::getConnector(const QString &id) const {
+  return m_connectors.value(id, nullptr);
+}
+
 QStringList Engine::getAvailableConnectors() const {
   return m_connectors.keys();
 }

@@ -81,7 +81,8 @@ void MainWindow::setupUi() {
   auto setupView = [this](QTableView *view, ItemModel *model,
                           const QString &title) {
     view->setModel(model);
-    view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    view->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
     view->setTextElideMode(Qt::ElideNone);
     view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -319,7 +320,8 @@ void MainWindow::onAddItems() {
                 &QDialog::reject);
 
         if (openDialog.exec() == QDialog::Accepted) {
-          QStringList lines = olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+          QStringList lines =
+              olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
           if (!lines.isEmpty()) {
             LinkExtractorDialog extractor(lines, extractMagnetsCb->isChecked(),
                                           extractTorrentsCb->isChecked(),
@@ -434,7 +436,7 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
 }
 
 void MainWindow::onPreferences() {
-  PreferencesDialog dialog(this);
+  PreferencesDialog dialog(m_engine, this);
   dialog.exec();
 }
 
