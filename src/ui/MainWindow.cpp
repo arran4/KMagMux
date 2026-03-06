@@ -255,7 +255,9 @@ void MainWindow::onAddItems() {
 
   QHBoxLayout *buttonLayout = new QHBoxLayout();
   QPushButton *browseBtn = new QPushButton(tr("Browse Files..."), &dialog);
+  QPushButton *openListBtn = new QPushButton(tr("Open List/HTML"), &dialog);
   buttonLayout->addWidget(browseBtn);
+  buttonLayout->addWidget(openListBtn);
   buttonLayout->addStretch();
 
   QDialogButtonBox *buttonBox = new QDialogButtonBox(
@@ -279,23 +281,33 @@ void MainWindow::onAddItems() {
     }
   });
 
-  connect(buttonBox, &QDialogButtonBox::accepted, &dialog,
-          [&dialog, textEdit]() {
-            QStringList lines =
-                textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
-            LinkExtractorDialog extractor(lines, &dialog);
-            if (extractor.exec() == QDialog::Accepted) {
-              if (extractor.wasModified()) {
-                QString newText = extractor.getExpandedLines().join('\n');
-                if (!newText.isEmpty() && !newText.endsWith('\n')) {
-                  newText += '\n';
+  connect(openListBtn, &QPushButton::clicked, this,
+          [&dialog, textEdit, this]() {
+            bool ok;
+            QString urlStr = QInputDialog::getText(
+                &dialog, tr("Open List/HTML"),
+                tr("Enter URL or local file path to a text list or HTML file:"),
+                QLineEdit::Normal, "", &ok);
+            if (ok && !urlStr.isEmpty()) {
+              QStringList lines = {urlStr};
+              LinkExtractorDialog extractor(lines, &dialog);
+              if (extractor.exec() == QDialog::Accepted) {
+                if (extractor.wasModified()) {
+                  QString expanded = extractor.getExpandedLines().join('\n');
+                  if (!expanded.isEmpty()) {
+                    QString currentText = textEdit->toPlainText();
+                    if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
+                      currentText += '\n';
+                    }
+                    currentText += expanded + '\n';
+                    textEdit->setPlainText(currentText);
+                  }
                 }
-                textEdit->setPlainText(newText);
-              } else {
-                dialog.accept();
               }
             }
           });
+
+  connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
   connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
   if (dialog.exec() == QDialog::Accepted) {
