@@ -39,11 +39,13 @@ private:
   ItemModel *m_unprocessedModel;
   ItemModel *m_queueModel;
   ItemModel *m_archiveModel;
+  ItemModel *m_errorModel;
 
   // Views
   QTableView *m_unprocessedView;
   QTableView *m_queueView;
   QTableView *m_archiveView;
+  QTableView *m_errorView;
 
   void setupUi();
   void loadData();

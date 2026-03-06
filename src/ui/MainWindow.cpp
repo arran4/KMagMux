@@ -104,6 +104,11 @@ void MainWindow::setupUi() {
   m_archiveView = new QTableView(this);
   m_archiveModel = new ItemModel(this);
   setupView(m_archiveView, m_archiveModel, "Archive");
+
+  // Errors Tab
+  m_errorView = new QTableView(this);
+  m_errorModel = new ItemModel(this);
+  setupView(m_errorView, m_errorModel, "Errors");
 }
 
 void MainWindow::loadData() {
@@ -112,6 +117,7 @@ void MainWindow::loadData() {
   std::vector<Item> unprocessedItems;
   std::vector<Item> queueItems;
   std::vector<Item> archiveItems;
+  std::vector<Item> errorItems;
 
   for (const auto &item : items) {
     switch (item.state) {
@@ -125,8 +131,10 @@ void MainWindow::loadData() {
       break;
     case ItemState::Archived:
     case ItemState::Dispatched:
-    case ItemState::Failed:
       archiveItems.push_back(item);
+      break;
+    case ItemState::Failed:
+      errorItems.push_back(item);
       break;
     default:
       break;
@@ -136,6 +144,7 @@ void MainWindow::loadData() {
   m_unprocessedModel->setItems(unprocessedItems);
   m_queueModel->setItems(queueItems);
   m_archiveModel->setItems(archiveItems);
+  m_errorModel->setItems(errorItems);
 }
 
 QTableView *MainWindow::getCurrentView() const {
@@ -166,6 +175,18 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     QAction *processAction = menu.addAction("Process...");
     connect(processAction, &QAction::triggered, this,
             &MainWindow::onProcessItem);
+    menu.addSeparator();
+  }
+
+  if (view == m_errorView) {
+    QAction *reprocessAction = menu.addAction("Reprocess");
+    connect(reprocessAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Queued); });
+
+    QAction *dismissAction = menu.addAction("Dismiss");
+    connect(dismissAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Archived); });
+
     menu.addSeparator();
   }
 

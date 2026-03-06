@@ -30,6 +30,10 @@ QVariant ItemModel::data(const QModelIndex &index, int role) const {
       return item.sourcePath;
     case ColCreated:
       return item.createdTime.toString(Qt::ISODate);
+    case ColError:
+      return item.metadata.value("error").toString();
+    case ColDispatchTime:
+      return item.metadata.value("lastDispatchTime").toString();
     default:
       return QVariant();
     }
@@ -51,6 +55,10 @@ QVariant ItemModel::headerData(int section, Qt::Orientation orientation,
     return "Source";
   case ColCreated:
     return "Created";
+  case ColError:
+    return "Error Message";
+  case ColDispatchTime:
+    return "Dispatch Time";
   default:
     return QVariant();
   }
