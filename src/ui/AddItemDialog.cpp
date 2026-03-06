@@ -27,7 +27,8 @@ QString getDisplayName(const QString &sourcePath) {
       int xtIdx = fullQuery.indexOf("xt=");
       if (xtIdx != -1) {
         int endIdx = fullQuery.indexOf('&', xtIdx);
-        if (endIdx == -1) endIdx = fullQuery.length();
+        if (endIdx == -1)
+          endIdx = fullQuery.length();
         return fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
       }
     }
@@ -67,8 +68,10 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     nameItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     m_itemsTable->setItem(i, 1, nameItem);
 
-    QLabel *linkLabel = new QLabel(QString("<a href=\"%1\">%1</a>").arg(m_items[i].sourcePath));
-    linkLabel->setOpenExternalLinks(false); // We want to show it, not necessarily open a browser directly
+    QLabel *linkLabel =
+        new QLabel(QString("<a href=\"%1\">%1</a>").arg(m_items[i].sourcePath));
+    linkLabel->setOpenExternalLinks(
+        false); // We want to show it, not necessarily open a browser directly
     linkLabel->setTextFormat(Qt::RichText);
     linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     m_itemsTable->setCellWidget(i, 2, linkLabel);
@@ -81,9 +84,10 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
     deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     if (isLocalFile) {
-        deleteItem->setCheckState(Qt::Unchecked);
+      deleteItem->setCheckState(Qt::Unchecked);
     } else {
-        deleteItem->setFlags(Qt::NoItemFlags); // Disable checkbox for non-local files
+      deleteItem->setFlags(
+          Qt::NoItemFlags); // Disable checkbox for non-local files
     }
     m_itemsTable->setItem(i, 3, deleteItem);
   }
@@ -95,7 +99,8 @@ void AddItemDialog::setupUi() {
   // Table
   m_itemsTable = new QTableWidget(this);
   m_itemsTable->setColumnCount(4);
-  m_itemsTable->setHorizontalHeaderLabels({"Enable", "Name", "Link", "Delete file"});
+  m_itemsTable->setHorizontalHeaderLabels(
+      {"Enable", "Name", "Link", "Delete file"});
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setStretchLastSection(true);
@@ -137,11 +142,11 @@ void AddItemDialog::onProcessClicked() {
 
       QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
       if (deleteItem && deleteItem->flags() & Qt::ItemIsUserCheckable) {
-          if (deleteItem->checkState() == Qt::Checked) {
-              QJsonObject meta = item.metadata;
-              meta["delete_source_file"] = true;
-              item.metadata = meta;
-          }
+        if (deleteItem->checkState() == Qt::Checked) {
+          QJsonObject meta = item.metadata;
+          meta["delete_source_file"] = true;
+          item.metadata = meta;
+        }
       }
 
       processedItems.push_back(item);
@@ -165,34 +170,34 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QMenu menu(this);
 
   if (col == 3) {
-      QAction *selectAllAction = menu.addAction("Select All");
-      connect(selectAllAction, &QAction::triggered, this, [this]() {
-          for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-              QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
-              if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
-                  deleteItem->setCheckState(Qt::Checked);
-              }
-          }
-      });
-      QAction *selectNoneAction = menu.addAction("Select None");
-      connect(selectNoneAction, &QAction::triggered, this, [this]() {
-          for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-              QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
-              if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
-                  deleteItem->setCheckState(Qt::Unchecked);
-              }
-          }
-      });
-      menu.addSeparator();
+    QAction *selectAllAction = menu.addAction("Select All");
+    connect(selectAllAction, &QAction::triggered, this, [this]() {
+      for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
+        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+          deleteItem->setCheckState(Qt::Checked);
+        }
+      }
+    });
+    QAction *selectNoneAction = menu.addAction("Select None");
+    connect(selectNoneAction, &QAction::triggered, this, [this]() {
+      for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
+        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 3);
+        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+          deleteItem->setCheckState(Qt::Unchecked);
+        }
+      }
+    });
+    menu.addSeparator();
   }
 
   QAction *copyAction = menu.addAction("Copy cell");
   connect(copyAction, &QAction::triggered, this, [this, item, row, col]() {
     QString text;
     if (col == 2) {
-       text = m_items[row].sourcePath;
+      text = m_items[row].sourcePath;
     } else {
-       text = item->text();
+      text = item->text();
     }
     QGuiApplication::clipboard()->setText(text);
   });

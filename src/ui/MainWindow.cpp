@@ -281,31 +281,62 @@ void MainWindow::onAddItems() {
     }
   });
 
-  connect(openListBtn, &QPushButton::clicked, this,
-          [&dialog, textEdit, this]() {
-            bool ok;
-            QString urlStr = QInputDialog::getText(
-                &dialog, tr("Open List/HTML"),
-                tr("Enter URL or local file path to a text list or HTML file:"),
-                QLineEdit::Normal, "", &ok);
-            if (ok && !urlStr.isEmpty()) {
-              QStringList lines = {urlStr};
-              LinkExtractorDialog extractor(lines, &dialog);
-              if (extractor.exec() == QDialog::Accepted) {
-                if (extractor.wasModified()) {
-                  QString expanded = extractor.getExpandedLines().join('\n');
-                  if (!expanded.isEmpty()) {
-                    QString currentText = textEdit->toPlainText();
-                    if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
-                      currentText += '\n';
-                    }
-                    currentText += expanded + '\n';
-                    textEdit->setPlainText(currentText);
+  connect(
+      openListBtn, &QPushButton::clicked, this, [&dialog, textEdit, this]() {
+        QDialog openDialog(&dialog);
+        openDialog.setWindowTitle(tr("Open List/HTML"));
+        QVBoxLayout *olLayout = new QVBoxLayout(&openDialog);
+
+        QLabel *olLabel = new QLabel(
+            tr("Enter URL or local file path to a text list or HTML file:"),
+            &openDialog);
+        olLayout->addWidget(olLabel);
+
+        QLineEdit *olLineEdit = new QLineEdit(&openDialog);
+        olLayout->addWidget(olLineEdit);
+
+        QCheckBox *extractMagnetsCb =
+            new QCheckBox(tr("Extract magnet links"), &openDialog);
+        extractMagnetsCb->setChecked(true);
+        olLayout->addWidget(extractMagnetsCb);
+
+        QCheckBox *extractTorrentsCb =
+            new QCheckBox(tr("Extract torrent links"), &openDialog);
+        extractTorrentsCb->setChecked(true);
+        olLayout->addWidget(extractTorrentsCb);
+
+        QDialogButtonBox *olButtonBox = new QDialogButtonBox(
+            QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &openDialog);
+        olLayout->addWidget(olButtonBox);
+
+        connect(olButtonBox, &QDialogButtonBox::accepted, &openDialog,
+                &QDialog::accept);
+        connect(olButtonBox, &QDialogButtonBox::rejected, &openDialog,
+                &QDialog::reject);
+
+        if (openDialog.exec() == QDialog::Accepted) {
+          QString urlStr = olLineEdit->text().trimmed();
+          if (!urlStr.isEmpty()) {
+            QStringList lines = {urlStr};
+            LinkExtractorDialog extractor(lines, extractMagnetsCb->isChecked(),
+                                          extractTorrentsCb->isChecked(),
+                                          &dialog);
+            if (extractor.exec() == QDialog::Accepted) {
+              if (extractor.wasModified()) {
+                QString expanded = extractor.getExpandedLines().join('\n');
+                if (!expanded.isEmpty()) {
+                  QString currentText = textEdit->toPlainText();
+                  if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
+                    currentText += '\n';
                   }
+                  currentText += expanded + '\n';
+                  textEdit->setPlainText(currentText);
                 }
               }
             }
-          });
+          }
+        }
+      });
 
   connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
   connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);

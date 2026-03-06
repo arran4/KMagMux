@@ -9,7 +9,8 @@
 #include <QVBoxLayout>
 
 LinkExtractorDialog::LinkExtractorDialog(const QStringList &lines,
-                                         QWidget *parent)
+                                         bool extractMagnets,
+                                         bool extractTorrents, QWidget *parent)
     : QDialog(parent), m_inputLines(lines), m_currentIndex(0),
       m_cancelled(false), m_modified(false),
       m_networkManager(new QNetworkAccessManager(this)),
@@ -21,9 +22,12 @@ LinkExtractorDialog::LinkExtractorDialog(const QStringList &lines,
 
   QHBoxLayout *optionsLayout = new QHBoxLayout();
   m_extractMagnetsCb = new QCheckBox(tr("Extract magnet links"), this);
-  m_extractMagnetsCb->setChecked(true);
+  m_extractMagnetsCb->setChecked(extractMagnets);
+  m_extractMagnetsCb->setEnabled(false); // Read-only
+
   m_extractTorrentsCb = new QCheckBox(tr("Extract torrent links"), this);
-  m_extractTorrentsCb->setChecked(true);
+  m_extractTorrentsCb->setChecked(extractTorrents);
+  m_extractTorrentsCb->setEnabled(false); // Read-only
   optionsLayout->addWidget(m_extractMagnetsCb);
   optionsLayout->addWidget(m_extractTorrentsCb);
   optionsLayout->addStretch();
@@ -104,8 +108,8 @@ void LinkExtractorDialog::processNext() {
     ext = QFileInfo(url.path()).suffix().toLower();
   }
 
-  // Always try to expand if given via this dialog explicitly, regardless of extension.
-  // We'll treat it as HTML if not explicitly txt.
+  // Always try to expand if given via this dialog explicitly, regardless of
+  // extension. We'll treat it as HTML if not explicitly txt.
   bool isTxt = (ext == "txt");
 
   if (isLocalFile) {
@@ -213,24 +217,28 @@ void LinkExtractorDialog::extractFromTxt(const QString &content) {
 
       // For TXT, we might want to extract all non-empty lines if they are URLs,
       // but to match the checkbox logic, we should filter magnets and torrents.
-      // If it's neither, we probably still want to add it as it was directly in a text file
-      // assuming the user knows what they're doing. Wait, user said "all of the links provided... assumed to be either magnet links, or direct paths to torrents".
-      // Let's filter TXT files the same way we do HTML, but if it doesn't end with .torrent and isn't a magnet, we check if it's a URL or file path.
-      // Actually, let's just apply the same checkbox filters to be safe and consistent.
-      // But what if it's a generic http link that the server resolves to a torrent?
-      // Let's just append it if the respective checkboxes are checked or if it doesn't look like a magnet/torrent explicitly.
-      // Actually, if they checked the boxes, they explicitly want to filter.
-      // Let's filter based on checkboxes if it's a magnet or ends with .torrent.
-      // If it's a generic link, keep it if torrents are enabled.
+      // If it's neither, we probably still want to add it as it was directly in
+      // a text file assuming the user knows what they're doing. Wait, user said
+      // "all of the links provided... assumed to be either magnet links, or
+      // direct paths to torrents". Let's filter TXT files the same way we do
+      // HTML, but if it doesn't end with .torrent and isn't a magnet, we check
+      // if it's a URL or file path. Actually, let's just apply the same
+      // checkbox filters to be safe and consistent. But what if it's a generic
+      // http link that the server resolves to a torrent? Let's just append it
+      // if the respective checkboxes are checked or if it doesn't look like a
+      // magnet/torrent explicitly. Actually, if they checked the boxes, they
+      // explicitly want to filter. Let's filter based on checkboxes if it's a
+      // magnet or ends with .torrent. If it's a generic link, keep it if
+      // torrents are enabled.
 
       bool shouldAdd = false;
       if (isMagnet) {
-          shouldAdd = m_extractMagnetsCb->isChecked();
+        shouldAdd = m_extractMagnetsCb->isChecked();
       } else if (isTorrent) {
-          shouldAdd = m_extractTorrentsCb->isChecked();
+        shouldAdd = m_extractTorrentsCb->isChecked();
       } else {
-          // If it's neither explicitly, we assume it's a link to a torrent/file
-          shouldAdd = m_extractTorrentsCb->isChecked();
+        // If it's neither explicitly, we assume it's a link to a torrent/file
+        shouldAdd = m_extractTorrentsCb->isChecked();
       }
 
       if (shouldAdd) {

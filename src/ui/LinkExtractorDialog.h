@@ -1,19 +1,19 @@
 #ifndef LINKEXTRACTORDIALOG_H
 #define LINKEXTRACTORDIALOG_H
 
+#include <QCheckBox>
 #include <QDialog>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QStringList>
-#include <QCheckBox>
 
 class LinkExtractorDialog : public QDialog {
   Q_OBJECT
 public:
-  explicit LinkExtractorDialog(const QStringList &lines,
-                               QWidget *parent = nullptr);
+  explicit LinkExtractorDialog(const QStringList &lines, bool extractMagnets,
+                               bool extractTorrents, QWidget *parent = nullptr);
   QStringList getExpandedLines() const { return m_expandedLines; }
   bool wasModified() const { return m_modified; }
 
