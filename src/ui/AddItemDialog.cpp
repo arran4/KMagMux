@@ -2,10 +2,30 @@
 #include "../core/Constants.h"
 #include <QDateTime>
 #include <QFileDialog>
+#include <QFileInfo>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QVBoxLayout>
+
+namespace {
+QString getDisplayName(const QString &sourcePath) {
+  if (sourcePath.startsWith("magnet:?")) {
+    QUrl url(sourcePath);
+    QUrlQuery query(url);
+    if (query.hasQueryItem("dn")) {
+      return query.queryItemValue("dn");
+    }
+    return "Magnet Link";
+  }
+
+  QFileInfo fi(sourcePath);
+  QString name = fi.fileName();
+  return name.isEmpty() ? sourcePath : name;
+}
+} // namespace
 
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
                              const QStringList &connectors, QWidget *parent)
@@ -22,7 +42,9 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     checkItem->setCheckState(Qt::Checked);
     m_itemsTable->setItem(i, 0, checkItem);
 
-    QTableWidgetItem *sourceItem = new QTableWidgetItem(m_items[i].sourcePath);
+    QString displayName = getDisplayName(m_items[i].sourcePath);
+    QTableWidgetItem *sourceItem = new QTableWidgetItem(displayName);
+    sourceItem->setToolTip(m_items[i].sourcePath);
     sourceItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     m_itemsTable->setItem(i, 1, sourceItem);
   }
@@ -141,6 +163,8 @@ void AddItemDialog::onProcessClicked() {
       if (isScheduled) {
         item.state = ItemState::Scheduled;
         item.scheduledTime = scheduledTime;
+      } else if (action == Constants::DefaultActionName) {
+        item.state = ItemState::Held;
       } else {
         item.state = ItemState::Queued;
       }
