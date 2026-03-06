@@ -63,7 +63,9 @@ void LinkExtractorDialog::processNext() {
 
   if (m_currentIndex >= m_inputLines.size()) {
     appendLog(tr("Finished processing."));
-    accept();
+    m_cancelBtn->setText(tr("Dismiss"));
+    m_cancelBtn->disconnect();
+    connect(m_cancelBtn, &QPushButton::clicked, this, &QDialog::accept);
     return;
   }
 
@@ -92,28 +94,29 @@ void LinkExtractorDialog::processNext() {
     ext = QFileInfo(url.path()).suffix().toLower();
   }
 
-  bool shouldExpand = (ext == "txt" || ext == "html" || ext == "htm");
+  // Always try to expand if given via this dialog explicitly, regardless of extension.
+  // We'll treat it as HTML if not explicitly txt.
+  bool isTxt = (ext == "txt");
 
-  if (isLocalFile && shouldExpand) {
+  if (isLocalFile) {
     appendLog(tr("Reading local file: %1").arg(pathToCheck));
     QFile file(pathToCheck);
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
       QString content = QTextStream(&file).readAll();
-      if (ext == "html" || ext == "htm") {
-        extractFromHtml(content, QUrl::fromLocalFile(pathToCheck));
-      } else {
+      if (isTxt) {
         extractFromTxt(content);
+      } else {
+        extractFromHtml(content, QUrl::fromLocalFile(pathToCheck));
       }
       m_modified = true;
     } else {
       appendLog(tr("Failed to open file: %1").arg(pathToCheck));
-      m_expandedLines.append(line);
     }
     QMetaObject::invokeMethod(this, "processNext", Qt::QueuedConnection);
     return;
   }
 
-  if (!isLocalFile && shouldExpand && url.isValid() &&
+  if (!isLocalFile && url.isValid() &&
       (url.scheme() == "http" || url.scheme() == "https")) {
     appendLog(tr("Downloading remote file: %1").arg(line));
     m_currentReply = m_networkManager->get(QNetworkRequest(url));
@@ -122,8 +125,7 @@ void LinkExtractorDialog::processNext() {
     return;
   }
 
-  // Keep the line as is
-  m_expandedLines.append(line);
+  appendLog(tr("Invalid or unsupported link provided: %1").arg(line));
   QMetaObject::invokeMethod(this, "processNext", Qt::QueuedConnection);
 }
 
@@ -144,18 +146,16 @@ void LinkExtractorDialog::onReplyFinished() {
 
   if (reply->error() == QNetworkReply::NoError) {
     QString content = QString::fromUtf8(reply->readAll());
-    if (ext == "html" || ext == "htm") {
-      extractFromHtml(content, url);
-    } else {
+    if (ext == "txt") {
       extractFromTxt(content);
+    } else {
+      extractFromHtml(content, url);
     }
     m_modified = true;
     appendLog(tr("Successfully processed remote file."));
   } else {
     appendLog(tr("Failed to download %1: %2")
                   .arg(url.toString(), reply->errorString()));
-    // Fallback to original
-    m_expandedLines.append(url.toString());
   }
 
   reply->deleteLater();
