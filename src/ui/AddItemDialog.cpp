@@ -84,7 +84,7 @@ void AddItemDialog::setupUi() {
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       0, QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setSectionResizeMode(1,
-                                                         QHeaderView::Stretch);
+                                                         QHeaderView::Interactive);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
   mainLayout->addWidget(m_itemsTable);
