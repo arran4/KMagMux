@@ -2,10 +2,32 @@
 #include "../core/Constants.h"
 #include <QDateTime>
 #include <QFileDialog>
+#include <QFileInfo>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QVBoxLayout>
+#include <QMenu>
+#include <QMessageBox>
+
+namespace {
+QString getDisplayName(const QString &sourcePath) {
+  if (sourcePath.startsWith("magnet:?")) {
+    QUrl url(sourcePath);
+    QUrlQuery query(url);
+    if (query.hasQueryItem("dn")) {
+      return query.queryItemValue("dn");
+    }
+    return "Magnet Link";
+  }
+
+  QFileInfo fi(sourcePath);
+  QString name = fi.fileName();
+  return name.isEmpty() ? sourcePath : name;
+}
+} // namespace
 
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
                              const QStringList &connectors, QWidget *parent)
@@ -22,7 +44,9 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     checkItem->setCheckState(Qt::Checked);
     m_itemsTable->setItem(i, 0, checkItem);
 
-    QTableWidgetItem *sourceItem = new QTableWidgetItem(m_items[i].sourcePath);
+    QString displayName = getDisplayName(m_items[i].sourcePath);
+    QTableWidgetItem *sourceItem = new QTableWidgetItem(displayName);
+    sourceItem->setToolTip(m_items[i].sourcePath);
     sourceItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     m_itemsTable->setItem(i, 1, sourceItem);
   }
@@ -62,9 +86,12 @@ void AddItemDialog::setupUi() {
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       0, QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setSectionResizeMode(1,
-                                                         QHeaderView::Stretch);
+                                                         QHeaderView::Interactive);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
+  m_itemsTable->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(m_itemsTable, &QTableWidget::customContextMenuRequested, this,
+          &AddItemDialog::onCustomContextMenuRequested);
   mainLayout->addWidget(m_itemsTable);
 
   QFormLayout *formLayout = new QFormLayout();
@@ -141,6 +168,8 @@ void AddItemDialog::onProcessClicked() {
       if (isScheduled) {
         item.state = ItemState::Scheduled;
         item.scheduledTime = scheduledTime;
+      } else if (action == Constants::DefaultActionName) {
+        item.state = ItemState::Held;
       } else {
         item.state = ItemState::Queued;
       }
@@ -151,4 +180,23 @@ void AddItemDialog::onProcessClicked() {
 
   m_items = processedItems;
   accept();
+}
+
+void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
+  QTableWidgetItem *item = m_itemsTable->itemAt(pos);
+  if (!item)
+    return;
+
+  int row = item->row();
+  if (row < 0 || static_cast<size_t>(row) >= m_items.size())
+    return;
+
+  QMenu menu(this);
+  QAction *infoAction = menu.addAction("Get Info");
+  connect(infoAction, &QAction::triggered, this, [this, row]() {
+    QMessageBox::information(this, "Item Information",
+                             QString("Source Path:\n%1").arg(m_items[row].sourcePath));
+  });
+
+  menu.exec(m_itemsTable->viewport()->mapToGlobal(pos));
 }

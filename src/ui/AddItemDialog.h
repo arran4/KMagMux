@@ -26,6 +26,7 @@ public:
 
 private slots:
   void onProcessClicked();
+  void onCustomContextMenuRequested(const QPoint &pos);
 
 private:
   std::vector<Item> m_items;
