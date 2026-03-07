@@ -653,44 +653,47 @@ void MainWindow::onProcessItem() {
   openProcessItemDialog(selectedItems);
 }
 
+void MainWindow::processAndSaveItems(const std::vector<Item> &updatedItems) {
+  std::vector<Item> itemsToSave;
+  itemsToSave.reserve(updatedItems.size());
+
+  for (Item updatedItem : updatedItems) {
+    bool success = true;
+
+    if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
+      // Move logic
+      if (!m_storage->moveToManaged(updatedItem, true, true)) {
+        QMessageBox::warning(
+            this, "Error",
+            QString("Failed to move original file to managed storage: %1")
+                .arg(updatedItem.sourcePath));
+        success = false; // Should we abort saving? Maybe just warn.
+      }
+
+      // Remove the temporary internal flag before saving
+      QJsonObject meta = updatedItem.metadata;
+      meta.remove("delete_source_file");
+      updatedItem.metadata = meta;
+    }
+
+    if (success) {
+      itemsToSave.push_back(std::move(updatedItem));
+      qDebug() << "Item queued for saving:" << itemsToSave.back().id;
+    }
+  }
+
+  if (!itemsToSave.empty()) {
+    m_storage->saveItems(itemsToSave);
+  }
+}
+
 void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
   if (items.empty())
     return;
 
   AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
-    std::vector<Item> updatedItems = dialog.getItems();
-    std::vector<Item> itemsToSave;
-    itemsToSave.reserve(updatedItems.size());
-
-    for (Item &updatedItem : updatedItems) {
-      bool success = true;
-
-      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
-        // Move logic
-        if (!m_storage->moveToManaged(updatedItem, true, true)) {
-          QMessageBox::warning(
-              this, "Error",
-              QString("Failed to move original file to managed storage: %1")
-                  .arg(updatedItem.sourcePath));
-          success = false; // Should we abort saving? Maybe just warn.
-        }
-
-        // Remove the temporary internal flag before saving
-        QJsonObject meta = updatedItem.metadata;
-        meta.remove("delete_source_file");
-        updatedItem.metadata = meta;
-      }
-
-      if (success) {
-        itemsToSave.push_back(updatedItem);
-        qDebug() << "Item queued for saving:" << updatedItem.id;
-      }
-    }
-
-    if (!itemsToSave.empty()) {
-      m_storage->saveItems(itemsToSave);
-    }
+    processAndSaveItems(dialog.getItems());
   }
 }
 
@@ -700,38 +703,7 @@ void MainWindow::openProcessItemDialog(const std::vector<Item> &items) {
 
   ProcessItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
-    std::vector<Item> updatedItems = dialog.getItems();
-    std::vector<Item> itemsToSave;
-    itemsToSave.reserve(updatedItems.size());
-
-    for (Item &updatedItem : updatedItems) {
-      bool success = true;
-
-      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
-        // Move logic
-        if (!m_storage->moveToManaged(updatedItem, true, true)) {
-          QMessageBox::warning(
-              this, "Error",
-              QString("Failed to move original file to managed storage: %1")
-                  .arg(updatedItem.sourcePath));
-          success = false; // Should we abort saving? Maybe just warn.
-        }
-
-        // Remove the temporary internal flag before saving
-        QJsonObject meta = updatedItem.metadata;
-        meta.remove("delete_source_file");
-        updatedItem.metadata = meta;
-      }
-
-      if (success) {
-        itemsToSave.push_back(updatedItem);
-        qDebug() << "Item queued for saving:" << updatedItem.id;
-      }
-    }
-
-    if (!itemsToSave.empty()) {
-      m_storage->saveItems(itemsToSave);
-    }
+    processAndSaveItems(dialog.getItems());
   }
 }
 
