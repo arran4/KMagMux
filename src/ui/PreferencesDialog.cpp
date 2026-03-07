@@ -129,6 +129,8 @@ void PreferencesDialog::createPluginsPage() {
               QCoreApplication::applicationDirPath() + "/plugins and " +
               QCoreApplication::applicationDirPath() + "/../plugins",
           scrollContent);
+      noPluginsLabel->setWordWrap(true);
+      noPluginsLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
       scrollLayout->addWidget(noPluginsLabel);
     } else {
       for (const QString &id : connectors) {

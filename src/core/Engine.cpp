@@ -24,6 +24,12 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   // install)
   pluginPaths << QDir::cleanPath(appDir + "/../plugins");
 
+  // CMake binary output path (when developing and running using target
+  // "kmagmux" directly via CLion/cmake)
+  pluginPaths << QDir::cleanPath(appDir + "/plugins/qbittorrent");
+  pluginPaths << QDir::cleanPath(appDir + "/src/plugins/qbittorrent");
+  pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/qbittorrent");
+
   // Install path (relative to executable)
 #ifdef KMAGMUX_REL_PLUGIN_DIR
   pluginPaths << QDir::cleanPath(appDir + "/" +
