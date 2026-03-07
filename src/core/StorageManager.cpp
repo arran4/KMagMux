@@ -64,11 +64,12 @@ bool StorageManager::init() {
       // Initial scan to populate known files and process existing ones
       QStringList initialFiles = scanInbox();
       m_knownFiles = QSet<QString>(initialFiles.begin(), initialFiles.end());
-      for (const QString &file : std::as_const(m_knownFiles)) {
-        // In a real scenario, we might want to process existing files on
-        // startup For now, we'll just log them to acknowledge existence.
-        // processNewFile(m_inboxDir + "/" + file);
-        qDebug() << "Found existing file in inbox:" << file;
+      if (!m_knownFiles.isEmpty()) {
+        (void)QtConcurrent::run([this, knownFiles = m_knownFiles]() {
+          for (const QString &file : std::as_const(knownFiles)) {
+            processNewFile(m_inboxDir + "/" + file);
+          }
+        });
       }
     } else {
       qWarning() << "Failed to watch inbox:" << m_inboxDir;
