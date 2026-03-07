@@ -4,6 +4,7 @@
 #include "../core/Engine.h"
 #include "../core/ItemModel.h"
 #include "../core/StorageManager.h"
+#include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QCloseEvent>
 #include <QEvent>
@@ -37,10 +38,14 @@ private slots:
   void onItemAction(ItemState newState);
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);
+  void onItemDeleted(const QString &id);
   void onProcessItem();
+  void onDeleteItems();
   void onAddItems();
   void onPreferences();
   void onAbout();
+  void onToggleProcessing(bool checked);
+  void onOpenCacheDirectory();
 
 private:
   StorageManager *m_storage;
@@ -50,20 +55,32 @@ private:
   // Models
   ItemModel *m_unprocessedModel;
   ItemModel *m_queueModel;
+  ItemModel *m_doneModel;
   ItemModel *m_archiveModel;
   ItemModel *m_errorModel;
+
+  // Proxy Models
+  ItemFilterProxyModel *m_unprocessedProxy;
+  ItemFilterProxyModel *m_queueProxy;
+  ItemFilterProxyModel *m_doneProxy;
+  ItemFilterProxyModel *m_archiveProxy;
+  ItemFilterProxyModel *m_errorProxy;
 
   // Views
   QTableView *m_unprocessedView;
   QTableView *m_queueView;
+  QTableView *m_doneView;
   QTableView *m_archiveView;
   QTableView *m_errorView;
+
+  QAction *m_toggleProcessingAction;
 
   void setupUi();
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
-  void openProcessDialog(const std::vector<Item> &items);
+  void openAddItemsDialog(const std::vector<Item> &items);
+  void openProcessItemDialog(const std::vector<Item> &items);
 
   QSystemTrayIcon *m_trayIcon;
   QMenu *m_trayIconMenu;

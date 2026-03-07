@@ -8,16 +8,26 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QtConcurrent>
+#include <QCoreApplication>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
     : QObject(parent), m_baseDir(QStandardPaths::writableLocation(
                            QStandardPaths::AppDataLocation)) {
-  // Set base directory to ~/.local/share/KMagMux
+  // Try to respect the lower-cased app name set in main() for AppDataLocation
+  // But QStandardPaths usually uses appName() if it's set before.
+  // We'll override if empty or fallback.
+
+  QString appName = QCoreApplication::applicationName();
+  if (appName.isEmpty()) {
+      appName = "kmagmux";
+  }
+
+  // Set base directory
   if (m_baseDir.isEmpty()) {
     // Fallback for systems that might not return AppDataLocation correctly,
     // though unlikely with Qt
-    m_baseDir = QDir::homePath() + "/.local/share/KMagMux";
+    m_baseDir = QDir::homePath() + "/.local/share/" + appName;
   }
 
   m_inboxDir = m_baseDir + "/inbox";
@@ -146,6 +156,38 @@ std::optional<Item> StorageManager::loadItem(const QString &id) {
   }
 
   return Item::fromJson(doc.object());
+}
+
+bool StorageManager::deleteItem(const QString &id) {
+  std::optional<Item> optItem = loadItem(id);
+  if (!optItem.has_value()) {
+    return false;
+  }
+
+  Item item = optItem.value();
+
+  // Remove the managed file if it exists
+  if (item.metadata.contains("managedFile")) {
+    QString managedPath = item.metadata["managedFile"].toString();
+    if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
+      QFile::remove(managedPath);
+    }
+  } else if (item.sourcePath.startsWith(m_managedDir) && QFile::exists(item.sourcePath)) {
+    // Sometimes sourcePath points directly to the managed dir
+    QFile::remove(item.sourcePath);
+  }
+
+  // Remove the JSON data file
+  QString path = getItemPath(id);
+  if (QFile::exists(path)) {
+    if (!QFile::remove(path)) {
+      qWarning() << "Failed to delete item data file:" << path;
+      return false;
+    }
+  }
+
+  emit itemDeleted(id);
+  return true;
 }
 
 std::vector<Item> StorageManager::loadAllItems() {
