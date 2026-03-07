@@ -121,7 +121,7 @@ void PreferencesDialog::createPluginsPage() {
   QVBoxLayout *scrollLayout = new QVBoxLayout(scrollContent);
 
   if (m_engine) {
-    QStringList connectors = m_engine->getAvailableConnectors();
+    QStringList connectors = m_engine->getAllConnectors();
     if (connectors.isEmpty()) {
       QLabel *noPluginsLabel = new QLabel(
           tr("No plugins found. Ensure plugins are compiled into the 'plugins' "

@@ -10,6 +10,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
+find_package(Qt6Keychain REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -20,8 +21,9 @@ add_library(KMagMuxCore SHARED
     src/core/Engine.cpp
     src/core/ItemModel.cpp
     src/core/ItemParser.cpp
+    src/core/SecureStorage.cpp
 )
-target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)
+target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent qt6keychain)
 target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 file(RELATIVE_PATH REL_PLUGIN_DIR

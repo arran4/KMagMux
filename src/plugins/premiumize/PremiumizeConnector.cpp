@@ -10,18 +10,21 @@
 #include <QSettings>
 #include <QUrl>
 #include <QUrlQuery>
+#include <QVBoxLayout>
 #include <QWidget>
+#include "core/SecureStorage.h"
 
 PremiumizeConnector::PremiumizeConnector() : PremiumizeConnector(nullptr) {}
 
 PremiumizeConnector::PremiumizeConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_apiKey(""), m_enabled(true) {
+      m_apiKey(""), m_enabled(false) {
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
-  m_apiKey = settings.value("apiKey", "").toString();
-  m_enabled = settings.value("enabled", true).toBool();
+  m_enabled = settings.value("enabled", false).toBool();
   settings.endGroup();
+
+  m_apiKey = SecureStorage::readPassword("Plugins/Premiumize", "apiKey");
 }
 
 QString PremiumizeConnector::getId() const { return "Premiumize"; }
@@ -102,23 +105,31 @@ bool PremiumizeConnector::hasSettings() const { return true; }
 
 QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
-  QFormLayout *layout = new QFormLayout(widget);
+  QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
 
   QCheckBox *enabledCheck = new QCheckBox(tr("Enable Premiumize.me"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", true).toBool());
-  layout->addRow(enabledCheck);
+  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  mainLayout->addWidget(enabledCheck);
 
-  QLineEdit *tokenEdit = new QLineEdit(widget);
+  QWidget *configWidget = new QWidget(widget);
+  QFormLayout *configLayout = new QFormLayout(configWidget);
+
+  QLineEdit *tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
-  tokenEdit->setText(settings.value("apiKey", "").toString());
-  layout->addRow(tr("API Key:"), tokenEdit);
+  tokenEdit->setText(SecureStorage::readPassword("Plugins/Premiumize", "apiKey"));
+  configLayout->addRow(tr("API Key:"), tokenEdit);
 
+  mainLayout->addWidget(configWidget);
   settings.endGroup();
+
+  configWidget->setVisible(enabledCheck->isChecked());
+  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
+
   return widget;
 }
 
@@ -139,7 +150,7 @@ void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
     m_enabled = en;
   }
   if (tokenEdit) {
-    settings.setValue("apiKey", tokenEdit->text());
+    SecureStorage::writePassword("Plugins/Premiumize", "apiKey", tokenEdit->text());
     m_apiKey = tokenEdit->text();
   }
 

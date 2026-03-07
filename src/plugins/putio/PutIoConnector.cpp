@@ -9,18 +9,21 @@
 #include <QLineEdit>
 #include <QSettings>
 #include <QUrl>
+#include <QVBoxLayout>
 #include <QWidget>
+#include "core/SecureStorage.h"
 
 PutIoConnector::PutIoConnector() : PutIoConnector(nullptr) {}
 
 PutIoConnector::PutIoConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_oauthToken(""), m_enabled(true) {
+      m_oauthToken(""), m_enabled(false) {
   QSettings settings;
   settings.beginGroup("Plugins/PutIO");
-  m_oauthToken = settings.value("oauthToken", "").toString();
-  m_enabled = settings.value("enabled", true).toBool();
+  m_enabled = settings.value("enabled", false).toBool();
   settings.endGroup();
+
+  m_oauthToken = SecureStorage::readPassword("Plugins/PutIO", "oauthToken");
 }
 
 QString PutIoConnector::getId() const { return "PutIO"; }
@@ -86,23 +89,31 @@ bool PutIoConnector::hasSettings() const { return true; }
 
 QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
-  QFormLayout *layout = new QFormLayout(widget);
+  QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
   QSettings settings;
   settings.beginGroup("Plugins/PutIO");
 
   QCheckBox *enabledCheck = new QCheckBox(tr("Enable Put.io"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", true).toBool());
-  layout->addRow(enabledCheck);
+  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  mainLayout->addWidget(enabledCheck);
 
-  QLineEdit *tokenEdit = new QLineEdit(widget);
+  QWidget *configWidget = new QWidget(widget);
+  QFormLayout *configLayout = new QFormLayout(configWidget);
+
+  QLineEdit *tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
-  tokenEdit->setText(settings.value("oauthToken", "").toString());
-  layout->addRow(tr("OAuth Token:"), tokenEdit);
+  tokenEdit->setText(SecureStorage::readPassword("Plugins/PutIO", "oauthToken"));
+  configLayout->addRow(tr("OAuth Token:"), tokenEdit);
 
+  mainLayout->addWidget(configWidget);
   settings.endGroup();
+
+  configWidget->setVisible(enabledCheck->isChecked());
+  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
+
   return widget;
 }
 
@@ -123,7 +134,7 @@ void PutIoConnector::saveSettings(QWidget *settingsWidget) {
     m_enabled = en;
   }
   if (tokenEdit) {
-    settings.setValue("oauthToken", tokenEdit->text());
+    SecureStorage::writePassword("Plugins/PutIO", "oauthToken", tokenEdit->text());
     m_oauthToken = tokenEdit->text();
   }
 

@@ -114,6 +114,10 @@ QStringList Engine::getAvailableConnectors() const {
   return active;
 }
 
+QStringList Engine::getAllConnectors() const {
+  return m_connectors.keys();
+}
+
 void Engine::start() {
   if (!m_paused) {
     m_timer->start();

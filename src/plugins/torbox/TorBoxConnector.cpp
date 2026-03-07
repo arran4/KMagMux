@@ -9,18 +9,21 @@
 #include <QLineEdit>
 #include <QSettings>
 #include <QUrl>
+#include <QVBoxLayout>
 #include <QWidget>
+#include "core/SecureStorage.h"
 
 TorBoxConnector::TorBoxConnector() : TorBoxConnector(nullptr) {}
 
 TorBoxConnector::TorBoxConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_apiToken(""), m_enabled(true) {
+      m_apiToken(""), m_enabled(false) {
   QSettings settings;
   settings.beginGroup("Plugins/TorBox");
-  m_apiToken = settings.value("apiToken", "").toString();
-  m_enabled = settings.value("enabled", true).toBool();
+  m_enabled = settings.value("enabled", false).toBool();
   settings.endGroup();
+
+  m_apiToken = SecureStorage::readPassword("Plugins/TorBox", "apiToken");
 }
 
 QString TorBoxConnector::getId() const { return "TorBox"; }
@@ -88,23 +91,31 @@ bool TorBoxConnector::hasSettings() const { return true; }
 
 QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
-  QFormLayout *layout = new QFormLayout(widget);
+  QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
   QSettings settings;
   settings.beginGroup("Plugins/TorBox");
 
   QCheckBox *enabledCheck = new QCheckBox(tr("Enable TorBox"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", true).toBool());
-  layout->addRow(enabledCheck);
+  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  mainLayout->addWidget(enabledCheck);
 
-  QLineEdit *tokenEdit = new QLineEdit(widget);
+  QWidget *configWidget = new QWidget(widget);
+  QFormLayout *configLayout = new QFormLayout(configWidget);
+
+  QLineEdit *tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
-  tokenEdit->setText(settings.value("apiToken", "").toString());
-  layout->addRow(tr("API Token:"), tokenEdit);
+  tokenEdit->setText(SecureStorage::readPassword("Plugins/TorBox", "apiToken"));
+  configLayout->addRow(tr("API Token:"), tokenEdit);
 
+  mainLayout->addWidget(configWidget);
   settings.endGroup();
+
+  configWidget->setVisible(enabledCheck->isChecked());
+  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
+
   return widget;
 }
 
@@ -125,7 +136,7 @@ void TorBoxConnector::saveSettings(QWidget *settingsWidget) {
     m_enabled = en;
   }
   if (tokenEdit) {
-    settings.setValue("apiToken", tokenEdit->text());
+    SecureStorage::writePassword("Plugins/TorBox", "apiToken", tokenEdit->text());
     m_apiToken = tokenEdit->text();
   }
 
