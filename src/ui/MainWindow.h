@@ -40,12 +40,14 @@ private:
   // Models
   ItemModel *m_unprocessedModel;
   ItemModel *m_queueModel;
+  ItemModel *m_doneModel;
   ItemModel *m_archiveModel;
   ItemModel *m_errorModel;
 
   // Views
   QTableView *m_unprocessedView;
   QTableView *m_queueView;
+  QTableView *m_doneView;
   QTableView *m_archiveView;
   QTableView *m_errorView;
 
@@ -55,7 +57,8 @@ private:
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
-  void openProcessDialog(const std::vector<Item> &items);
+  void openAddItemsDialog(const std::vector<Item> &items);
+  void openProcessItemDialog(const std::vector<Item> &items);
 };
 
 #endif // MAINWINDOW_H

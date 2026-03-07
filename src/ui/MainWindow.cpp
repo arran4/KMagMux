@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
+#include "ProcessItemDialog.h"
 #include "LinkExtractorDialog.h"
 #include "PreferencesDialog.h"
 #include <QApplication>
@@ -44,7 +45,7 @@ void MainWindow::setupUi() {
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
   QAction *addItemsAction =
       fileMenu->addAction(QIcon::fromTheme("document-open"),
-                          tr("&Add Item(s)..."), this, &MainWindow::onAddItems);
+                          tr("&Find Item(s)..."), this, &MainWindow::onAddItems);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
 
   fileMenu->addSeparator();
@@ -119,6 +120,7 @@ void MainWindow::setupUi() {
   m_unprocessedView = new QTableView(this);
   m_unprocessedModel = new ItemModel(this);
   setupView(m_unprocessedView, m_unprocessedModel, "Inbox");
+  m_unprocessedView->hideColumn(ItemModel::ColState);
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
 
@@ -126,6 +128,11 @@ void MainWindow::setupUi() {
   m_queueView = new QTableView(this);
   m_queueModel = new ItemModel(this);
   setupView(m_queueView, m_queueModel, "Queue");
+
+  // Done Tab
+  m_doneView = new QTableView(this);
+  m_doneModel = new ItemModel(this);
+  setupView(m_doneView, m_doneModel, "Done");
 
   // Archive Tab
   m_archiveView = new QTableView(this);
@@ -143,6 +150,7 @@ void MainWindow::loadData() {
 
   std::vector<Item> unprocessedItems;
   std::vector<Item> queueItems;
+  std::vector<Item> doneItems;
   std::vector<Item> archiveItems;
   std::vector<Item> errorItems;
 
@@ -156,8 +164,10 @@ void MainWindow::loadData() {
     case ItemState::Held:
       queueItems.push_back(item);
       break;
+    case ItemState::Done:
+      doneItems.push_back(item);
+      break;
     case ItemState::Archived:
-    case ItemState::Dispatched:
       archiveItems.push_back(item);
       break;
     case ItemState::Failed:
@@ -170,6 +180,7 @@ void MainWindow::loadData() {
 
   m_unprocessedModel->setItems(unprocessedItems);
   m_queueModel->setItems(queueItems);
+  m_doneModel->setItems(doneItems);
   m_archiveModel->setItems(archiveItems);
   m_errorModel->setItems(errorItems);
 }
@@ -217,14 +228,17 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addSeparator();
   }
 
-  QAction *queueAction = menu.addAction("Queue");
-  QAction *holdAction = menu.addAction("Hold");
-  QAction *archiveAction = menu.addAction("Archive");
+  if (view != m_unprocessedView) {
+    QAction *queueAction = menu.addAction("Queue");
+    QAction *holdAction = menu.addAction("Hold");
 
-  connect(queueAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Queued); });
-  connect(holdAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Held); });
+    connect(queueAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Queued); });
+    connect(holdAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Held); });
+  }
+
+  QAction *archiveAction = menu.addAction("Archive");
   connect(archiveAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
 
@@ -263,7 +277,7 @@ void MainWindow::onItemUpdated(const Item &item) { loadData(); }
 
 void MainWindow::onAddItems() {
   QDialog dialog(this);
-  dialog.setWindowTitle(tr("Add Items"));
+  dialog.setWindowTitle(tr("Find Items"));
   dialog.resize(500, 400);
 
   QVBoxLayout *layout = new QVBoxLayout(&dialog);
@@ -378,7 +392,7 @@ void MainWindow::onAddItems() {
             [this, watcher]() {
               std::vector<Item> items = watcher->result();
               if (!items.empty()) {
-                openProcessDialog(items);
+                openAddItemsDialog(items);
               }
               watcher->deleteLater();
             });
@@ -413,14 +427,55 @@ void MainWindow::onProcessItem() {
                    return model->getItem(index.row());
                  });
 
-  openProcessDialog(selectedItems);
+  openProcessItemDialog(selectedItems);
 }
 
-void MainWindow::openProcessDialog(const std::vector<Item> &items) {
+void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
   if (items.empty())
     return;
 
   AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
+  if (dialog.exec() == QDialog::Accepted) {
+    std::vector<Item> updatedItems = dialog.getItems();
+    std::vector<Item> itemsToSave;
+    itemsToSave.reserve(updatedItems.size());
+
+    for (Item &updatedItem : updatedItems) {
+      bool success = true;
+
+      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
+        // Move logic
+        if (!m_storage->moveToManaged(updatedItem, true, true)) {
+          QMessageBox::warning(
+              this, "Error",
+              QString("Failed to move original file to managed storage: %1")
+                  .arg(updatedItem.sourcePath));
+          success = false; // Should we abort saving? Maybe just warn.
+        }
+
+        // Remove the temporary internal flag before saving
+        QJsonObject meta = updatedItem.metadata;
+        meta.remove("delete_source_file");
+        updatedItem.metadata = meta;
+      }
+
+      if (success) {
+        itemsToSave.push_back(updatedItem);
+        qDebug() << "Item queued for saving:" << updatedItem.id;
+      }
+    }
+
+    if (!itemsToSave.empty()) {
+      m_storage->saveItems(itemsToSave);
+    }
+  }
+}
+
+void MainWindow::openProcessItemDialog(const std::vector<Item> &items) {
+  if (items.empty())
+    return;
+
+  ProcessItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
     std::vector<Item> updatedItems = dialog.getItems();
     std::vector<Item> itemsToSave;
