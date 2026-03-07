@@ -28,6 +28,10 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
 
   m_pagesWidget = new QStackedWidget(this);
 
+  m_buttonBox = new QDialogButtonBox(
+      QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel,
+      this);
+
   createGeneralPage();
   createShortcutsPage();
   createPluginsPage();
@@ -40,10 +44,6 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
   QHBoxLayout *horizontalLayout = new QHBoxLayout;
   horizontalLayout->addWidget(m_categoriesList);
   horizontalLayout->addWidget(m_pagesWidget, 1);
-
-  m_buttonBox = new QDialogButtonBox(
-      QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel,
-      this);
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -148,10 +148,12 @@ void PreferencesDialog::createPluginsPage() {
               // We need to save settings when OK/Apply is clicked.
               // We can connect to the buttonBox accepted signal to call
               // saveSettings.
-              connect(m_buttonBox, &QDialogButtonBox::accepted, this,
-                      [connector, settingsWidget]() {
-                        connector->saveSettings(settingsWidget);
-                      });
+              if (m_buttonBox && connector && settingsWidget) {
+                connect(m_buttonBox, &QDialogButtonBox::accepted, this,
+                        [connector, settingsWidget]() {
+                          connector->saveSettings(settingsWidget);
+                        });
+              }
             } else {
               groupLayout->addWidget(
                   new QLabel(tr("Settings widget creation failed.")));
