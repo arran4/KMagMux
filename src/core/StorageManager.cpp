@@ -9,6 +9,7 @@
 #include <QStandardPaths>
 #include <QtConcurrent>
 #include <QCoreApplication>
+#include <QPointer>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
@@ -156,6 +157,26 @@ std::optional<Item> StorageManager::loadItem(const QString &id) {
   }
 
   return Item::fromJson(doc.object());
+}
+
+void StorageManager::deleteItems(const std::vector<QString> &ids) {
+  if (ids.empty()) {
+    return;
+  }
+  // To avoid dangling pointers if the application exits while deleting
+  QPointer<StorageManager> safeThis(this);
+  (void)QtConcurrent::run([safeThis, ids]() {
+    for (const QString &id : ids) {
+      if (safeThis) {
+        qDebug() << "Deleting item:" << id;
+        if (!safeThis->deleteItem(id)) {
+          qWarning() << "Failed to delete item:" << id;
+        }
+      } else {
+        break;
+      }
+    }
+  });
 }
 
 bool StorageManager::deleteItem(const QString &id) {

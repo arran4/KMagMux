@@ -31,6 +31,7 @@ public:
   std::optional<Item> loadItem(const QString &id);
   std::vector<Item> loadAllItems();
   bool deleteItem(const QString &id);
+  void deleteItems(const std::vector<QString> &ids);
 
   // Scanning
   QStringList scanInbox() const;
