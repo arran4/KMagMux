@@ -15,6 +15,8 @@ public:
   explicit Engine(StorageManager *storage, QObject *parent = nullptr);
   void start();
   void stop();
+  void setPaused(bool paused);
+  bool isPaused() const;
   QStringList getAvailableConnectors() const;
   QStringList getAllConnectors() const;
   Connector *getConnector(const QString &id) const;
