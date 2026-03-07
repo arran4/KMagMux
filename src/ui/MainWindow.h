@@ -6,10 +6,13 @@
 #include "../core/StorageManager.h"
 #include "ItemFilterProxyModel.h"
 #include <QAction>
+#include <QCloseEvent>
+#include <QEvent>
 #include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
+#include <QSystemTrayIcon>
 #include <QTabWidget>
 #include <QTableView>
 #include <QToolBar>
@@ -21,7 +24,16 @@ public:
   explicit MainWindow(StorageManager *storage, QWidget *parent = nullptr);
   ~MainWindow();
 
+protected:
+  void closeEvent(QCloseEvent *event) override;
+  void changeEvent(QEvent *event) override;
+
 private slots:
+  void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
+  void toggleShowHide();
+  void minimizeToTray();
+  void quitApplication();
+
   void onCustomContextMenuRequested(const QPoint &pos);
   void onItemAction(ItemState newState);
   void onItemAdded(const Item &item);
@@ -69,6 +81,20 @@ private:
   ItemModel *getCurrentModel() const;
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
+
+  QSystemTrayIcon *m_trayIcon;
+  QMenu *m_trayIconMenu;
+
+  QAction *m_minimizeAction;
+  QAction *m_showHideAction;
+  QAction *m_quitAction;
+
+  bool m_closeToTray;
+  bool m_minimizeToTray;
+  bool m_autoStart;
+  bool m_forceQuit;
+
+  void applySettings();
 };
 
 #endif // MAINWINDOW_H

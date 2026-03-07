@@ -11,3 +11,6 @@ KMagMux_autogen/
 .DS_Store
 *.user
 *.pro.user
+/tests/
+/plugins/
+/src/plugins/qbittorrent/qbittorrent_autogen/
