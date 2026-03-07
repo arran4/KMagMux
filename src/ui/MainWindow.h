@@ -29,6 +29,7 @@ private slots:
   void onAddItems();
   void onPreferences();
   void onAbout();
+  void onOpenCacheDirectory();
 
 private:
   StorageManager *m_storage;
