@@ -2,6 +2,7 @@
 
 #include "../core/Connector.h"
 #include "../core/Engine.h"
+#include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -122,8 +123,12 @@ void PreferencesDialog::createPluginsPage() {
   if (m_engine) {
     QStringList connectors = m_engine->getAvailableConnectors();
     if (connectors.isEmpty()) {
-      QLabel *noPluginsLabel =
-          new QLabel(tr("No plugins found."), scrollContent);
+      QLabel *noPluginsLabel = new QLabel(
+          tr("No plugins found. Ensure plugins are compiled into the 'plugins' "
+             "directory.\nLooking in: ") +
+              QCoreApplication::applicationDirPath() + "/plugins and " +
+              QCoreApplication::applicationDirPath() + "/../plugins",
+          scrollContent);
       scrollLayout->addWidget(noPluginsLabel);
     } else {
       for (const QString &id : connectors) {
