@@ -18,8 +18,8 @@ class ProcessItemDialog : public QDialog {
 
 public:
   explicit ProcessItemDialog(const std::vector<Item> &items,
-                         const QStringList &connectors,
-                         QWidget *parent = nullptr);
+                             const QStringList &connectors,
+                             QWidget *parent = nullptr);
 
   std::vector<Item> getItems() const;
 

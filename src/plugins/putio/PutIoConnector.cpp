@@ -1,4 +1,5 @@
 #include "PutIoConnector.h"
+#include "core/SecureStorage.h"
 #include <QCheckBox>
 #include <QDebug>
 #include <QFile>
@@ -8,10 +9,11 @@
 #include <QHttpPart>
 #include <QLineEdit>
 #include <QSettings>
+#include <QSslConfiguration>
+#include <QSslSocket>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QWidget>
-#include "core/SecureStorage.h"
 
 PutIoConnector::PutIoConnector() : PutIoConnector(nullptr) {}
 
@@ -35,6 +37,9 @@ bool PutIoConnector::isEnabled() const { return m_enabled; }
 void PutIoConnector::dispatch(const Item &item) {
   QUrl url("https://api.put.io/v2/transfers/add");
   QNetworkRequest request(url);
+  QSslConfiguration sslConfig = request.sslConfiguration();
+  sslConfig.setPeerVerifyMode(QSslSocket::VerifyPeer);
+  request.setSslConfiguration(sslConfig);
   request.setRawHeader("Authorization", ("Bearer " + m_oauthToken).toUtf8());
 
   QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
@@ -55,9 +60,9 @@ void PutIoConnector::dispatch(const Item &item) {
     }
     QHttpPart filePart;
     QString filename = QFileInfo(item.sourcePath).fileName();
-    filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                       QVariant("form-data; name=\"file\"; filename=\"" +
-                                filename + "\""));
+    filePart.setHeader(
+        QNetworkRequest::ContentDispositionHeader,
+        QVariant("form-data; name=\"file\"; filename=\"" + filename + "\""));
     filePart.setBodyDevice(file);
     file->setParent(multiPart);
     multiPart->append(filePart);
@@ -105,14 +110,16 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   QLineEdit *tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
-  tokenEdit->setText(SecureStorage::readPassword("Plugins/PutIO", "oauthToken"));
+  tokenEdit->setText(
+      SecureStorage::readPassword("Plugins/PutIO", "oauthToken"));
   configLayout->addRow(tr("OAuth Token:"), tokenEdit);
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
 
   configWidget->setVisible(enabledCheck->isChecked());
-  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
+  connect(enabledCheck, &QCheckBox::toggled, configWidget,
+          &QWidget::setVisible);
 
   return widget;
 }
@@ -134,7 +141,8 @@ void PutIoConnector::saveSettings(QWidget *settingsWidget) {
     m_enabled = en;
   }
   if (tokenEdit) {
-    SecureStorage::writePassword("Plugins/PutIO", "oauthToken", tokenEdit->text());
+    SecureStorage::writePassword("Plugins/PutIO", "oauthToken",
+                                 tokenEdit->text());
     m_oauthToken = tokenEdit->text();
   }
 

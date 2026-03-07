@@ -4,6 +4,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSslConfiguration>
+#include <QSslSocket>
 #include <QTextStream>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -133,7 +135,11 @@ void LinkExtractorDialog::processNext() {
   if (!isLocalFile && url.isValid() &&
       (url.scheme() == "http" || url.scheme() == "https")) {
     appendLog(tr("Downloading remote file: %1").arg(line));
-    m_currentReply = m_networkManager->get(QNetworkRequest(url));
+    QNetworkRequest request(url);
+    QSslConfiguration sslConfig = request.sslConfiguration();
+    sslConfig.setPeerVerifyMode(QSslSocket::VerifyPeer);
+    request.setSslConfiguration(sslConfig);
+    m_currentReply = m_networkManager->get(request);
     connect(m_currentReply, &QNetworkReply::finished, this,
             &LinkExtractorDialog::onReplyFinished);
     return;

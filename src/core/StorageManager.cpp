@@ -1,4 +1,5 @@
 #include "StorageManager.h"
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
 #include <QDirIterator>
@@ -8,7 +9,6 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QtConcurrent>
-#include <QCoreApplication>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
@@ -20,7 +20,7 @@ StorageManager::StorageManager(QObject *parent)
 
   QString appName = QCoreApplication::applicationName();
   if (appName.isEmpty()) {
-      appName = "kmagmux";
+    appName = "kmagmux";
   }
 
   // Set base directory
@@ -172,7 +172,8 @@ bool StorageManager::deleteItem(const QString &id) {
     if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
       QFile::remove(managedPath);
     }
-  } else if (item.sourcePath.startsWith(m_managedDir) && QFile::exists(item.sourcePath)) {
+  } else if (item.sourcePath.startsWith(m_managedDir) &&
+             QFile::exists(item.sourcePath)) {
     // Sometimes sourcePath points directly to the managed dir
     QFile::remove(item.sourcePath);
   }

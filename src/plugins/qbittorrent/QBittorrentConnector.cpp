@@ -1,8 +1,9 @@
 #include "QBittorrentConnector.h"
+#include "core/SecureStorage.h"
+#include <QCheckBox>
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
-#include <QCheckBox>
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
@@ -10,9 +11,10 @@
 #include <QJsonObject>
 #include <QLineEdit>
 #include <QSettings>
+#include <QSslConfiguration>
+#include <QSslSocket>
 #include <QUrlQuery>
 #include <QWidget>
-#include "core/SecureStorage.h"
 
 QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 
@@ -64,6 +66,9 @@ void QBittorrentConnector::dispatch(const Item &item) {
 void QBittorrentConnector::login() {
   QUrl url(m_baseUrl + "/api/v2/auth/login");
   QNetworkRequest request(url);
+  QSslConfiguration sslConfig = request.sslConfiguration();
+  sslConfig.setPeerVerifyMode(QSslSocket::VerifyPeer);
+  request.setSslConfiguration(sslConfig);
   request.setHeader(QNetworkRequest::ContentTypeHeader,
                     "application/x-www-form-urlencoded");
 
@@ -103,6 +108,9 @@ void QBittorrentConnector::onLoginReply() {
 void QBittorrentConnector::performDispatch(const Item &item) {
   QUrl url(m_baseUrl + "/api/v2/torrents/add");
   QNetworkRequest request(url);
+  QSslConfiguration sslConfig = request.sslConfiguration();
+  sslConfig.setPeerVerifyMode(QSslSocket::VerifyPeer);
+  request.setSslConfiguration(sslConfig);
 
   // We use QHttpMultiPart for both files and magnets because qBittorrent API
   // accepts multipart/form-data
@@ -235,14 +243,16 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QLineEdit *passEdit = new QLineEdit(configWidget);
   passEdit->setObjectName("passEdit");
   passEdit->setEchoMode(QLineEdit::Password);
-  passEdit->setText(SecureStorage::readPassword("Plugins/qBittorrent", "password"));
+  passEdit->setText(
+      SecureStorage::readPassword("Plugins/qBittorrent", "password"));
   configLayout->addRow(tr("Password:"), passEdit);
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
 
   configWidget->setVisible(enabledCheck->isChecked());
-  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
+  connect(enabledCheck, &QCheckBox::toggled, configWidget,
+          &QWidget::setVisible);
 
   return widget;
 }
@@ -271,7 +281,8 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   }
   if (userEdit && passEdit) {
     settings.setValue("username", userEdit->text());
-    SecureStorage::writePassword("Plugins/qBittorrent", "password", passEdit->text());
+    SecureStorage::writePassword("Plugins/qBittorrent", "password",
+                                 passEdit->text());
     setCredentials(userEdit->text(), passEdit->text());
   }
 

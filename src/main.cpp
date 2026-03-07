@@ -1,11 +1,11 @@
 #include "core/StorageManager.h"
 #include "ui/MainWindow.h"
 #include <QApplication>
-#include <QDebug>
-#include <QMessageBox>
-#include <QLocalSocket>
-#include <QLocalServer>
 #include <QDataStream>
+#include <QDebug>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QMessageBox>
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
@@ -13,16 +13,21 @@ int main(int argc, char *argv[]) {
   app.setOrganizationName("KMagMux");
   app.setWindowIcon(QIcon(":/icons/kmagmux.svg"));
 
-  // Using kmagmux for normal, maybe handle dev mode later. The comment asks to lowercase KMagMux and for dev copy name spacing.
-  // Wait, I will just change "KMagMux_SingleInstance" to "kmagmux_SingleInstance" for the socket, or read the PR comment again:
-  // "the exception should be the development copy which should be name spaced. It should also use a different configuration / share / cache directories too. Also the directory names should be lower case not `KMagMux` but `kmagmux` the dev can be `kmagmux-dev1`"
+  // Using kmagmux for normal, maybe handle dev mode later. The comment asks to
+  // lowercase KMagMux and for dev copy name spacing. Wait, I will just change
+  // "KMagMux_SingleInstance" to "kmagmux_SingleInstance" for the socket, or
+  // read the PR comment again: "the exception should be the development copy
+  // which should be name spaced. It should also use a different configuration /
+  // share / cache directories too. Also the directory names should be lower
+  // case not `KMagMux` but `kmagmux` the dev can be `kmagmux-dev1`"
 
   QString appName = "kmagmux";
 #ifdef QT_DEBUG
   appName = "kmagmux-dev1";
 #endif
 
-  app.setApplicationName(appName); // This will affect the config directory as well
+  app.setApplicationName(
+      appName); // This will affect the config directory as well
 
   const QString serverName = appName + "_SingleInstance";
   QStringList args = app.arguments();
@@ -57,46 +62,52 @@ int main(int argc, char *argv[]) {
   QLocalServer::removeServer(serverName);
   QLocalServer server;
   if (!server.listen(serverName)) {
-    qWarning() << "Failed to start local server for single instance logic:" << server.errorString();
+    qWarning() << "Failed to start local server for single instance logic:"
+               << server.errorString();
   }
 
   MainWindow window(&storage);
 
   // Handle incoming connections from new instances
-  QObject::connect(&server, &QLocalServer::newConnection, [&storage, &server, &window]() {
-    QLocalSocket *client = server.nextPendingConnection();
-    QObject::connect(client, &QLocalSocket::readyRead, [&storage, client, &window]() {
-      QDataStream in(client);
-      in.startTransaction();
-      QStringList passedArgs;
-      in >> passedArgs;
-      if (!in.commitTransaction()) {
-        return; // Wait for more data
-      }
+  QObject::connect(
+      &server, &QLocalServer::newConnection, [&storage, &server, &window]() {
+        QLocalSocket *client = server.nextPendingConnection();
+        QObject::connect(
+            client, &QLocalSocket::readyRead, [&storage, client, &window]() {
+              QDataStream in(client);
+              in.startTransaction();
+              QStringList passedArgs;
+              in >> passedArgs;
+              if (!in.commitTransaction()) {
+                return; // Wait for more data
+              }
 
-      for (int i = 0; i < passedArgs.size(); ++i) {
-        QString arg = passedArgs[i];
-        Item newItem;
-        newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
-                     QString::number(i) + "_remote"; // To avoid collision
-        newItem.state = ItemState::Unprocessed;
-        newItem.sourcePath = arg;
-        newItem.createdTime = QDateTime::currentDateTime();
+              for (int i = 0; i < passedArgs.size(); ++i) {
+                QString arg = passedArgs[i];
+                Item newItem;
+                newItem.id =
+                    QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
+                    QString::number(i) + "_remote"; // To avoid collision
+                newItem.state = ItemState::Unprocessed;
+                newItem.sourcePath = arg;
+                newItem.createdTime = QDateTime::currentDateTime();
 
-        if (storage.saveItem(newItem)) {
-          qDebug() << "Imported item from new instance:" << arg;
-        } else {
-          qWarning() << "Failed to import item from new instance:" << arg;
-        }
-      }
+                if (storage.saveItem(newItem)) {
+                  qDebug() << "Imported item from new instance:" << arg;
+                } else {
+                  qWarning()
+                      << "Failed to import item from new instance:" << arg;
+                }
+              }
 
-      // Bring window to front
-      window.show();
-      window.raise();
-      window.activateWindow();
-    });
-    QObject::connect(client, &QLocalSocket::disconnected, client, &QLocalSocket::deleteLater);
-  });
+              // Bring window to front
+              window.show();
+              window.raise();
+              window.activateWindow();
+            });
+        QObject::connect(client, &QLocalSocket::disconnected, client,
+                         &QLocalSocket::deleteLater);
+      });
 
   // Handle CLI arguments (Files/URLs) from the FIRST instance
   for (int i = 1; i < args.size(); ++i) {
