@@ -16,6 +16,7 @@ public:
   void start();
   void stop();
   QStringList getAvailableConnectors() const;
+  QStringList getAllConnectors() const;
   Connector *getConnector(const QString &id) const;
 
 private slots:

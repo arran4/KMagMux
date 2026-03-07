@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
+#include <QCheckBox>
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
@@ -11,24 +12,29 @@
 #include <QSettings>
 #include <QUrlQuery>
 #include <QWidget>
+#include "core/SecureStorage.h"
 
 QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_baseUrl(""), m_username(""), m_password(""), m_pendingItem(),
-      m_isPending(false) {
+      m_baseUrl(""), m_username(""), m_password(""), m_enabled(false),
+      m_pendingItem(), m_isPending(false) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
   m_baseUrl = settings.value("baseUrl", "http://localhost:8080").toString();
   m_username = settings.value("username", "").toString();
-  m_password = settings.value("password", "").toString();
+  m_enabled = settings.value("enabled", false).toBool();
   settings.endGroup();
+
+  m_password = SecureStorage::readPassword("Plugins/qBittorrent", "password");
 }
 
 QString QBittorrentConnector::getId() const { return "qBittorrent"; }
 
 QString QBittorrentConnector::getName() const { return "qBittorrent (WebAPI)"; }
+
+bool QBittorrentConnector::isEnabled() const { return m_enabled; }
 
 void QBittorrentConnector::setBaseUrl(const QString &url) {
   m_baseUrl = url;
@@ -202,29 +208,41 @@ bool QBittorrentConnector::hasSettings() const { return true; }
 
 QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
-  QFormLayout *layout = new QFormLayout(widget);
+  QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
-  QLineEdit *urlEdit = new QLineEdit(widget);
+  QCheckBox *enabledCheck = new QCheckBox(tr("Enable qBittorrent"), widget);
+  enabledCheck->setObjectName("enabledCheck");
+  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  mainLayout->addWidget(enabledCheck);
+
+  QWidget *configWidget = new QWidget(widget);
+  QFormLayout *configLayout = new QFormLayout(configWidget);
+
+  QLineEdit *urlEdit = new QLineEdit(configWidget);
   urlEdit->setObjectName("urlEdit");
   urlEdit->setText(
       settings.value("baseUrl", "http://localhost:8080").toString());
-  layout->addRow(tr("Base URL:"), urlEdit);
+  configLayout->addRow(tr("Base URL:"), urlEdit);
 
-  QLineEdit *userEdit = new QLineEdit(widget);
+  QLineEdit *userEdit = new QLineEdit(configWidget);
   userEdit->setObjectName("userEdit");
   userEdit->setText(settings.value("username", "").toString());
-  layout->addRow(tr("Username:"), userEdit);
+  configLayout->addRow(tr("Username:"), userEdit);
 
-  QLineEdit *passEdit = new QLineEdit(widget);
+  QLineEdit *passEdit = new QLineEdit(configWidget);
   passEdit->setObjectName("passEdit");
   passEdit->setEchoMode(QLineEdit::Password);
-  passEdit->setText(settings.value("password", "").toString());
-  layout->addRow(tr("Password:"), passEdit);
+  passEdit->setText(SecureStorage::readPassword("Plugins/qBittorrent", "password"));
+  configLayout->addRow(tr("Password:"), passEdit);
 
+  mainLayout->addWidget(configWidget);
   settings.endGroup();
+
+  configWidget->setVisible(enabledCheck->isChecked());
+  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
 
   return widget;
 }
@@ -233,6 +251,8 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   if (!settingsWidget)
     return;
 
+  QCheckBox *enabledCheck =
+      settingsWidget->findChild<QCheckBox *>("enabledCheck");
   QLineEdit *urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
   QLineEdit *userEdit = settingsWidget->findChild<QLineEdit *>("userEdit");
   QLineEdit *passEdit = settingsWidget->findChild<QLineEdit *>("passEdit");
@@ -240,13 +260,18 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
+  if (enabledCheck) {
+    bool en = enabledCheck->isChecked();
+    settings.setValue("enabled", en);
+    m_enabled = en;
+  }
   if (urlEdit) {
     settings.setValue("baseUrl", urlEdit->text());
     setBaseUrl(urlEdit->text());
   }
   if (userEdit && passEdit) {
     settings.setValue("username", userEdit->text());
-    settings.setValue("password", passEdit->text());
+    SecureStorage::writePassword("Plugins/qBittorrent", "password", passEdit->text());
     setCredentials(userEdit->text(), passEdit->text());
   }
 

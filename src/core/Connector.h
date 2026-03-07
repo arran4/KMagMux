@@ -12,6 +12,8 @@ public:
   virtual QString getName() const = 0;
   virtual void dispatch(const Item &item) = 0;
 
+  virtual bool isEnabled() const { return true; }
+
   virtual bool hasSettings() const { return false; }
   virtual class QWidget *createSettingsWidget(class QWidget *parent) {
     return nullptr;
