@@ -35,6 +35,7 @@ private:
   QCheckBox *m_closeToTrayCb;
   QCheckBox *m_minimizeToTrayCb;
   QCheckBox *m_autoStartCb;
+  QCheckBox *m_autoMoveInboxCb;
 };
 
 #endif // PREFERENCESDIALOG_H

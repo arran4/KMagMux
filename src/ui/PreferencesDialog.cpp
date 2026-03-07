@@ -54,6 +54,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
             settings.setValue("minimizeToTray",
                               m_minimizeToTrayCb->isChecked());
             settings.setValue("autoStart", m_autoStartCb->isChecked());
+            settings.setValue("autoMoveInbox", m_autoMoveInboxCb->isChecked());
           });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
@@ -61,6 +62,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
     settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
     settings.setValue("autoStart", m_autoStartCb->isChecked());
+    settings.setValue("autoMoveInbox", m_autoMoveInboxCb->isChecked());
     accept();
   });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -101,6 +103,10 @@ void PreferencesDialog::createGeneralPage() {
   m_autoStartCb = new QCheckBox(tr("Start KMagMux automatically"), page);
   m_autoStartCb->setChecked(settings.value("autoStart", false).toBool());
   layout->addWidget(m_autoStartCb);
+
+  m_autoMoveInboxCb = new QCheckBox(tr("Automatically move new inbox files to managed storage"), page);
+  m_autoMoveInboxCb->setChecked(settings.value("autoMoveInbox", false).toBool());
+  layout->addWidget(m_autoMoveInboxCb);
 
   layout->addStretch();
   m_pagesWidget->addWidget(page);

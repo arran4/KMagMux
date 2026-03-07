@@ -1,6 +1,7 @@
 #include "StorageManager.h"
 #include <QDateTime>
 #include <QDebug>
+#include <QSettings>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
@@ -244,8 +245,14 @@ void StorageManager::processNewFile(const QString &filePath) {
   newItem.sourcePath = filePath;
   newItem.createdTime = QDateTime::currentDateTime();
 
-  // TODO: Implement policy for automated vs user-initiated moves to managed
-  // storage. For now, we only register the item.
+  QSettings settings;
+  if (settings.value("autoMoveInbox", false).toBool()) {
+    if (!moveToManaged(newItem, true, true)) {
+      qWarning() << "Failed to automatically move new item to managed storage:" << newItem.sourcePath;
+    } else {
+      qDebug() << "Automatically moved new item to managed storage:" << newItem.sourcePath;
+    }
+  }
 
   if (saveItem(newItem)) {
     emit itemAdded(newItem);
