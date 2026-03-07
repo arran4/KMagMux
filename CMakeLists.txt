@@ -36,6 +36,7 @@ set_target_properties(KMagMuxCore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 add_executable(KMagMux
     src/main.cpp
     src/ui/MainWindow.cpp
+    src/ui/BaseItemDialog.cpp
     src/ui/AddItemDialog.cpp
     src/ui/ProcessItemDialog.cpp
     src/ui/PreferencesDialog.cpp

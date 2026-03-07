@@ -1,19 +1,9 @@
 #ifndef ADDITEMDIALOG_H
 #define ADDITEMDIALOG_H
 
-#include "../core/Item.h"
-#include <QCheckBox>
-#include <QComboBox>
-#include <QDateTimeEdit>
-#include <QDialog>
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QStringList>
-#include <QTableWidget>
-#include <vector>
+#include "BaseItemDialog.h"
 
-class AddItemDialog : public QDialog {
+class AddItemDialog : public BaseItemDialog {
   Q_OBJECT
 
 public:
@@ -21,17 +11,10 @@ public:
                          const QStringList &connectors,
                          QWidget *parent = nullptr);
 
-  std::vector<Item> getItems() const;
-
 private slots:
   void onProcessClicked();
-  void onCustomContextMenuRequested(const QPoint &pos);
 
 private:
-  std::vector<Item> m_items;
-
-  QTableWidget *m_itemsTable;
-
   void setupUi();
 };
 

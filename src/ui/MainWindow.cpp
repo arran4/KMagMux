@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include <QLabel>
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
 #include "ProcessItemDialog.h"
