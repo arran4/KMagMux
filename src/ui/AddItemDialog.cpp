@@ -75,9 +75,10 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
     deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     if (isLocalFile) {
-        deleteItem->setCheckState(Qt::Unchecked);
+      deleteItem->setCheckState(Qt::Unchecked);
     } else {
-        deleteItem->setFlags(Qt::NoItemFlags); // Disable checkbox for non-local files
+      deleteItem->setFlags(
+          Qt::NoItemFlags); // Disable checkbox for non-local files
     }
     m_itemsTable->setItem(i, 1, deleteItem);
 
@@ -102,13 +103,13 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
   // Check if any items are local files. If none are, hide the delete column.
   bool hasLocalFiles = false;
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-      if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
-          hasLocalFiles = true;
-          break;
-      }
+    if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
+      hasLocalFiles = true;
+      break;
+    }
   }
   if (!hasLocalFiles) {
-      m_itemsTable->hideColumn(1);
+    m_itemsTable->hideColumn(1);
   }
 }
 

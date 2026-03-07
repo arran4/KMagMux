@@ -30,6 +30,7 @@ private slots:
   void onPreferences();
   void onAbout();
   void onToggleProcessing(bool checked);
+  void onOpenCacheDirectory();
 
 private:
   StorageManager *m_storage;

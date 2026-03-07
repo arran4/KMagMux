@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFutureWatcher>
@@ -14,6 +15,7 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QtConcurrent>
 #include <algorithm>
@@ -70,6 +72,11 @@ void MainWindow::setupUi() {
                           tr("&Preferences"), this, &MainWindow::onPreferences);
   prefAction->setShortcut(QKeySequence("Ctrl+,"));
 
+  QMenu *actionsMenu = menuBar()->addMenu(tr("A&ctions"));
+  QMenu *debugMenu = actionsMenu->addMenu(tr("&Debug"));
+  debugMenu->addAction(tr("Open &Cache directory"), this,
+                       &MainWindow::onOpenCacheDirectory);
+
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
   helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
                       this, &MainWindow::onAbout);
@@ -96,7 +103,8 @@ void MainWindow::setupUi() {
   auto setupView = [this](QTableView *view, ItemModel *model,
                           const QString &title) {
     view->setModel(model);
-    view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    view->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
     view->setTextElideMode(Qt::ElideNone);
     view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -334,7 +342,8 @@ void MainWindow::onAddItems() {
                 &QDialog::reject);
 
         if (openDialog.exec() == QDialog::Accepted) {
-          QStringList lines = olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+          QStringList lines =
+              olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
           if (!lines.isEmpty()) {
             LinkExtractorDialog extractor(lines, extractMagnetsCb->isChecked(),
                                           extractTorrentsCb->isChecked(),
@@ -470,4 +479,8 @@ void MainWindow::onToggleProcessing(bool checked) {
     m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-start"));
   }
   // TODO: Implement processing items pause/play toggle
+}
+
+void MainWindow::onOpenCacheDirectory() {
+  QDesktopServices::openUrl(QUrl::fromLocalFile(m_storage->getBaseDir()));
 }
