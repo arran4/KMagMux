@@ -6,6 +6,28 @@
 #include <QLocalSocket>
 #include <QLocalServer>
 #include <QDataStream>
+#include <QUrl>
+#include <QFileInfo>
+
+static bool isValidInput(const QString &arg) {
+  if (arg.startsWith("magnet:?")) {
+    return true;
+  }
+  if (arg.startsWith("magnet:") && arg.length() > 7) {
+    return true;
+  }
+  QUrl url(arg);
+  if (url.isValid() && (url.scheme() == "http" || url.scheme() == "https")) {
+    return true;
+  }
+
+  QString pathToCheck = arg;
+  if (arg.startsWith("file://")) {
+    pathToCheck = QUrl(arg).toLocalFile();
+  }
+  QFileInfo fi(pathToCheck);
+  return fi.exists() && fi.isFile();
+}
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
@@ -56,6 +78,7 @@ int main(int argc, char *argv[]) {
   // Not running, clean up any stale socket
   QLocalServer::removeServer(serverName);
   QLocalServer server;
+  server.setSocketOptions(QLocalServer::UserAccessOption);
   if (!server.listen(serverName)) {
     qWarning() << "Failed to start local server for single instance logic:" << server.errorString();
   }
@@ -76,6 +99,11 @@ int main(int argc, char *argv[]) {
 
       for (int i = 0; i < passedArgs.size(); ++i) {
         QString arg = passedArgs[i];
+        if (!isValidInput(arg)) {
+          qWarning() << "Invalid input received from IPC, ignoring:" << arg;
+          continue;
+        }
+
         Item newItem;
         newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
                      QString::number(i) + "_remote"; // To avoid collision
@@ -101,6 +129,11 @@ int main(int argc, char *argv[]) {
   // Handle CLI arguments (Files/URLs) from the FIRST instance
   for (int i = 1; i < args.size(); ++i) {
     QString arg = args[i];
+
+    if (!isValidInput(arg)) {
+      qWarning() << "Invalid input received from CLI, ignoring:" << arg;
+      continue;
+    }
 
     Item newItem;
     newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
