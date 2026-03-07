@@ -12,38 +12,6 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
-namespace {
-QString getDisplayName(const QString &sourcePath) {
-  if (sourcePath.startsWith("magnet:?")) {
-    QUrl url(sourcePath);
-    QUrlQuery query(url);
-    if (query.hasQueryItem("dn")) {
-      return QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
-    } else if (query.hasQueryItem("tr")) {
-      return "Magnet Link (No Name)";
-    } else {
-      // maybe xt infohash?
-      QString fullQuery = url.query();
-      int xtIdx = fullQuery.indexOf("xt=");
-      if (xtIdx != -1) {
-        int endIdx = fullQuery.indexOf('&', xtIdx);
-        if (endIdx == -1)
-          endIdx = fullQuery.length();
-        return fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
-      }
-    }
-    return "Magnet Link";
-  }
-
-  QFileInfo fi(sourcePath);
-  QString name = fi.fileName();
-  if (!name.isEmpty()) {
-    return QUrl::fromPercentEncoding(name.toUtf8());
-  }
-  return sourcePath;
-}
-} // namespace
-
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
@@ -82,7 +50,7 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     }
     m_itemsTable->setItem(i, 1, deleteItem);
 
-    QString displayName = getDisplayName(m_items[i].sourcePath);
+    QString displayName = m_items[i].getDisplayName();
     QTableWidgetItem *nameItem = new QTableWidgetItem(displayName);
     nameItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     m_itemsTable->setItem(i, 2, nameItem);
