@@ -1,0 +1,50 @@
+#include "ItemFilterProxyModel.h"
+#include "../core/ItemModel.h"
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QVariant>
+
+ItemFilterProxyModel::ItemFilterProxyModel(QObject *parent)
+    : QSortFilterProxyModel(parent) {}
+
+void ItemFilterProxyModel::setFilterText(const QString &text) {
+  m_filterText = text;
+  invalidate();
+}
+
+bool ItemFilterProxyModel::filterAcceptsRow(
+    int source_row, const QModelIndex &source_parent) const {
+  if (m_filterText.isEmpty())
+    return true;
+
+  ItemModel *model = qobject_cast<ItemModel *>(sourceModel());
+  if (!model)
+    return true;
+
+  const Item &item = model->getItem(source_row);
+  QString textLower = m_filterText.toLower();
+
+  if (item.id.toLower().contains(textLower) ||
+      item.sourcePath.toLower().contains(textLower)) {
+    return true;
+  }
+
+  // Check metadata for matching text (trackers, labels, etc.)
+  for (auto it = item.metadata.constBegin(); it != item.metadata.constEnd();
+       ++it) {
+    if (it.value().isString()) {
+      if (it.value().toString().toLower().contains(textLower)) {
+        return true;
+      }
+    } else if (it.value().isArray()) {
+      QJsonArray arr = it.value().toArray();
+      for (const QJsonValue &val : arr) {
+        if (val.isString() && val.toString().toLower().contains(textLower)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}

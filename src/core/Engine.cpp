@@ -180,7 +180,7 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
   meta["dispatchResult"] = message;
 
   if (success) {
-    item.state = ItemState::Dispatched;
+    item.state = ItemState::Done;
     qDebug() << "Item dispatched successfully:" << itemId;
   } else {
     item.state = ItemState::Failed;
