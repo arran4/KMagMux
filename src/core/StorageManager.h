@@ -4,6 +4,8 @@
 #include "Item.h"
 #include <QDir>
 #include <QFileSystemWatcher>
+#include <QList>
+#include <QMap>
 #include <QObject>
 #include <QSet>
 #include <QString>
@@ -30,6 +32,7 @@ public:
   void saveItems(const std::vector<Item> &items);
   std::optional<Item> loadItem(const QString &id);
   std::vector<Item> loadAllItems();
+  std::vector<Item> loadItemsByStates(const QList<ItemState> &states) const;
   bool deleteItem(const QString &id);
 
   // Scanning
@@ -59,6 +62,8 @@ private:
 
   QFileSystemWatcher *m_watcher;
   QSet<QString> m_knownFiles; // To track new files vs existing
+
+  QMap<QString, Item> m_itemCache;
 
   bool createDirIfNotExists(const QString &path);
   QString getItemPath(const QString &id) const;

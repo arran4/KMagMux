@@ -1,4 +1,5 @@
 #include "StorageManager.h"
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
 #include <QDirIterator>
@@ -8,7 +9,6 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QtConcurrent>
-#include <QCoreApplication>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
@@ -20,7 +20,7 @@ StorageManager::StorageManager(QObject *parent)
 
   QString appName = QCoreApplication::applicationName();
   if (appName.isEmpty()) {
-      appName = "kmagmux";
+    appName = "kmagmux";
   }
 
   // Set base directory
@@ -58,6 +58,22 @@ bool StorageManager::init() {
 
   if (success) {
     qDebug() << "Storage initialized at:" << m_baseDir;
+
+    // Load all existing items into cache
+    QDirIterator it(m_dataDir, QStringList() << "*.json", QDir::Files);
+    while (it.hasNext()) {
+      QString path = it.next();
+      QFile file(path);
+      if (file.open(QIODevice::ReadOnly)) {
+        QByteArray data = file.readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (!doc.isNull() && doc.isObject()) {
+          Item item = Item::fromJson(doc.object());
+          m_itemCache.insert(item.id, item);
+        }
+      }
+    }
+
     // Start watching inbox
     if (m_watcher->addPath(m_inboxDir)) {
       qDebug() << "Watching inbox:" << m_inboxDir;
@@ -123,8 +139,15 @@ bool StorageManager::saveItem(const Item &item) {
     return false;
   }
 
+  bool isNew = !m_itemCache.contains(item.id);
+  m_itemCache.insert(item.id, item);
+
   // Notify updates
-  emit itemUpdated(item);
+  if (isNew) {
+    emit itemAdded(item);
+  } else {
+    emit itemUpdated(item);
+  }
 
   return true;
 }
@@ -141,21 +164,10 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
 }
 
 std::optional<Item> StorageManager::loadItem(const QString &id) {
-  QString path = getItemPath(id);
-  QFile file(path);
-  if (!file.open(QIODevice::ReadOnly)) {
-    qWarning() << "Failed to open file for reading:" << path;
-    return std::nullopt;
+  if (m_itemCache.contains(id)) {
+    return m_itemCache.value(id);
   }
-
-  QByteArray data = file.readAll();
-  QJsonDocument doc = QJsonDocument::fromJson(data);
-  if (doc.isNull() || !doc.isObject()) {
-    qWarning() << "Failed to parse JSON from file:" << path;
-    return std::nullopt;
-  }
-
-  return Item::fromJson(doc.object());
+  return std::nullopt;
 }
 
 bool StorageManager::deleteItem(const QString &id) {
@@ -172,7 +184,8 @@ bool StorageManager::deleteItem(const QString &id) {
     if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
       QFile::remove(managedPath);
     }
-  } else if (item.sourcePath.startsWith(m_managedDir) && QFile::exists(item.sourcePath)) {
+  } else if (item.sourcePath.startsWith(m_managedDir) &&
+             QFile::exists(item.sourcePath)) {
     // Sometimes sourcePath points directly to the managed dir
     QFile::remove(item.sourcePath);
   }
@@ -186,22 +199,27 @@ bool StorageManager::deleteItem(const QString &id) {
     }
   }
 
+  m_itemCache.remove(id);
+
   emit itemDeleted(id);
   return true;
 }
 
 std::vector<Item> StorageManager::loadAllItems() {
   std::vector<Item> items;
-  QDirIterator it(m_dataDir, QStringList() << "*.json", QDir::Files);
-  while (it.hasNext()) {
-    QString path = it.next();
-    QFile file(path);
-    if (file.open(QIODevice::ReadOnly)) {
-      QByteArray data = file.readAll();
-      QJsonDocument doc = QJsonDocument::fromJson(data);
-      if (!doc.isNull() && doc.isObject()) {
-        items.push_back(Item::fromJson(doc.object()));
-      }
+  items.reserve(m_itemCache.size());
+  for (auto it = m_itemCache.constBegin(); it != m_itemCache.constEnd(); ++it) {
+    items.push_back(it.value());
+  }
+  return items;
+}
+
+std::vector<Item>
+StorageManager::loadItemsByStates(const QList<ItemState> &states) const {
+  std::vector<Item> items;
+  for (auto it = m_itemCache.constBegin(); it != m_itemCache.constEnd(); ++it) {
+    if (states.contains(it.value().state)) {
+      items.push_back(it.value());
     }
   }
   return items;

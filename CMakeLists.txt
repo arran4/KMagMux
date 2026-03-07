@@ -68,3 +68,7 @@ install(FILES resources/icons/kmagmux-64.png DESTINATION share/icons/hicolor/64x
 install(FILES resources/icons/kmagmux-128.png DESTINATION share/icons/hicolor/128x128/apps RENAME kmagmux.png)
 install(FILES resources/icons/kmagmux-256.png DESTINATION share/icons/hicolor/256x256/apps RENAME kmagmux.png)
 install(FILES resources/icons/kmagmux-512.png DESTINATION share/icons/hicolor/512x512/apps RENAME kmagmux.png)
+add_executable(bench benchmark.cpp)
+target_link_libraries(bench PRIVATE KMagMuxCore Qt6::Core)
+add_executable(bench2 benchmark2.cpp)
+target_link_libraries(bench2 PRIVATE KMagMuxCore Qt6::Core)

@@ -49,7 +49,8 @@ QString getDisplayName(const QString &sourcePath) {
 #include <QLabel>
 
 ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
-                             const QStringList &connectors, QWidget *parent)
+                                     const QStringList &connectors,
+                                     QWidget *parent)
     : QDialog(parent), m_items(items), m_connectors(connectors) {
   setupUi();
   setWindowTitle("Process Items");
@@ -75,9 +76,10 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
     deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     if (isLocalFile) {
-        deleteItem->setCheckState(Qt::Unchecked);
+      deleteItem->setCheckState(Qt::Unchecked);
     } else {
-        deleteItem->setFlags(Qt::NoItemFlags); // Disable checkbox for non-local files
+      deleteItem->setFlags(
+          Qt::NoItemFlags); // Disable checkbox for non-local files
     }
     m_itemsTable->setItem(i, 1, deleteItem);
 
@@ -102,13 +104,13 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
   // Check if any items are local files. If none are, hide the delete column.
   bool hasLocalFiles = false;
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-      if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
-          hasLocalFiles = true;
-          break;
-      }
+    if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
+      hasLocalFiles = true;
+      break;
+    }
   }
   if (!hasLocalFiles) {
-      m_itemsTable->hideColumn(1);
+    m_itemsTable->hideColumn(1);
   }
 }
 
@@ -142,15 +144,17 @@ void ProcessItemDialog::setupUi() {
           this, &ProcessItemDialog::onStateChanged);
   formLayout->addRow("State:", m_stateCombo);
 
-  m_holdTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime().addSecs(3600), this);
+  m_holdTimeEdit =
+      new QDateTimeEdit(QDateTime::currentDateTime().addSecs(3600), this);
   m_holdTimeEdit->setCalendarPopup(true);
-  m_holdTimeEdit->setEnabled(false); // Initially disabled unless "Hold" is selected
+  m_holdTimeEdit->setEnabled(
+      false); // Initially disabled unless "Hold" is selected
   formLayout->addRow("Hold Until:", m_holdTimeEdit);
 
   m_connectorCombo = new QComboBox(this);
   m_connectorCombo->addItems(m_connectors);
   if (m_connectors.contains(Constants::DefaultActionName)) {
-      m_connectorCombo->setCurrentText(Constants::DefaultActionName);
+    m_connectorCombo->setCurrentText(Constants::DefaultActionName);
   }
   formLayout->addRow("Connector:", m_connectorCombo);
 
@@ -181,11 +185,11 @@ void ProcessItemDialog::onProcessClicked() {
   ItemState selectedState = ItemState::Queued;
   QString stateStr = m_stateCombo->currentText();
   if (stateStr == "Queue") {
-      selectedState = ItemState::Queued;
+    selectedState = ItemState::Queued;
   } else if (stateStr == "Hold") {
-      selectedState = ItemState::Held;
+    selectedState = ItemState::Held;
   } else if (stateStr == "Archive") {
-      selectedState = ItemState::Archived;
+    selectedState = ItemState::Archived;
   }
 
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
@@ -195,9 +199,9 @@ void ProcessItemDialog::onProcessClicked() {
       item.state = selectedState;
       item.connectorId = m_connectorCombo->currentText();
       if (selectedState == ItemState::Held) {
-          item.scheduledTime = m_holdTimeEdit->dateTime();
+        item.scheduledTime = m_holdTimeEdit->dateTime();
       } else {
-          item.scheduledTime = QDateTime(); // Clear scheduled time if not holding
+        item.scheduledTime = QDateTime(); // Clear scheduled time if not holding
       }
 
       QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);

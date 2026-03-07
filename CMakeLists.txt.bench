@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+project(KMagMuxBench)
+find_package(Qt6 COMPONENTS Core REQUIRED)
+add_executable(bench benchmark.cpp src/core/StorageManager.cpp src/core/Item.cpp src/core/SecureStorage.cpp)
+target_link_libraries(bench Qt6::Core)
