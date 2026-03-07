@@ -16,13 +16,13 @@
 PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     : QDialog(parent), m_engine(engine) {
   setWindowTitle(tr("Preferences"));
-  resize(600, 400);
+  resize(800, 600);
 
   m_categoriesList = new QListWidget(this);
   m_categoriesList->setViewMode(QListView::IconMode);
   m_categoriesList->setIconSize(QSize(48, 48));
   m_categoriesList->setMovement(QListView::Static);
-  m_categoriesList->setMaximumWidth(120);
+  m_categoriesList->setMaximumWidth(160);
   m_categoriesList->setSpacing(12);
 
   m_pagesWidget = new QStackedWidget(this);
