@@ -9,7 +9,7 @@ ItemFilterProxyModel::ItemFilterProxyModel(QObject *parent)
 
 void ItemFilterProxyModel::setFilterText(const QString &text) {
   m_filterText = text;
-  invalidateFilter();
+  invalidate();
 }
 
 bool ItemFilterProxyModel::filterAcceptsRow(
