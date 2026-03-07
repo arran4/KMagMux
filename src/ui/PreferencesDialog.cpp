@@ -6,6 +6,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QListWidget>
+#include <QPushButton>
 #include <QSettings>
 #include <QStackedWidget>
 #include <QTableWidget>
@@ -39,9 +40,19 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) : QDialog(parent) {
   m_buttonBox = new QDialogButtonBox(
       QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel,
       this);
+  connect(m_buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked,
+          this, [this]() {
+            QSettings settings;
+            settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
+            settings.setValue("minimizeToTray",
+                              m_minimizeToTrayCb->isChecked());
+            settings.setValue("autoStart", m_autoStartCb->isChecked());
+          });
+
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
     QSettings settings;
     settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
+    settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
     settings.setValue("autoStart", m_autoStartCb->isChecked());
     accept();
   });
@@ -69,9 +80,16 @@ void PreferencesDialog::createGeneralPage() {
   layout->addWidget(label);
 
   QSettings settings;
-  m_closeToTrayCb = new QCheckBox(tr("Close to system tray"), page);
+  m_closeToTrayCb =
+      new QCheckBox(tr("When window is closed, minimize to tray"), page);
   m_closeToTrayCb->setChecked(settings.value("closeToTray", false).toBool());
   layout->addWidget(m_closeToTrayCb);
+
+  m_minimizeToTrayCb =
+      new QCheckBox(tr("When window is minimized, minimize to tray"), page);
+  m_minimizeToTrayCb->setChecked(
+      settings.value("minimizeToTray", false).toBool());
+  layout->addWidget(m_minimizeToTrayCb);
 
   m_autoStartCb = new QCheckBox(tr("Start KMagMux automatically"), page);
   m_autoStartCb->setChecked(settings.value("autoStart", false).toBool());

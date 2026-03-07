@@ -28,6 +28,7 @@ private:
   QDialogButtonBox *m_buttonBox;
 
   QCheckBox *m_closeToTrayCb;
+  QCheckBox *m_minimizeToTrayCb;
   QCheckBox *m_autoStartCb;
 };
 

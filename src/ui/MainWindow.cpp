@@ -9,6 +9,7 @@
 #include <QDebug>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFutureWatcher>
@@ -26,12 +27,10 @@
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
     : QMainWindow(parent), m_storage(storage), m_closeToTray(false),
-      m_autoStart(false) {
-  QSettings settings;
-  m_closeToTray = settings.value("closeToTray", false).toBool();
-  m_autoStart = settings.value("autoStart", false).toBool();
-
+      m_minimizeToTray(false), m_autoStart(false) {
   qApp->setQuitOnLastWindowClosed(false);
+
+  applySettings();
 
   setupUi();
   loadData();
@@ -57,6 +56,21 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   }
 }
 
+void MainWindow::quitApplication() {
+  m_forceQuit = true;
+  close();
+  qApp->quit();
+}
+
+void MainWindow::changeEvent(QEvent *event) {
+  QMainWindow::changeEvent(event);
+  if (event->type() == QEvent::WindowStateChange) {
+    if (isMinimized() && m_minimizeToTray && m_trayIcon->isVisible()) {
+      hide();
+    }
+  }
+}
+
 void MainWindow::setupUi() {
   setWindowTitle("KMagMux");
   resize(1000, 600);
@@ -69,9 +83,13 @@ void MainWindow::setupUi() {
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
 
   fileMenu->addSeparator();
+  m_minimizeAction =
+      fileMenu->addAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"),
+                          this, &MainWindow::minimizeToTray);
+
   QAction *quitAction =
       fileMenu->addAction(QIcon::fromTheme("application-exit"), tr("&Quit"),
-                          qApp, &QApplication::quit);
+                          this, &MainWindow::quitApplication);
   quitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
   QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
@@ -88,6 +106,7 @@ void MainWindow::setupUi() {
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
   mainToolBar->addAction(addItemsAction);
   mainToolBar->addSeparator();
+  mainToolBar->addAction(m_minimizeAction);
   mainToolBar->addAction(quitAction);
 
   // Setup Status Bar
@@ -147,31 +166,10 @@ void MainWindow::setupUi() {
 
   m_trayIconMenu = new QMenu(this);
 
-  m_restoreAction = new QAction(tr("&Restore"), this);
-  connect(m_restoreAction, &QAction::triggered, this,
-          &MainWindow::restoreWindow);
-  m_trayIconMenu->addAction(m_restoreAction);
-
-  m_minimizeAction = new QAction(tr("&Minimize to Tray"), this);
-  connect(m_minimizeAction, &QAction::triggered, this,
-          &MainWindow::minimizeToTray);
-  m_trayIconMenu->addAction(m_minimizeAction);
-
-  m_trayIconMenu->addSeparator();
-
-  m_closeToTrayAction = new QAction(tr("&Close to Tray"), this);
-  m_closeToTrayAction->setCheckable(true);
-  m_closeToTrayAction->setChecked(m_closeToTray);
-  connect(m_closeToTrayAction, &QAction::toggled, this,
-          &MainWindow::toggleCloseToTray);
-  m_trayIconMenu->addAction(m_closeToTrayAction);
-
-  m_autoStartAction = new QAction(tr("Add to &Auto Start"), this);
-  m_autoStartAction->setCheckable(true);
-  m_autoStartAction->setChecked(m_autoStart);
-  connect(m_autoStartAction, &QAction::toggled, this,
-          &MainWindow::toggleAutoStart);
-  m_trayIconMenu->addAction(m_autoStartAction);
+  m_showHideAction = new QAction(tr("Show/Hide"), this);
+  connect(m_showHideAction, &QAction::triggered, this,
+          &MainWindow::toggleShowHide);
+  m_trayIconMenu->addAction(m_showHideAction);
 
   m_trayIconMenu->addSeparator();
 
@@ -189,31 +187,26 @@ void MainWindow::setupUi() {
 void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
   if (reason == QSystemTrayIcon::DoubleClick ||
       reason == QSystemTrayIcon::Trigger) {
-    if (isVisible()) {
-      minimizeToTray();
-    } else {
-      restoreWindow();
-    }
+    toggleShowHide();
+  }
+}
+
+void MainWindow::toggleShowHide() {
+  if (isVisible()) {
+    hide();
+  } else {
+    showNormal();
+    activateWindow();
   }
 }
 
 void MainWindow::minimizeToTray() { hide(); }
 
-void MainWindow::restoreWindow() {
-  showNormal();
-  activateWindow();
-}
-
-void MainWindow::toggleCloseToTray(bool checked) {
-  m_closeToTray = checked;
+void MainWindow::applySettings() {
   QSettings settings;
-  settings.setValue("closeToTray", m_closeToTray);
-}
-
-void MainWindow::toggleAutoStart(bool checked) {
-  m_autoStart = checked;
-  QSettings settings;
-  settings.setValue("autoStart", m_autoStart);
+  m_closeToTray = settings.value("closeToTray", false).toBool();
+  m_minimizeToTray = settings.value("minimizeToTray", false).toBool();
+  m_autoStart = settings.value("autoStart", false).toBool();
 
 #ifdef Q_OS_WIN
   QSettings bootUpSettings(
@@ -579,16 +572,7 @@ void MainWindow::openProcessDialog(const std::vector<Item> &items) {
 void MainWindow::onPreferences() {
   PreferencesDialog dialog(this);
   if (dialog.exec() == QDialog::Accepted) {
-    QSettings settings;
-    bool newCloseToTray = settings.value("closeToTray", false).toBool();
-    if (newCloseToTray != m_closeToTray) {
-      m_closeToTrayAction->setChecked(newCloseToTray);
-    }
-
-    bool newAutoStart = settings.value("autoStart", false).toBool();
-    if (newAutoStart != m_autoStart) {
-      m_autoStartAction->setChecked(newAutoStart);
-    }
+    applySettings();
   }
 }
 

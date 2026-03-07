@@ -6,6 +6,7 @@
 #include "../core/StorageManager.h"
 #include <QAction>
 #include <QCloseEvent>
+#include <QEvent>
 #include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
@@ -24,13 +25,13 @@ public:
 
 protected:
   void closeEvent(QCloseEvent *event) override;
+  void changeEvent(QEvent *event) override;
 
 private slots:
   void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
-  void toggleCloseToTray(bool checked);
-  void toggleAutoStart(bool checked);
+  void toggleShowHide();
   void minimizeToTray();
-  void restoreWindow();
+  void quitApplication();
 
   void onCustomContextMenuRequested(const QPoint &pos);
   void onItemAction(ItemState newState);
@@ -68,13 +69,15 @@ private:
   QMenu *m_trayIconMenu;
 
   QAction *m_minimizeAction;
-  QAction *m_restoreAction;
+  QAction *m_showHideAction;
   QAction *m_quitAction;
-  QAction *m_closeToTrayAction;
-  QAction *m_autoStartAction;
 
   bool m_closeToTray;
+  bool m_minimizeToTray;
   bool m_autoStart;
+  bool m_forceQuit;
+
+  void applySettings();
 };
 
 #endif // MAINWINDOW_H
