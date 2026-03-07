@@ -24,6 +24,10 @@ public:
   void setBaseUrl(const QString &url);
   void setCredentials(const QString &username, const QString &password);
 
+  bool hasSettings() const override;
+  QWidget *createSettingsWidget(QWidget *parent) override;
+  void saveSettings(QWidget *settingsWidget) override;
+
 private slots:
   void onLoginReply();
   void onAddTorrentReply();

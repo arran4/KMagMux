@@ -602,7 +602,7 @@ void MainWindow::openProcessItemDialog(const std::vector<Item> &items) {
 }
 
 void MainWindow::onPreferences() {
-  PreferencesDialog dialog(this);
+  PreferencesDialog dialog(m_engine, this);
   dialog.exec();
 }
 

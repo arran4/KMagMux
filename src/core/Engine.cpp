@@ -20,6 +20,21 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   // Dev path
   pluginPaths << QDir::cleanPath(appDir + "/plugins");
 
+  // CMake binary output path (when developing and running from build/ without
+  // install)
+  pluginPaths << QDir::cleanPath(appDir + "/../plugins");
+
+  // CMake binary output path (when developing and running using target
+  // "kmagmux" directly via CLion/cmake)
+  pluginPaths << QDir::cleanPath(appDir + "/plugins/qbittorrent");
+  pluginPaths << QDir::cleanPath(appDir + "/src/plugins/qbittorrent");
+  pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/qbittorrent");
+
+  // Explicit IDE binary output path
+  pluginPaths << QDir::cleanPath(appDir + "/../../cmake-build-debug/plugins");
+  pluginPaths << QDir::cleanPath(appDir + "/../cmake-build-debug/plugins");
+  pluginPaths << QDir::cleanPath(appDir + "/cmake-build-debug/plugins");
+
   // Install path (relative to executable)
 #ifdef KMAGMUX_REL_PLUGIN_DIR
   pluginPaths << QDir::cleanPath(appDir + "/" +
@@ -74,6 +89,10 @@ Engine::Engine(StorageManager *storage, QObject *parent)
       }
     }
   }
+}
+
+Connector *Engine::getConnector(const QString &id) const {
+  return m_connectors.value(id, nullptr);
 }
 
 QStringList Engine::getAvailableConnectors() const {
