@@ -1,9 +1,9 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
-#include "ProcessItemDialog.h"
 #include "LinkExtractorDialog.h"
 #include "PreferencesDialog.h"
+#include "ProcessItemDialog.h"
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDateTime>
@@ -17,8 +17,8 @@
 #include <QFutureWatcher>
 #include <QHeaderView>
 #include <QInputDialog>
-#include <QMessageBox>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSettings>
@@ -83,9 +83,9 @@ void MainWindow::setupUi() {
 
   // Setup Menu Bar
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-  QAction *addItemsAction =
-      fileMenu->addAction(QIcon::fromTheme("document-open"),
-                          tr("&Find Item(s)..."), this, &MainWindow::onAddItems);
+  QAction *addItemsAction = fileMenu->addAction(
+      QIcon::fromTheme("document-open"), tr("&Find Item(s)..."), this,
+      &MainWindow::onAddItems);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
 
   fileMenu->addSeparator();
@@ -100,15 +100,20 @@ void MainWindow::setupUi() {
 
   QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
 
-  // Since processing is ON by default (checked=true), the action should display the Pause icon
-  // to indicate what happens when you click it, or you can just use Pause to represent "Stop processing".
-  // Let's initialize it with Pause since the default state is "Playing".
-  m_toggleProcessingAction = new QAction(QIcon::fromTheme("media-playback-pause"), tr("&Play / Pause"), this);
+  // Since processing is ON by default (checked=true), the action should display
+  // the Pause icon to indicate what happens when you click it, or you can just
+  // use Pause to represent "Stop processing". Let's initialize it with Pause
+  // since the default state is "Playing".
+  m_toggleProcessingAction = new QAction(
+      QIcon::fromTheme("media-playback-pause"), tr("&Play / Pause"), this);
   m_toggleProcessingAction->setCheckable(true);
   m_toggleProcessingAction->setChecked(true);
-  m_toggleProcessingAction->setToolTip(tr("Play / Pause processing items in the list"));
-  m_toggleProcessingAction->setStatusTip(tr("Play / Pause processing items in the list"));
-  connect(m_toggleProcessingAction, &QAction::toggled, this, &MainWindow::onToggleProcessing);
+  m_toggleProcessingAction->setToolTip(
+      tr("Play / Pause processing items in the list"));
+  m_toggleProcessingAction->setStatusTip(
+      tr("Play / Pause processing items in the list"));
+  connect(m_toggleProcessingAction, &QAction::toggled, this,
+          &MainWindow::onToggleProcessing);
   editMenu->addAction(m_toggleProcessingAction);
   editMenu->addSeparator();
 
@@ -146,8 +151,8 @@ void MainWindow::setupUi() {
   m_tabWidget = new QTabWidget(this);
   layout->addWidget(m_tabWidget);
 
-  auto setupView = [this](QTableView *view, ItemModel *model, ItemFilterProxyModel *proxy,
-                          const QString &title) {
+  auto setupView = [this](QTableView *view, ItemModel *model,
+                          ItemFilterProxyModel *proxy, const QString &title) {
     QWidget *tab = new QWidget(this);
     QVBoxLayout *tabLayout = new QVBoxLayout(tab);
 
@@ -159,9 +164,11 @@ void MainWindow::setupUi() {
     proxy->setSourceModel(model);
     view->setModel(proxy);
 
-    connect(searchBox, &QLineEdit::textChanged, proxy, &ItemFilterProxyModel::setFilterText);
+    connect(searchBox, &QLineEdit::textChanged, proxy,
+            &ItemFilterProxyModel::setFilterText);
 
-    view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    view->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::ResizeToContents);
     view->setModel(model);
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
@@ -360,7 +367,8 @@ QTableView *MainWindow::getCurrentView() const {
 ItemModel *MainWindow::getCurrentModel() const {
   QTableView *view = getCurrentView();
   if (view) {
-    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+    ItemFilterProxyModel *proxy =
+        qobject_cast<ItemFilterProxyModel *>(view->model());
     if (proxy) {
       return qobject_cast<ItemModel *>(proxy->sourceModel());
     }
@@ -415,9 +423,9 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
   menu.addSeparator();
 
-  QAction *deleteAction = menu.addAction(QIcon::fromTheme("edit-delete"), "Delete");
-  connect(deleteAction, &QAction::triggered, this,
-          &MainWindow::onDeleteItems);
+  QAction *deleteAction =
+      menu.addAction(QIcon::fromTheme("edit-delete"), "Delete");
+  connect(deleteAction, &QAction::triggered, this, &MainWindow::onDeleteItems);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
 }
@@ -431,7 +439,8 @@ void MainWindow::onItemAction(ItemState newState) {
   if (!model)
     return;
 
-  ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+  ItemFilterProxyModel *proxy =
+      qobject_cast<ItemFilterProxyModel *>(view->model());
   if (!proxy)
     return;
 
@@ -474,9 +483,13 @@ void MainWindow::onDeleteItems() {
 
   int count = selection.size();
   QMessageBox::StandardButton reply;
-  reply = QMessageBox::question(this, tr("Delete Items"),
-                                tr("Are you sure you want to delete the selected %n item(s)?\n\nThis will remove the item from tracking and delete any managed payload files.", "", count),
-                                QMessageBox::Yes | QMessageBox::No);
+  reply =
+      QMessageBox::question(this, tr("Delete Items"),
+                            tr("Are you sure you want to delete the selected "
+                               "%n item(s)?\n\nThis will remove the item from "
+                               "tracking and delete any managed payload files.",
+                               "", count),
+                            QMessageBox::Yes | QMessageBox::No);
   if (reply == QMessageBox::Yes) {
     std::vector<QString> idsToDelete;
     idsToDelete.reserve(selection.size());
@@ -637,7 +650,8 @@ void MainWindow::onProcessItem() {
   if (selection.isEmpty())
     return;
 
-  ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+  ItemFilterProxyModel *proxy =
+      qobject_cast<ItemFilterProxyModel *>(view->model());
   if (!proxy)
     return;
 
@@ -660,37 +674,58 @@ void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
   AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
     std::vector<Item> updatedItems = dialog.getItems();
-    std::vector<Item> itemsToSave;
-    itemsToSave.reserve(updatedItems.size());
 
-    for (Item &updatedItem : updatedItems) {
-      bool success = true;
+    struct ProcessResult {
+      std::vector<Item> itemsToSave;
+      QStringList errors;
+    };
 
-      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
-        // Move logic
-        if (!m_storage->moveToManaged(updatedItem, true, true)) {
-          QMessageBox::warning(
-              this, "Error",
-              QString("Failed to move original file to managed storage: %1")
-                  .arg(updatedItem.sourcePath));
-          success = false; // Should we abort saving? Maybe just warn.
+    auto *watcher = new QFutureWatcher<ProcessResult>(this);
+
+    connect(watcher, &QFutureWatcher<ProcessResult>::finished, this,
+            [this, watcher]() {
+              ProcessResult result = watcher->result();
+              for (const QString &errorMsg : std::as_const(result.errors)) {
+                QMessageBox::warning(this, "Error", errorMsg);
+              }
+              if (!result.itemsToSave.empty()) {
+                m_storage->saveItems(result.itemsToSave);
+              }
+              watcher->deleteLater();
+            });
+
+    QFuture<ProcessResult> future = QtConcurrent::run([this, updatedItems]()
+                                                          -> ProcessResult {
+      ProcessResult result;
+      result.itemsToSave.reserve(updatedItems.size());
+
+      for (Item updatedItem : updatedItems) {
+        bool success = true;
+
+        if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
+          // Move logic
+          if (!m_storage->moveToManaged(updatedItem, true, true)) {
+            result.errors.append(
+                QString("Failed to move original file to managed storage: %1")
+                    .arg(updatedItem.sourcePath));
+            success = false;
+          }
+
+          // Remove the temporary internal flag before saving
+          QJsonObject meta = updatedItem.metadata;
+          meta.remove("delete_source_file");
+          updatedItem.metadata = meta;
         }
 
-        // Remove the temporary internal flag before saving
-        QJsonObject meta = updatedItem.metadata;
-        meta.remove("delete_source_file");
-        updatedItem.metadata = meta;
+        if (success) {
+          result.itemsToSave.push_back(updatedItem);
+          qDebug() << "Item queued for saving:" << updatedItem.id;
+        }
       }
+      return result;
+    });
 
-      if (success) {
-        itemsToSave.push_back(updatedItem);
-        qDebug() << "Item queued for saving:" << updatedItem.id;
-      }
-    }
-
-    if (!itemsToSave.empty()) {
-      m_storage->saveItems(itemsToSave);
-    }
+    watcher->setFuture(future);
   }
 }
 
@@ -701,37 +736,58 @@ void MainWindow::openProcessItemDialog(const std::vector<Item> &items) {
   ProcessItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
     std::vector<Item> updatedItems = dialog.getItems();
-    std::vector<Item> itemsToSave;
-    itemsToSave.reserve(updatedItems.size());
 
-    for (Item &updatedItem : updatedItems) {
-      bool success = true;
+    struct ProcessResult {
+      std::vector<Item> itemsToSave;
+      QStringList errors;
+    };
 
-      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
-        // Move logic
-        if (!m_storage->moveToManaged(updatedItem, true, true)) {
-          QMessageBox::warning(
-              this, "Error",
-              QString("Failed to move original file to managed storage: %1")
-                  .arg(updatedItem.sourcePath));
-          success = false; // Should we abort saving? Maybe just warn.
+    auto *watcher = new QFutureWatcher<ProcessResult>(this);
+
+    connect(watcher, &QFutureWatcher<ProcessResult>::finished, this,
+            [this, watcher]() {
+              ProcessResult result = watcher->result();
+              for (const QString &errorMsg : std::as_const(result.errors)) {
+                QMessageBox::warning(this, "Error", errorMsg);
+              }
+              if (!result.itemsToSave.empty()) {
+                m_storage->saveItems(result.itemsToSave);
+              }
+              watcher->deleteLater();
+            });
+
+    QFuture<ProcessResult> future = QtConcurrent::run([this, updatedItems]()
+                                                          -> ProcessResult {
+      ProcessResult result;
+      result.itemsToSave.reserve(updatedItems.size());
+
+      for (Item updatedItem : updatedItems) {
+        bool success = true;
+
+        if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
+          // Move logic
+          if (!m_storage->moveToManaged(updatedItem, true, true)) {
+            result.errors.append(
+                QString("Failed to move original file to managed storage: %1")
+                    .arg(updatedItem.sourcePath));
+            success = false;
+          }
+
+          // Remove the temporary internal flag before saving
+          QJsonObject meta = updatedItem.metadata;
+          meta.remove("delete_source_file");
+          updatedItem.metadata = meta;
         }
 
-        // Remove the temporary internal flag before saving
-        QJsonObject meta = updatedItem.metadata;
-        meta.remove("delete_source_file");
-        updatedItem.metadata = meta;
+        if (success) {
+          result.itemsToSave.push_back(updatedItem);
+          qDebug() << "Item queued for saving:" << updatedItem.id;
+        }
       }
+      return result;
+    });
 
-      if (success) {
-        itemsToSave.push_back(updatedItem);
-        qDebug() << "Item queued for saving:" << updatedItem.id;
-      }
-    }
-
-    if (!itemsToSave.empty()) {
-      m_storage->saveItems(itemsToSave);
-    }
+    watcher->setFuture(future);
   }
 }
 
@@ -751,11 +807,13 @@ void MainWindow::onAbout() {
 void MainWindow::onToggleProcessing(bool checked) {
   if (checked) {
     qDebug() << "Play clicked - refers to processing items in the list";
-    QMessageBox::information(this, tr("Play"), tr("Play action clicked (does nothing yet)."));
+    QMessageBox::information(this, tr("Play"),
+                             tr("Play action clicked (does nothing yet)."));
     m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-pause"));
   } else {
     qDebug() << "Pause clicked - refers to processing items in the list";
-    QMessageBox::information(this, tr("Pause"), tr("Pause action clicked (does nothing yet)."));
+    QMessageBox::information(this, tr("Pause"),
+                             tr("Pause action clicked (does nothing yet)."));
     m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-start"));
   }
   // TODO: Implement processing items pause/play toggle
