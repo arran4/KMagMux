@@ -34,6 +34,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
           &MainWindow::onItemAdded);
   connect(m_storage, &StorageManager::itemUpdated, this,
           &MainWindow::onItemUpdated);
+  connect(m_storage, &StorageManager::itemDeleted, this,
+          &MainWindow::onItemDeleted);
 }
 
 MainWindow::~MainWindow() {}
@@ -277,6 +279,12 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   connect(archiveAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
 
+  menu.addSeparator();
+
+  QAction *deleteAction = menu.addAction(QIcon::fromTheme("edit-delete"), "Delete");
+  connect(deleteAction, &QAction::triggered, this,
+          &MainWindow::onDeleteItems);
+
   menu.exec(view->viewport()->mapToGlobal(pos));
 }
 
@@ -314,6 +322,42 @@ void MainWindow::onItemAction(ItemState newState) {
 void MainWindow::onItemAdded(const Item &item) { loadData(); }
 
 void MainWindow::onItemUpdated(const Item &item) { loadData(); }
+
+void MainWindow::onItemDeleted(const QString &id) { loadData(); }
+
+void MainWindow::onDeleteItems() {
+  QTableView *view = getCurrentView();
+  if (!view)
+    return;
+
+  const ItemModel *model = getCurrentModel();
+  if (!model)
+    return;
+
+  QModelIndexList selection = view->selectionModel()->selectedRows();
+  if (selection.isEmpty())
+    return;
+
+  int count = selection.size();
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, tr("Delete Items"),
+                                tr("Are you sure you want to delete the selected %n item(s)?\n\nThis will remove the item from tracking and delete any managed payload files.", "", count),
+                                QMessageBox::Yes | QMessageBox::No);
+  if (reply == QMessageBox::Yes) {
+    std::vector<QString> idsToDelete;
+    idsToDelete.reserve(selection.size());
+    for (const QModelIndex &index : selection) {
+      idsToDelete.push_back(model->getItem(index.row()).id);
+    }
+
+    for (const QString &id : idsToDelete) {
+      qDebug() << "Deleting item:" << id;
+      if (!m_storage->deleteItem(id)) {
+        qWarning() << "Failed to delete item:" << id;
+      }
+    }
+  }
+}
 
 void MainWindow::onAddItems() {
   QDialog dialog(this);
