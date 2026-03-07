@@ -684,7 +684,6 @@ void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
 
       if (success) {
         itemsToSave.push_back(updatedItem);
-        qDebug() << "Item queued for saving:" << updatedItem.id;
       }
     }
 
@@ -725,7 +724,6 @@ void MainWindow::openProcessItemDialog(const std::vector<Item> &items) {
 
       if (success) {
         itemsToSave.push_back(updatedItem);
-        qDebug() << "Item queued for saving:" << updatedItem.id;
       }
     }
 
