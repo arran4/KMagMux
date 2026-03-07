@@ -20,6 +20,10 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   // Dev path
   pluginPaths << QDir::cleanPath(appDir + "/plugins");
 
+  // CMake binary output path (when developing and running from build/ without
+  // install)
+  pluginPaths << QDir::cleanPath(appDir + "/../plugins");
+
   // Install path (relative to executable)
 #ifdef KMAGMUX_REL_PLUGIN_DIR
   pluginPaths << QDir::cleanPath(appDir + "/" +
