@@ -48,6 +48,7 @@ private:
   // Proxy Models
   ItemFilterProxyModel *m_unprocessedProxy;
   ItemFilterProxyModel *m_queueProxy;
+  ItemFilterProxyModel *m_doneProxy;
   ItemFilterProxyModel *m_archiveProxy;
   ItemFilterProxyModel *m_errorProxy;
 

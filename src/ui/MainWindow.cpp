@@ -138,7 +138,9 @@ void MainWindow::setupUi() {
   m_unprocessedModel = new ItemModel(this);
   m_unprocessedProxy = new ItemFilterProxyModel(this);
   setupView(m_unprocessedView, m_unprocessedModel, m_unprocessedProxy, "Inbox");
-  m_unprocessedProxy->hideColumn(ItemModel::ColState);
+  m_unprocessedView->hideColumn(ItemModel::ColState);
+  m_unprocessedView->hideColumn(ItemModel::ColDispatchTime);
+  m_unprocessedView->hideColumn(ItemModel::ColError);
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
 
@@ -147,17 +149,22 @@ void MainWindow::setupUi() {
   m_queueModel = new ItemModel(this);
   m_queueProxy = new ItemFilterProxyModel(this);
   setupView(m_queueView, m_queueModel, m_queueProxy, "Queue");
+  m_queueView->hideColumn(ItemModel::ColError);
 
   // Done Tab
   m_doneView = new QTableView(this);
   m_doneModel = new ItemModel(this);
-  setupView(m_doneView, m_doneModel, "Done");
+  m_doneProxy = new ItemFilterProxyModel(this);
+  setupView(m_doneView, m_doneModel, m_doneProxy, "Done");
+  m_doneView->hideColumn(ItemModel::ColState);
+  m_doneView->hideColumn(ItemModel::ColError);
 
   // Archive Tab
   m_archiveView = new QTableView(this);
   m_archiveModel = new ItemModel(this);
   m_archiveProxy = new ItemFilterProxyModel(this);
   setupView(m_archiveView, m_archiveModel, m_archiveProxy, "Archive");
+  m_archiveView->hideColumn(ItemModel::ColError);
 
   // Errors Tab
   m_errorView = new QTableView(this);
