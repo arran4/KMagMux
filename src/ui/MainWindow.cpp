@@ -1,11 +1,13 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
+#include "ProcessItemDialog.h"
 #include "LinkExtractorDialog.h"
 #include "PreferencesDialog.h"
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFutureWatcher>
@@ -15,6 +17,7 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QtConcurrent>
 #include <algorithm>
@@ -43,7 +46,7 @@ void MainWindow::setupUi() {
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
   QAction *addItemsAction =
       fileMenu->addAction(QIcon::fromTheme("document-open"),
-                          tr("&Add Item(s)..."), this, &MainWindow::onAddItems);
+                          tr("&Find Item(s)..."), this, &MainWindow::onAddItems);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
 
   fileMenu->addSeparator();
@@ -53,10 +56,28 @@ void MainWindow::setupUi() {
   quitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
   QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
+
+  // Since processing is ON by default (checked=true), the action should display the Pause icon
+  // to indicate what happens when you click it, or you can just use Pause to represent "Stop processing".
+  // Let's initialize it with Pause since the default state is "Playing".
+  m_toggleProcessingAction = new QAction(QIcon::fromTheme("media-playback-pause"), tr("&Play / Pause"), this);
+  m_toggleProcessingAction->setCheckable(true);
+  m_toggleProcessingAction->setChecked(true);
+  m_toggleProcessingAction->setToolTip(tr("Play / Pause processing items in the list"));
+  m_toggleProcessingAction->setStatusTip(tr("Play / Pause processing items in the list"));
+  connect(m_toggleProcessingAction, &QAction::toggled, this, &MainWindow::onToggleProcessing);
+  editMenu->addAction(m_toggleProcessingAction);
+  editMenu->addSeparator();
+
   QAction *prefAction =
       editMenu->addAction(QIcon::fromTheme("preferences-system"),
                           tr("&Preferences"), this, &MainWindow::onPreferences);
   prefAction->setShortcut(QKeySequence("Ctrl+,"));
+
+  QMenu *actionsMenu = menuBar()->addMenu(tr("A&ctions"));
+  QMenu *debugMenu = actionsMenu->addMenu(tr("&Debug"));
+  debugMenu->addAction(tr("Open &Cache directory"), this,
+                       &MainWindow::onOpenCacheDirectory);
 
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
   helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
@@ -64,6 +85,8 @@ void MainWindow::setupUi() {
 
   // Setup Tool Bar
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
+  mainToolBar->addAction(m_toggleProcessingAction);
+  mainToolBar->addSeparator();
   mainToolBar->addAction(addItemsAction);
   mainToolBar->addSeparator();
   mainToolBar->addAction(quitAction);
@@ -95,6 +118,9 @@ void MainWindow::setupUi() {
     connect(searchBox, &QLineEdit::textChanged, proxy, &ItemFilterProxyModel::setFilterText);
 
     view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    view->setModel(model);
+    view->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
     view->setTextElideMode(Qt::ElideNone);
     view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -112,6 +138,7 @@ void MainWindow::setupUi() {
   m_unprocessedModel = new ItemModel(this);
   m_unprocessedProxy = new ItemFilterProxyModel(this);
   setupView(m_unprocessedView, m_unprocessedModel, m_unprocessedProxy, "Inbox");
+  m_unprocessedProxy->hideColumn(ItemModel::ColState);
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
 
@@ -120,6 +147,11 @@ void MainWindow::setupUi() {
   m_queueModel = new ItemModel(this);
   m_queueProxy = new ItemFilterProxyModel(this);
   setupView(m_queueView, m_queueModel, m_queueProxy, "Queue");
+
+  // Done Tab
+  m_doneView = new QTableView(this);
+  m_doneModel = new ItemModel(this);
+  setupView(m_doneView, m_doneModel, "Done");
 
   // Archive Tab
   m_archiveView = new QTableView(this);
@@ -139,6 +171,7 @@ void MainWindow::loadData() {
 
   std::vector<Item> unprocessedItems;
   std::vector<Item> queueItems;
+  std::vector<Item> doneItems;
   std::vector<Item> archiveItems;
   std::vector<Item> errorItems;
 
@@ -152,8 +185,10 @@ void MainWindow::loadData() {
     case ItemState::Held:
       queueItems.push_back(item);
       break;
+    case ItemState::Done:
+      doneItems.push_back(item);
+      break;
     case ItemState::Archived:
-    case ItemState::Dispatched:
       archiveItems.push_back(item);
       break;
     case ItemState::Failed:
@@ -166,6 +201,7 @@ void MainWindow::loadData() {
 
   m_unprocessedModel->setItems(unprocessedItems);
   m_queueModel->setItems(queueItems);
+  m_doneModel->setItems(doneItems);
   m_archiveModel->setItems(archiveItems);
   m_errorModel->setItems(errorItems);
 }
@@ -220,14 +256,17 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addSeparator();
   }
 
-  QAction *queueAction = menu.addAction("Queue");
-  QAction *holdAction = menu.addAction("Hold");
-  QAction *archiveAction = menu.addAction("Archive");
+  if (view != m_unprocessedView) {
+    QAction *queueAction = menu.addAction("Queue");
+    QAction *holdAction = menu.addAction("Hold");
 
-  connect(queueAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Queued); });
-  connect(holdAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Held); });
+    connect(queueAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Queued); });
+    connect(holdAction, &QAction::triggered, this,
+            [this]() { onItemAction(ItemState::Held); });
+  }
+
+  QAction *archiveAction = menu.addAction("Archive");
   connect(archiveAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
 
@@ -271,7 +310,7 @@ void MainWindow::onItemUpdated(const Item &item) { loadData(); }
 
 void MainWindow::onAddItems() {
   QDialog dialog(this);
-  dialog.setWindowTitle(tr("Add Items"));
+  dialog.setWindowTitle(tr("Find Items"));
   dialog.resize(500, 400);
 
   QVBoxLayout *layout = new QVBoxLayout(&dialog);
@@ -350,7 +389,8 @@ void MainWindow::onAddItems() {
                 &QDialog::reject);
 
         if (openDialog.exec() == QDialog::Accepted) {
-          QStringList lines = olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+          QStringList lines =
+              olTextEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
           if (!lines.isEmpty()) {
             LinkExtractorDialog extractor(lines, extractMagnetsCb->isChecked(),
                                           extractTorrentsCb->isChecked(),
@@ -385,7 +425,7 @@ void MainWindow::onAddItems() {
             [this, watcher]() {
               std::vector<Item> items = watcher->result();
               if (!items.empty()) {
-                openProcessDialog(items);
+                openAddItemsDialog(items);
               }
               watcher->deleteLater();
             });
@@ -425,14 +465,55 @@ void MainWindow::onProcessItem() {
                    return model->getItem(sourceIndex.row());
                  });
 
-  openProcessDialog(selectedItems);
+  openProcessItemDialog(selectedItems);
 }
 
-void MainWindow::openProcessDialog(const std::vector<Item> &items) {
+void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
   if (items.empty())
     return;
 
   AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
+  if (dialog.exec() == QDialog::Accepted) {
+    std::vector<Item> updatedItems = dialog.getItems();
+    std::vector<Item> itemsToSave;
+    itemsToSave.reserve(updatedItems.size());
+
+    for (Item &updatedItem : updatedItems) {
+      bool success = true;
+
+      if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
+        // Move logic
+        if (!m_storage->moveToManaged(updatedItem, true, true)) {
+          QMessageBox::warning(
+              this, "Error",
+              QString("Failed to move original file to managed storage: %1")
+                  .arg(updatedItem.sourcePath));
+          success = false; // Should we abort saving? Maybe just warn.
+        }
+
+        // Remove the temporary internal flag before saving
+        QJsonObject meta = updatedItem.metadata;
+        meta.remove("delete_source_file");
+        updatedItem.metadata = meta;
+      }
+
+      if (success) {
+        itemsToSave.push_back(updatedItem);
+        qDebug() << "Item queued for saving:" << updatedItem.id;
+      }
+    }
+
+    if (!itemsToSave.empty()) {
+      m_storage->saveItems(itemsToSave);
+    }
+  }
+}
+
+void MainWindow::openProcessItemDialog(const std::vector<Item> &items) {
+  if (items.empty())
+    return;
+
+  ProcessItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
     std::vector<Item> updatedItems = dialog.getItems();
     std::vector<Item> itemsToSave;
@@ -478,4 +559,21 @@ void MainWindow::onAbout() {
   QMessageBox::about(
       this, tr("About KMagMux"),
       tr("KMagMux\nTorrent and Magnet file handler and router."));
+}
+
+void MainWindow::onToggleProcessing(bool checked) {
+  if (checked) {
+    qDebug() << "Play clicked - refers to processing items in the list";
+    QMessageBox::information(this, tr("Play"), tr("Play action clicked (does nothing yet)."));
+    m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-pause"));
+  } else {
+    qDebug() << "Pause clicked - refers to processing items in the list";
+    QMessageBox::information(this, tr("Pause"), tr("Pause action clicked (does nothing yet)."));
+    m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-start"));
+  }
+  // TODO: Implement processing items pause/play toggle
+}
+
+void MainWindow::onOpenCacheDirectory() {
+  QDesktopServices::openUrl(QUrl::fromLocalFile(m_storage->getBaseDir()));
 }

@@ -8,16 +8,26 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QtConcurrent>
+#include <QCoreApplication>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
     : QObject(parent), m_baseDir(QStandardPaths::writableLocation(
                            QStandardPaths::AppDataLocation)) {
-  // Set base directory to ~/.local/share/KMagMux
+  // Try to respect the lower-cased app name set in main() for AppDataLocation
+  // But QStandardPaths usually uses appName() if it's set before.
+  // We'll override if empty or fallback.
+
+  QString appName = QCoreApplication::applicationName();
+  if (appName.isEmpty()) {
+      appName = "kmagmux";
+  }
+
+  // Set base directory
   if (m_baseDir.isEmpty()) {
     // Fallback for systems that might not return AppDataLocation correctly,
     // though unlikely with Qt
-    m_baseDir = QDir::homePath() + "/.local/share/KMagMux";
+    m_baseDir = QDir::homePath() + "/.local/share/" + appName;
   }
 
   m_inboxDir = m_baseDir + "/inbox";

@@ -30,6 +30,8 @@ private slots:
   void onAddItems();
   void onPreferences();
   void onAbout();
+  void onToggleProcessing(bool checked);
+  void onOpenCacheDirectory();
 
 private:
   StorageManager *m_storage;
@@ -39,6 +41,7 @@ private:
   // Models
   ItemModel *m_unprocessedModel;
   ItemModel *m_queueModel;
+  ItemModel *m_doneModel;
   ItemModel *m_archiveModel;
   ItemModel *m_errorModel;
 
@@ -51,14 +54,18 @@ private:
   // Views
   QTableView *m_unprocessedView;
   QTableView *m_queueView;
+  QTableView *m_doneView;
   QTableView *m_archiveView;
   QTableView *m_errorView;
+
+  QAction *m_toggleProcessingAction;
 
   void setupUi();
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
-  void openProcessDialog(const std::vector<Item> &items);
+  void openAddItemsDialog(const std::vector<Item> &items);
+  void openProcessItemDialog(const std::vector<Item> &items);
 };
 
 #endif // MAINWINDOW_H

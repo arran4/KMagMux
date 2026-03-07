@@ -45,8 +45,8 @@ QString Item::stateToString() const {
     return "Scheduled";
   case ItemState::Held:
     return "Held";
-  case ItemState::Dispatched:
-    return "Dispatched";
+  case ItemState::Done:
+    return "Done";
   case ItemState::Failed:
     return "Failed";
   case ItemState::Archived:
@@ -65,8 +65,8 @@ ItemState Item::stringToState(const QString &s) {
     return ItemState::Scheduled;
   if (s == "Held")
     return ItemState::Held;
-  if (s == "Dispatched")
-    return ItemState::Dispatched;
+  if (s == "Done" || s == "Dispatched")
+    return ItemState::Done;
   if (s == "Failed")
     return ItemState::Failed;
   if (s == "Archived")

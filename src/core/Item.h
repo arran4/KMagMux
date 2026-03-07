@@ -12,7 +12,7 @@ enum class ItemState {
   Queued,
   Scheduled,
   Held,
-  Dispatched,
+  Done,
   Failed,
   Archived
 };
