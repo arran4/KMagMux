@@ -13,7 +13,18 @@ int main(int argc, char *argv[]) {
   app.setOrganizationName("KMagMux");
   app.setWindowIcon(QIcon(":/icons/kmagmux.svg"));
 
-  const QString serverName = "KMagMux_SingleInstance";
+  // Using kmagmux for normal, maybe handle dev mode later. The comment asks to lowercase KMagMux and for dev copy name spacing.
+  // Wait, I will just change "KMagMux_SingleInstance" to "kmagmux_SingleInstance" for the socket, or read the PR comment again:
+  // "the exception should be the development copy which should be name spaced. It should also use a different configuration / share / cache directories too. Also the directory names should be lower case not `KMagMux` but `kmagmux` the dev can be `kmagmux-dev1`"
+
+  QString appName = "kmagmux";
+#ifdef QT_DEBUG
+  appName = "kmagmux-dev1";
+#endif
+
+  app.setApplicationName(appName); // This will affect the config directory as well
+
+  const QString serverName = appName + "_SingleInstance";
   QStringList args = app.arguments();
 
   // Try to connect to existing instance
