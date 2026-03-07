@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
+#include <QCheckBox>
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
@@ -16,19 +17,22 @@ QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_baseUrl(""), m_username(""), m_password(""), m_pendingItem(),
-      m_isPending(false) {
+      m_baseUrl(""), m_username(""), m_password(""), m_enabled(true),
+      m_pendingItem(), m_isPending(false) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
   m_baseUrl = settings.value("baseUrl", "http://localhost:8080").toString();
   m_username = settings.value("username", "").toString();
   m_password = settings.value("password", "").toString();
+  m_enabled = settings.value("enabled", true).toBool();
   settings.endGroup();
 }
 
 QString QBittorrentConnector::getId() const { return "qBittorrent"; }
 
 QString QBittorrentConnector::getName() const { return "qBittorrent (WebAPI)"; }
+
+bool QBittorrentConnector::isEnabled() const { return m_enabled; }
 
 void QBittorrentConnector::setBaseUrl(const QString &url) {
   m_baseUrl = url;
@@ -207,6 +211,11 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
+  QCheckBox *enabledCheck = new QCheckBox(tr("Enable qBittorrent"), widget);
+  enabledCheck->setObjectName("enabledCheck");
+  enabledCheck->setChecked(settings.value("enabled", true).toBool());
+  layout->addRow(enabledCheck);
+
   QLineEdit *urlEdit = new QLineEdit(widget);
   urlEdit->setObjectName("urlEdit");
   urlEdit->setText(
@@ -233,6 +242,8 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   if (!settingsWidget)
     return;
 
+  QCheckBox *enabledCheck =
+      settingsWidget->findChild<QCheckBox *>("enabledCheck");
   QLineEdit *urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
   QLineEdit *userEdit = settingsWidget->findChild<QLineEdit *>("userEdit");
   QLineEdit *passEdit = settingsWidget->findChild<QLineEdit *>("passEdit");
@@ -240,6 +251,11 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
+  if (enabledCheck) {
+    bool en = enabledCheck->isChecked();
+    settings.setValue("enabled", en);
+    m_enabled = en;
+  }
   if (urlEdit) {
     settings.setValue("baseUrl", urlEdit->text());
     setBaseUrl(urlEdit->text());

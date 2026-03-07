@@ -45,6 +45,9 @@ add_executable(KMagMux
 target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent)
 
 add_subdirectory(src/plugins/qbittorrent)
+add_subdirectory(src/plugins/torbox)
+add_subdirectory(src/plugins/putio)
+add_subdirectory(src/plugins/premiumize)
 
 include(CTest)
 if(BUILD_TESTING)

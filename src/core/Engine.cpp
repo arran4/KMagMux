@@ -29,6 +29,15 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   pluginPaths << QDir::cleanPath(appDir + "/plugins/qbittorrent");
   pluginPaths << QDir::cleanPath(appDir + "/src/plugins/qbittorrent");
   pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/qbittorrent");
+  pluginPaths << QDir::cleanPath(appDir + "/plugins/torbox");
+  pluginPaths << QDir::cleanPath(appDir + "/src/plugins/torbox");
+  pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/torbox");
+  pluginPaths << QDir::cleanPath(appDir + "/plugins/putio");
+  pluginPaths << QDir::cleanPath(appDir + "/src/plugins/putio");
+  pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/putio");
+  pluginPaths << QDir::cleanPath(appDir + "/plugins/premiumize");
+  pluginPaths << QDir::cleanPath(appDir + "/src/plugins/premiumize");
+  pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/premiumize");
 
   // Explicit IDE binary output path
   pluginPaths << QDir::cleanPath(appDir + "/../../cmake-build-debug/plugins");
@@ -96,7 +105,13 @@ Connector *Engine::getConnector(const QString &id) const {
 }
 
 QStringList Engine::getAvailableConnectors() const {
-  return m_connectors.keys();
+  QStringList active;
+  for (auto it = m_connectors.constBegin(); it != m_connectors.constEnd(); ++it) {
+    if (it.value()->isEnabled()) {
+      active << it.key();
+    }
+  }
+  return active;
 }
 
 void Engine::start() {
