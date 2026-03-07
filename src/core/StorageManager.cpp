@@ -148,6 +148,38 @@ std::optional<Item> StorageManager::loadItem(const QString &id) {
   return Item::fromJson(doc.object());
 }
 
+bool StorageManager::deleteItem(const QString &id) {
+  std::optional<Item> optItem = loadItem(id);
+  if (!optItem.has_value()) {
+    return false;
+  }
+
+  Item item = optItem.value();
+
+  // Remove the managed file if it exists
+  if (item.metadata.contains("managedFile")) {
+    QString managedPath = item.metadata["managedFile"].toString();
+    if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
+      QFile::remove(managedPath);
+    }
+  } else if (item.sourcePath.startsWith(m_managedDir) && QFile::exists(item.sourcePath)) {
+    // Sometimes sourcePath points directly to the managed dir
+    QFile::remove(item.sourcePath);
+  }
+
+  // Remove the JSON data file
+  QString path = getItemPath(id);
+  if (QFile::exists(path)) {
+    if (!QFile::remove(path)) {
+      qWarning() << "Failed to delete item data file:" << path;
+      return false;
+    }
+  }
+
+  emit itemDeleted(id);
+  return true;
+}
+
 std::vector<Item> StorageManager::loadAllItems() {
   std::vector<Item> items;
   QDirIterator it(m_dataDir, QStringList() << "*.json", QDir::Files);
