@@ -73,8 +73,6 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         Connector *connector = qobject_cast<Connector *>(plugin);
         if (connector) {
           if (!m_connectors.contains(connector->getId())) {
-            qDebug() << "Loaded connector plugin:" << connector->getName()
-                     << "from" << pluginsDir.absolutePath();
             m_connectors.insert(connector->getId(), connector);
             // Connect to its signals via QObject cast
             connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
