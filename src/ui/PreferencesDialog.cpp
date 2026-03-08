@@ -104,7 +104,7 @@ void PreferencesDialog::createGeneralPage() {
   m_autoStartCb->setChecked(settings.value("autoStart", false).toBool());
   layout->addWidget(m_autoStartCb);
 
-  m_autoMoveInboxCb = new QCheckBox(tr("Automatically move new inbox files to managed storage"), page);
+  m_autoMoveInboxCb = new QCheckBox(tr("Automatically move (delete source) new inbox files to managed storage"), page);
   m_autoMoveInboxCb->setChecked(settings.value("autoMoveInbox", false).toBool());
   layout->addWidget(m_autoMoveInboxCb);
 
