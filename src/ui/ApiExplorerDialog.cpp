@@ -178,7 +178,7 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint) {
     m_methodCombo->setEditText(endpoint.method);
 
   // Set URL
-  m_urlEdit->setText(applySubstitutions(endpoint.url));
+  m_urlEdit->setText(endpoint.url);
 
   // Set headers
   m_headersTable->setRowCount(0);
@@ -187,10 +187,8 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint) {
     QString val = endpoint.headers.value(key);
     int row = m_headersTable->rowCount();
     m_headersTable->insertRow(row);
-    m_headersTable->setItem(row, 0,
-                            new QTableWidgetItem(applySubstitutions(key)));
-    m_headersTable->setItem(row, 1,
-                            new QTableWidgetItem(applySubstitutions(val)));
+    m_headersTable->setItem(row, 0, new QTableWidgetItem(key));
+    m_headersTable->setItem(row, 1, new QTableWidgetItem(val));
   }
 
   m_isMultipartCurrent = endpoint.isMultipart;
@@ -204,18 +202,15 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint) {
       QString val = endpoint.multipartParts.value(key);
       int row = m_multipartTable->rowCount();
       m_multipartTable->insertRow(row);
-      m_multipartTable->setItem(row, 0,
-                                new QTableWidgetItem(applySubstitutions(key)));
-      m_multipartTable->setItem(row, 1,
-                                new QTableWidgetItem(applySubstitutions(val)));
+      m_multipartTable->setItem(row, 0, new QTableWidgetItem(key));
+      m_multipartTable->setItem(row, 1, new QTableWidgetItem(val));
     }
   } else {
     m_rawBodyWidget->setVisible(true);
     m_multipartWidget->setVisible(false);
 
     // Set body
-    m_bodyEdit->setPlainText(
-        QString::fromUtf8(applySubstitutions(endpoint.body)));
+    m_bodyEdit->setPlainText(QString::fromUtf8(endpoint.body));
   }
 
   m_responseEdit->clear();
@@ -303,7 +298,7 @@ void ApiExplorerDialog::onSendRequest() {
     m_currentReply = nullptr;
   }
 
-  QString urlString = m_urlEdit->text();
+  QString urlString = applySubstitutions(m_urlEdit->text());
   QUrl url(urlString);
 
   if (!url.isValid()) {
@@ -328,7 +323,8 @@ void ApiExplorerDialog::onSendRequest() {
     QTableWidgetItem *keyItem = m_headersTable->item(i, 0);
     QTableWidgetItem *valItem = m_headersTable->item(i, 1);
     if (keyItem && valItem && !keyItem->text().isEmpty()) {
-      request.setRawHeader(keyItem->text().toUtf8(), valItem->text().toUtf8());
+      request.setRawHeader(applySubstitutions(keyItem->text()).toUtf8(),
+                           applySubstitutions(valItem->text()).toUtf8());
     }
   }
 
@@ -352,8 +348,8 @@ void ApiExplorerDialog::onSendRequest() {
       QTableWidgetItem *valItem = m_multipartTable->item(i, 1);
       if (keyItem && valItem && !keyItem->text().isEmpty()) {
         QHttpPart part;
-        QString key = keyItem->text();
-        QString val = valItem->text();
+        QString key = applySubstitutions(keyItem->text());
+        QString val = applySubstitutions(valItem->text());
 
         if (val.startsWith("file://")) {
           QString filePath = val.mid(7); // strip file://
@@ -392,7 +388,7 @@ void ApiExplorerDialog::onSendRequest() {
     multiPart->setParent(m_currentReply);
 
   } else {
-    QByteArray body = m_bodyEdit->toPlainText().toUtf8();
+    QByteArray body = applySubstitutions(m_bodyEdit->toPlainText().toUtf8());
     if (method == "GET") {
       m_currentReply = m_networkManager->get(request);
     } else if (method == "POST") {
