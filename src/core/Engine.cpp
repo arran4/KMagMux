@@ -130,6 +130,25 @@ void Engine::stop() {
   qDebug() << "Engine stopped.";
 }
 
+void Engine::setPaused(bool paused) {
+  if (m_paused == paused) {
+    return;
+  }
+
+  m_paused = paused;
+  if (m_paused) {
+    m_timer->stop();
+    qDebug() << "Engine paused.";
+  } else {
+    m_timer->start();
+    qDebug() << "Engine resumed.";
+  }
+}
+
+bool Engine::isPaused() const {
+  return m_paused;
+}
+
 void Engine::processQueue() {
   if (m_paused)
     return;

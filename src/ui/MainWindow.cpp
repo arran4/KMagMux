@@ -750,15 +750,12 @@ void MainWindow::onAbout() {
 
 void MainWindow::onToggleProcessing(bool checked) {
   if (checked) {
-    qDebug() << "Play clicked - refers to processing items in the list";
-    QMessageBox::information(this, tr("Play"), tr("Play action clicked (does nothing yet)."));
+    m_engine->setPaused(false);
     m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-pause"));
   } else {
-    qDebug() << "Pause clicked - refers to processing items in the list";
-    QMessageBox::information(this, tr("Pause"), tr("Pause action clicked (does nothing yet)."));
+    m_engine->setPaused(true);
     m_toggleProcessingAction->setIcon(QIcon::fromTheme("media-playback-start"));
   }
-  // TODO: Implement processing items pause/play toggle
 }
 
 void MainWindow::onOpenCacheDirectory() {
