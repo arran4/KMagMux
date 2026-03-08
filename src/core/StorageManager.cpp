@@ -224,6 +224,52 @@ bool StorageManager::deleteItem(const QString &id) {
   return true;
 }
 
+void StorageManager::deleteItems(const std::vector<QString> &ids) {
+  if (ids.empty()) {
+    return;
+  }
+
+  std::vector<QString> actuallyDeletedIds;
+  actuallyDeletedIds.reserve(ids.size());
+
+  for (const QString &id : ids) {
+    std::optional<Item> optItem = loadItem(id);
+    if (!optItem.has_value()) {
+      continue;
+    }
+
+    Item item = optItem.value();
+
+    // Remove the managed file if it exists
+    if (item.metadata.contains("managedFile")) {
+      QString managedPath = item.metadata["managedFile"].toString();
+      if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
+        QFile::remove(managedPath);
+      }
+    } else if (item.sourcePath.startsWith(m_managedDir) &&
+               QFile::exists(item.sourcePath)) {
+      // Sometimes sourcePath points directly to the managed dir
+      QFile::remove(item.sourcePath);
+    }
+
+    // Remove the JSON data file
+    QString path = getItemPath(id);
+    if (QFile::exists(path)) {
+      if (!QFile::remove(path)) {
+        qWarning() << "Failed to delete item data file:" << path;
+        continue;
+      }
+    }
+
+    m_cache.remove(id);
+    actuallyDeletedIds.push_back(id);
+  }
+
+  if (!actuallyDeletedIds.empty()) {
+    emit itemsDeleted(actuallyDeletedIds);
+  }
+}
+
 std::vector<Item> StorageManager::loadAllItems() {
   std::vector<Item> items;
 
