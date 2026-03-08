@@ -144,3 +144,44 @@ void TorBoxConnector::saveSettings(QWidget *settingsWidget) {
 
   settings.endGroup();
 }
+
+bool TorBoxConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> TorBoxConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint createTorrent;
+  createTorrent.name = "Create Torrent";
+  createTorrent.description = "Creates a new torrent transfer";
+  createTorrent.method = "POST";
+  createTorrent.url = "https://api.torbox.app/v1/api/torrents/createtorrent";
+  createTorrent.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  createTorrent.headers.insert("Content-Type", "multipart/form-data");
+  endpoints.append(createTorrent);
+
+  HttpApiEndpoint createUsenet;
+  createUsenet.name = "Create Usenet";
+  createUsenet.description = "Creates a new usenet transfer";
+  createUsenet.method = "POST";
+  createUsenet.url = "https://api.torbox.app/v1/api/usenet/createusenet";
+  createUsenet.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  createUsenet.headers.insert("Content-Type", "multipart/form-data");
+  endpoints.append(createUsenet);
+
+  HttpApiEndpoint createWebdl;
+  createWebdl.name = "Create Web Download";
+  createWebdl.description = "Creates a new web download";
+  createWebdl.method = "POST";
+  createWebdl.url = "https://api.torbox.app/v1/api/webdl/createwebdl";
+  createWebdl.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  createWebdl.headers.insert("Content-Type", "multipart/form-data");
+  endpoints.append(createWebdl);
+
+  return endpoints;
+}
+
+QMap<QString, QString> TorBoxConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("API_TOKEN", m_apiToken);
+  return subs;
+}

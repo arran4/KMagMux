@@ -143,3 +143,27 @@ void PutIoConnector::saveSettings(QWidget *settingsWidget) {
 
   settings.endGroup();
 }
+
+bool PutIoConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> PutIoConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint addTransfer;
+  addTransfer.name = "Add Transfer";
+  addTransfer.description = "Creates a new transfer";
+  addTransfer.method = "POST";
+  addTransfer.url = "https://api.put.io/v2/transfers/add";
+  addTransfer.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  addTransfer.headers.insert("Content-Type", "application/x-www-form-urlencoded");
+  addTransfer.body = "url=${MAGNET_LINK}";
+  endpoints.append(addTransfer);
+
+  return endpoints;
+}
+
+QMap<QString, QString> PutIoConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("OAUTH_TOKEN", m_oauthToken);
+  return subs;
+}

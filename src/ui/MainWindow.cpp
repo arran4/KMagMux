@@ -128,11 +128,11 @@ void MainWindow::setupUi() {
   debugMenu->addAction(tr("Open &Cache directory"), this,
                        &MainWindow::onOpenCacheDirectory);
 
+  setupPluginMenus(debugMenu);
+
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
   helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
                       this, &MainWindow::onAbout);
-
-  setupPluginMenus(helpMenu);
 
   // Setup Tool Bar
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
