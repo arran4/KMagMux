@@ -65,7 +65,8 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     m_itemsTable->setCellWidget(i, 3, linkLabel);
 
     // Keep the actual data in the item for easy retrieval
-    QTableWidgetItem *linkItem = new QTableWidgetItem(m_items[i].sourcePath);
+    QTableWidgetItem *linkItem = new QTableWidgetItem();
+    linkItem->setData(Qt::UserRole, m_items[i].sourcePath);
     m_itemsTable->setItem(i, 3, linkItem);
   }
 
@@ -232,7 +233,10 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   connect(copyAction, &QAction::triggered, this, [this, item, row, col]() {
     QString text;
     if (col == 3) {
-      text = m_items[row].sourcePath;
+      text = item->data(Qt::UserRole).toString();
+      if (text.isEmpty()) {
+          text = m_items[row].sourcePath;
+      }
     } else {
       text = item->text();
     }
