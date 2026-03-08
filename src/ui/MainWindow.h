@@ -9,6 +9,8 @@
 #include <QCloseEvent>
 #include <QEvent>
 #include <QMainWindow>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
@@ -27,6 +29,8 @@ public:
 protected:
   void closeEvent(QCloseEvent *event) override;
   void changeEvent(QEvent *event) override;
+  void dragEnterEvent(QDragEnterEvent *event) override;
+  void dropEvent(QDropEvent *event) override;
 
 private slots:
   void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
