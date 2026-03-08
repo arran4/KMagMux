@@ -10,11 +10,10 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
-#include <QDragEnterEvent>
-#include <QDropEvent>
-#include <QMimeData>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -23,6 +22,7 @@
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSettings>
@@ -50,6 +50,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
           &MainWindow::onItemAdded);
   connect(m_storage, &StorageManager::itemUpdated, this,
           &MainWindow::onItemUpdated);
+  connect(m_storage, &StorageManager::itemsUpdated, this,
+          &MainWindow::onItemsUpdated);
   connect(m_storage, &StorageManager::itemDeleted, this,
           &MainWindow::onItemDeleted);
 }
@@ -98,7 +100,8 @@ void MainWindow::dropEvent(QDropEvent *event) {
         QFileInfo fileInfo(localPath);
         if (fileInfo.suffix().toLower() == "torrent") {
           lines.append("file://" + localPath);
-        } else if (fileInfo.suffix().toLower() == "txt" || fileInfo.suffix().isEmpty()) {
+        } else if (fileInfo.suffix().toLower() == "txt" ||
+                   fileInfo.suffix().isEmpty()) {
           QFile file(localPath);
           if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream in(&file);
@@ -142,9 +145,9 @@ void MainWindow::setupUi() {
 
   // Setup Menu Bar
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-  QAction *addItemsAction = fileMenu->addAction(
-      QIcon::fromTheme("document-open"), tr("&Add..."), this,
-      &MainWindow::onAddItems);
+  QAction *addItemsAction =
+      fileMenu->addAction(QIcon::fromTheme("document-open"), tr("&Add..."),
+                          this, &MainWindow::onAddItems);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
 
   fileMenu->addSeparator();
@@ -215,8 +218,10 @@ void MainWindow::setupUi() {
   connect(m_archiveAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
 
-  m_deleteAction = new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
-  connect(m_deleteAction, &QAction::triggered, this, &MainWindow::onDeleteItems);
+  m_deleteAction =
+      new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
+  connect(m_deleteAction, &QAction::triggered, this,
+          &MainWindow::onDeleteItems);
 
   QMenu *actionsMenu = menuBar()->addMenu(tr("A&ctions"));
 
@@ -578,6 +583,8 @@ void MainWindow::onItemAdded(const Item &item) { loadData(); }
 
 void MainWindow::onItemUpdated(const Item &item) { loadData(); }
 
+void MainWindow::onItemsUpdated() { loadData(); }
+
 void MainWindow::onItemDeleted(const QString &id) { loadData(); }
 
 void MainWindow::onDeleteItems() {
@@ -860,7 +867,8 @@ void MainWindow::updateActionsState() {
     return;
   }
 
-  bool hasSelection = view->selectionModel() && view->selectionModel()->hasSelection();
+  bool hasSelection =
+      view->selectionModel() && view->selectionModel()->hasSelection();
   m_selectAllAction->setEnabled(true);
 
   m_processAction->setVisible(view == m_unprocessedView);

@@ -34,12 +34,14 @@ public:
     // Check if this is the "Source" column or if the text looks like a link
     // We can just format any URL-looking text as a link color
     QString text = opt.text;
-    if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("magnet:") || text.startsWith("file://")) {
-        // Change text color to standard link color (blue)
-        opt.palette.setColor(QPalette::Text, QApplication::palette().color(QPalette::Link));
+    if (text.startsWith("http://") || text.startsWith("https://") ||
+        text.startsWith("magnet:") || text.startsWith("file://")) {
+      // Change text color to standard link color (blue)
+      opt.palette.setColor(QPalette::Text,
+                           QApplication::palette().color(QPalette::Link));
 
-        // Underline the text if we want to make it look even more like a link
-        // opt.font.setUnderline(true);
+      // Underline the text if we want to make it look even more like a link
+      // opt.font.setUnderline(true);
     }
 
     QStyledItemDelegate::paint(painter, opt, index);

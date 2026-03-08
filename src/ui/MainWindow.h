@@ -7,10 +7,10 @@
 #include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QCloseEvent>
-#include <QEvent>
-#include <QMainWindow>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEvent>
+#include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
@@ -42,6 +42,7 @@ private slots:
   void onItemAction(ItemState newState);
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);
+  void onItemsUpdated();
   void onItemDeleted(const QString &id);
   void onProcessItem();
   void onDeleteItems();

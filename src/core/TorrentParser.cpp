@@ -68,7 +68,7 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   QString path = filePath;
   if (path.startsWith("file://")) {
-      path = QUrl(path).toLocalFile();
+    path = QUrl(path).toLocalFile();
   }
 
   QFile file(path);

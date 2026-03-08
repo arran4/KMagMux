@@ -146,8 +146,8 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
   // Update cache immediately on the main thread to prevent stale data
   for (const Item &item : items) {
     m_cache[item.id] = item;
-    emit itemUpdated(item);
   }
+  emit itemsUpdated();
 
   (void)QtConcurrent::run([this, items]() {
     for (const Item &item : items) {
