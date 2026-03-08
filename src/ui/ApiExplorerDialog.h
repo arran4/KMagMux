@@ -23,6 +23,9 @@ private slots:
   void onEndpointSelected(int currentRow);
   void onAddHeader();
   void onRemoveHeader();
+  void onAddMultipart();
+  void onRemoveMultipart();
+  void onBrowseMultipartFile();
   void onSendRequest();
   void onNetworkReplyFinished();
   void onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
@@ -44,9 +47,13 @@ private:
   QComboBox *m_methodCombo;
   QLineEdit *m_urlEdit;
   QTableWidget *m_headersTable;
+  QTableWidget *m_multipartTable;
+  QWidget *m_multipartWidget;
+  QWidget *m_rawBodyWidget;
   QPlainTextEdit *m_bodyEdit;
   QPlainTextEdit *m_responseEdit;
   QLabel *m_statusLabel;
+  bool m_isMultipartCurrent;
 };
 
 #endif // APIEXPLORERDIALOG_H

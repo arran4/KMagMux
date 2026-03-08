@@ -4,6 +4,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QHttpMultiPart>
 #include <QLabel>
 #include <QMessageBox>
 #include <QNetworkReply>
@@ -102,8 +103,43 @@ void ApiExplorerDialog::setupUi() {
 
   // Request Body
   requestLayout->addWidget(new QLabel("Body:"));
+
+  m_rawBodyWidget = new QWidget();
+  QVBoxLayout *rawBodyLayout = new QVBoxLayout(m_rawBodyWidget);
+  rawBodyLayout->setContentsMargins(0, 0, 0, 0);
   m_bodyEdit = new QPlainTextEdit();
-  requestLayout->addWidget(m_bodyEdit);
+  rawBodyLayout->addWidget(m_bodyEdit);
+  requestLayout->addWidget(m_rawBodyWidget);
+
+  m_multipartWidget = new QWidget();
+  QVBoxLayout *multipartLayout = new QVBoxLayout(m_multipartWidget);
+  multipartLayout->setContentsMargins(0, 0, 0, 0);
+  m_multipartTable = new QTableWidget(0, 2);
+  m_multipartTable->setHorizontalHeaderLabels({"Name", "Value / FilePath"});
+  m_multipartTable->horizontalHeader()->setStretchLastSection(true);
+  m_multipartTable->verticalHeader()->setVisible(false);
+  multipartLayout->addWidget(m_multipartTable);
+
+  QHBoxLayout *multipartButtonsLayout = new QHBoxLayout();
+  QPushButton *addMultiBtn = new QPushButton("Add Part");
+  QPushButton *removeMultiBtn = new QPushButton("Remove Part");
+  QPushButton *browseMultiBtn = new QPushButton("Browse File...");
+  connect(addMultiBtn, &QPushButton::clicked, this,
+          &ApiExplorerDialog::onAddMultipart);
+  connect(removeMultiBtn, &QPushButton::clicked, this,
+          &ApiExplorerDialog::onRemoveMultipart);
+  connect(browseMultiBtn, &QPushButton::clicked, this,
+          &ApiExplorerDialog::onBrowseMultipartFile);
+  multipartButtonsLayout->addWidget(addMultiBtn);
+  multipartButtonsLayout->addWidget(removeMultiBtn);
+  multipartButtonsLayout->addWidget(browseMultiBtn);
+  multipartButtonsLayout->addStretch();
+  multipartLayout->addLayout(multipartButtonsLayout);
+
+  requestLayout->addWidget(m_multipartWidget);
+  m_multipartWidget->setVisible(false);
+  m_isMultipartCurrent = false;
+
   rightSplitter->addWidget(requestGroup);
 
   // Response Group
@@ -157,9 +193,30 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint) {
                             new QTableWidgetItem(applySubstitutions(val)));
   }
 
-  // Set body
-  m_bodyEdit->setPlainText(
-      QString::fromUtf8(applySubstitutions(endpoint.body)));
+  m_isMultipartCurrent = endpoint.isMultipart;
+  if (m_isMultipartCurrent) {
+    m_rawBodyWidget->setVisible(false);
+    m_multipartWidget->setVisible(true);
+
+    m_multipartTable->setRowCount(0);
+    auto multiKeys = endpoint.multipartParts.keys();
+    for (const QString &key : multiKeys) {
+      QString val = endpoint.multipartParts.value(key);
+      int row = m_multipartTable->rowCount();
+      m_multipartTable->insertRow(row);
+      m_multipartTable->setItem(row, 0,
+                                new QTableWidgetItem(applySubstitutions(key)));
+      m_multipartTable->setItem(row, 1,
+                                new QTableWidgetItem(applySubstitutions(val)));
+    }
+  } else {
+    m_rawBodyWidget->setVisible(true);
+    m_multipartWidget->setVisible(false);
+
+    // Set body
+    m_bodyEdit->setPlainText(
+        QString::fromUtf8(applySubstitutions(endpoint.body)));
+  }
 
   m_responseEdit->clear();
   m_statusLabel->setText("Status: ");
@@ -186,6 +243,10 @@ void ApiExplorerDialog::onEndpointSelected(int currentRow) {
     m_urlEdit->clear();
     m_headersTable->setRowCount(0);
     m_bodyEdit->clear();
+    m_multipartTable->setRowCount(0);
+    m_isMultipartCurrent = false;
+    m_multipartWidget->setVisible(false);
+    m_rawBodyWidget->setVisible(true);
     m_responseEdit->clear();
     m_statusLabel->setText("Status: ");
   } else if (currentRow > 0 && currentRow <= m_endpoints.size()) {
@@ -204,6 +265,34 @@ void ApiExplorerDialog::onRemoveHeader() {
   int row = m_headersTable->currentRow();
   if (row >= 0) {
     m_headersTable->removeRow(row);
+  }
+}
+
+void ApiExplorerDialog::onAddMultipart() {
+  int row = m_multipartTable->rowCount();
+  m_multipartTable->insertRow(row);
+  m_multipartTable->setItem(row, 0, new QTableWidgetItem(""));
+  m_multipartTable->setItem(row, 1, new QTableWidgetItem(""));
+}
+
+void ApiExplorerDialog::onRemoveMultipart() {
+  int row = m_multipartTable->currentRow();
+  if (row >= 0) {
+    m_multipartTable->removeRow(row);
+  }
+}
+
+#include <QFileDialog>
+void ApiExplorerDialog::onBrowseMultipartFile() {
+  int row = m_multipartTable->currentRow();
+  if (row < 0) {
+    QMessageBox::information(this, "Select Row",
+                             "Please select a row first to set its file path.");
+    return;
+  }
+  QString file = QFileDialog::getOpenFileName(this, "Select File");
+  if (!file.isEmpty()) {
+    m_multipartTable->setItem(row, 1, new QTableWidgetItem("file://" + file));
   }
 }
 
@@ -244,7 +333,6 @@ void ApiExplorerDialog::onSendRequest() {
   }
 
   QString method = m_methodCombo->currentText();
-  QByteArray body = m_bodyEdit->toPlainText().toUtf8();
 
   m_statusLabel->setText("Status: Sending...");
   m_responseEdit->clear();
@@ -252,19 +340,71 @@ void ApiExplorerDialog::onSendRequest() {
   m_urlEdit->setEnabled(false);
   m_methodCombo->setEnabled(false);
   m_bodyEdit->setEnabled(false);
+  m_multipartTable->setEnabled(false);
   m_headersTable->setEnabled(false);
 
-  if (method == "GET") {
-    m_currentReply = m_networkManager->get(request);
-  } else if (method == "POST") {
-    m_currentReply = m_networkManager->post(request, body);
-  } else if (method == "PUT") {
-    m_currentReply = m_networkManager->put(request, body);
-  } else if (method == "DELETE") {
-    m_currentReply = m_networkManager->deleteResource(request);
+  if (m_isMultipartCurrent) {
+    QHttpMultiPart *multiPart =
+        new QHttpMultiPart(QHttpMultiPart::FormDataType);
+
+    for (int i = 0; i < m_multipartTable->rowCount(); ++i) {
+      QTableWidgetItem *keyItem = m_multipartTable->item(i, 0);
+      QTableWidgetItem *valItem = m_multipartTable->item(i, 1);
+      if (keyItem && valItem && !keyItem->text().isEmpty()) {
+        QHttpPart part;
+        QString key = keyItem->text();
+        QString val = valItem->text();
+
+        if (val.startsWith("file://")) {
+          QString filePath = val.mid(7); // strip file://
+          QFile *file = new QFile(filePath);
+          if (file->open(QIODevice::ReadOnly)) {
+            QString filename = QFileInfo(filePath).fileName();
+            part.setHeader(QNetworkRequest::ContentDispositionHeader,
+                           QVariant("form-data; name=\"" + key +
+                                    "\"; filename=\"" + filename + "\""));
+            part.setBodyDevice(file);
+            file->setParent(multiPart); // File will be deleted with multipart
+          } else {
+            QMessageBox::warning(this, "File Error",
+                                 "Failed to open file: " + filePath);
+            delete file;
+            delete multiPart;
+            return;
+          }
+        } else {
+          part.setHeader(QNetworkRequest::ContentDispositionHeader,
+                         QVariant("form-data; name=\"" + key + "\""));
+          part.setBody(val.toUtf8());
+        }
+        multiPart->append(part);
+      }
+    }
+
+    if (method == "POST") {
+      m_currentReply = m_networkManager->post(request, multiPart);
+    } else if (method == "PUT") {
+      m_currentReply = m_networkManager->put(request, multiPart);
+    } else {
+      m_currentReply = m_networkManager->sendCustomRequest(
+          request, method.toUtf8(), multiPart);
+    }
+    multiPart->setParent(m_currentReply);
+
   } else {
-    m_currentReply =
-        m_networkManager->sendCustomRequest(request, method.toUtf8(), body);
+    QByteArray body = m_bodyEdit->toPlainText().toUtf8();
+    if (method == "GET") {
+      m_currentReply = m_networkManager->get(request);
+    } else if (method == "POST") {
+      m_currentReply = m_networkManager->post(request, body);
+    } else if (method == "PUT") {
+      m_currentReply = m_networkManager->put(request, body);
+    } else if (method == "DELETE") {
+      m_currentReply = m_networkManager->deleteResource(request);
+    } else {
+      m_currentReply =
+          m_networkManager->sendCustomRequest(request, method.toUtf8(), body);
+    }
   }
 }
 
@@ -276,6 +416,7 @@ void ApiExplorerDialog::onNetworkReplyFinished() {
   m_urlEdit->setEnabled(true);
   m_methodCombo->setEnabled(true);
   m_bodyEdit->setEnabled(true);
+  m_multipartTable->setEnabled(true);
   m_headersTable->setEnabled(true);
 
   if (reply == m_currentReply) {

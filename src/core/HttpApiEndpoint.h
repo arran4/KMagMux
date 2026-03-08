@@ -12,6 +12,10 @@ struct HttpApiEndpoint {
   QString url;
   QMap<QString, QString> headers;
   QByteArray body;
+
+  bool isMultipart = false;
+  // Key = field name, Value = string value or "file:///path/to/file"
+  QMap<QString, QString> multipartParts;
 };
 
 #endif // HTTPAPIENDPOINT_H
