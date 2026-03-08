@@ -41,10 +41,11 @@ add_executable(KMagMux
     src/ui/PreferencesDialog.cpp
     src/ui/LinkExtractorDialog.cpp
     src/ui/ItemFilterProxyModel.cpp
+    src/ui/ApiExplorerDialog.cpp
     resources/resources.qrc
 )
 
-target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent)
+target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)
 
 add_subdirectory(src/plugins/qbittorrent)
 add_subdirectory(src/plugins/torbox)
