@@ -16,6 +16,7 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
+#include "TorrentInfoDialog.h"
 
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
                              const QStringList &connectors, QWidget *parent)
@@ -201,9 +202,15 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
 
   QAction *infoAction = menu.addAction("Get Info");
   connect(infoAction, &QAction::triggered, this, [this, row]() {
-    QMessageBox::information(
-        this, "Item Information",
-        QString("Source Path:\n%1").arg(m_items[row].sourcePath));
+    QString sourcePath = m_items[row].sourcePath;
+    if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
+      TorrentInfoDialog dialog(sourcePath, this);
+      dialog.exec();
+    } else {
+      QMessageBox::information(
+          this, "Item Information",
+          QString("Source Path:\n%1").arg(sourcePath));
+    }
   });
 
   menu.exec(m_itemsTable->viewport()->mapToGlobal(pos));

@@ -29,3 +29,13 @@ add_executable(TestStorageManager TestStorageManager.cpp)
 target_link_libraries(TestStorageManager PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
 target_include_directories(TestStorageManager PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 add_test(NAME TestStorageManager COMMAND TestStorageManager)
+
+add_executable(TestBencodeParser TestBencodeParser.cpp)
+target_link_libraries(TestBencodeParser PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
+target_include_directories(TestBencodeParser PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+add_test(NAME TestBencodeParser COMMAND TestBencodeParser)
+
+add_executable(TestTorrentParser TestTorrentParser.cpp)
+target_link_libraries(TestTorrentParser PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
+target_include_directories(TestTorrentParser PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+add_test(NAME TestTorrentParser COMMAND TestTorrentParser)
