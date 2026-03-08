@@ -1,8 +1,8 @@
-#include <QTest>
-#include <QByteArray>
-#include <QVariantMap>
-#include <QCryptographicHash>
 #include "../../src/core/BencodeParser.h"
+#include <QByteArray>
+#include <QCryptographicHash>
+#include <QTest>
+#include <QVariantMap>
 
 class TestBencodeParser : public QObject {
   Q_OBJECT
@@ -37,11 +37,13 @@ private slots:
 
   void testInfoHash() {
     BencodeParser parser;
-    QByteArray infoDict = "d4:name4:test12:piece lengthi262144e6:pieces20:12345678901234567890e";
+    QByteArray infoDict =
+        "d4:name4:test12:piece lengthi262144e6:pieces20:12345678901234567890e";
     QByteArray data = "d4:info" + infoDict + "e";
     QVERIFY(parser.parse(data));
 
-    QByteArray expectedHash = QCryptographicHash::hash(infoDict, QCryptographicHash::Sha1);
+    QByteArray expectedHash =
+        QCryptographicHash::hash(infoDict, QCryptographicHash::Sha1);
     QCOMPARE(parser.infoHash(), expectedHash);
   }
 

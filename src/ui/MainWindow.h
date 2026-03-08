@@ -7,10 +7,10 @@
 #include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QCloseEvent>
-#include <QEvent>
-#include <QMainWindow>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEvent>
+#include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
@@ -94,6 +94,7 @@ private:
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
+  void processAddedLines(const QStringList &lines);
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
   void saveItemsFromDialog(std::vector<Item> updatedItems);
