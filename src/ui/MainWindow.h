@@ -81,6 +81,7 @@ private:
   ItemModel *getCurrentModel() const;
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
+  void saveItemsFromDialog(std::vector<Item> updatedItems);
 
   QSystemTrayIcon *m_trayIcon;
   QMenu *m_trayIconMenu;
