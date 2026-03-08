@@ -18,13 +18,13 @@ QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_baseUrl(""), m_username(""), m_password(""), m_enabled(false),
+      m_baseUrl(""), m_username(""), m_password(""), m_enabled(true),
       m_pendingItem(), m_isPending(false) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
   m_baseUrl = settings.value("baseUrl", "http://localhost:8080").toString();
   m_username = settings.value("username", "").toString();
-  m_enabled = settings.value("enabled", false).toBool();
+  m_enabled = settings.value("enabled", true).toBool();
   settings.endGroup();
 
   m_password = SecureStorage::readPassword("Plugins/qBittorrent", "password");
@@ -215,7 +215,7 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
 
   QCheckBox *enabledCheck = new QCheckBox(tr("Enable qBittorrent"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  enabledCheck->setChecked(settings.value("enabled", true).toBool());
   mainLayout->addWidget(enabledCheck);
 
   QWidget *configWidget = new QWidget(widget);

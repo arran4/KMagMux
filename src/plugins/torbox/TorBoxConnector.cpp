@@ -17,10 +17,10 @@ TorBoxConnector::TorBoxConnector() : TorBoxConnector(nullptr) {}
 
 TorBoxConnector::TorBoxConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_apiToken(""), m_enabled(false) {
+      m_apiToken(""), m_enabled(true) {
   QSettings settings;
   settings.beginGroup("Plugins/TorBox");
-  m_enabled = settings.value("enabled", false).toBool();
+  m_enabled = settings.value("enabled", true).toBool();
   settings.endGroup();
 
   m_apiToken = SecureStorage::readPassword("Plugins/TorBox", "apiToken");
@@ -98,7 +98,7 @@ QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
 
   QCheckBox *enabledCheck = new QCheckBox(tr("Enable TorBox"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  enabledCheck->setChecked(settings.value("enabled", true).toBool());
   mainLayout->addWidget(enabledCheck);
 
   QWidget *configWidget = new QWidget(widget);

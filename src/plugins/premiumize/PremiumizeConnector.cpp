@@ -18,10 +18,10 @@ PremiumizeConnector::PremiumizeConnector() : PremiumizeConnector(nullptr) {}
 
 PremiumizeConnector::PremiumizeConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_apiKey(""), m_enabled(false) {
+      m_apiKey(""), m_enabled(true) {
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
-  m_enabled = settings.value("enabled", false).toBool();
+  m_enabled = settings.value("enabled", true).toBool();
   settings.endGroup();
 
   m_apiKey = SecureStorage::readPassword("Plugins/Premiumize", "apiKey");
@@ -117,7 +117,7 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
 
   QCheckBox *enabledCheck = new QCheckBox(tr("Enable Premiumize.me"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  enabledCheck->setChecked(settings.value("enabled", true).toBool());
   mainLayout->addWidget(enabledCheck);
 
   QWidget *configWidget = new QWidget(widget);

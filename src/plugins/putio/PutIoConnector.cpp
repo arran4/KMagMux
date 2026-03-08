@@ -17,10 +17,10 @@ PutIoConnector::PutIoConnector() : PutIoConnector(nullptr) {}
 
 PutIoConnector::PutIoConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
-      m_oauthToken(""), m_enabled(false) {
+      m_oauthToken(""), m_enabled(true) {
   QSettings settings;
   settings.beginGroup("Plugins/PutIO");
-  m_enabled = settings.value("enabled", false).toBool();
+  m_enabled = settings.value("enabled", true).toBool();
   settings.endGroup();
 
   m_oauthToken = SecureStorage::readPassword("Plugins/PutIO", "oauthToken");
@@ -96,7 +96,7 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
 
   QCheckBox *enabledCheck = new QCheckBox(tr("Enable Put.io"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  enabledCheck->setChecked(settings.value("enabled", true).toBool());
   mainLayout->addWidget(enabledCheck);
 
   QWidget *configWidget = new QWidget(widget);
