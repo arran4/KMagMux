@@ -6,6 +6,7 @@
 #include <QDialog>
 #include <QTableWidget>
 #include <QPushButton>
+#include <QTextEdit>
 
 class TorrentInfoDialog : public QDialog {
   Q_OBJECT
@@ -27,6 +28,7 @@ private:
   QString m_sourcePath;
   TorrentInfo m_info;
   QTableWidget *m_trackerTable;
+  QTextEdit *m_logView;
   QPushButton *m_queryBtn;
   QPushButton *m_cancelBtn;
   QPushButton *m_closeBtn;

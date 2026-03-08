@@ -114,13 +114,59 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
     }
   }
 
-  // Extract name
+  if (dict.contains("comment")) {
+    info.comment = QString::fromUtf8(dict["comment"].toByteArray());
+  }
+
+  if (dict.contains("created by")) {
+    info.createdBy = QString::fromUtf8(dict["created by"].toByteArray());
+  }
+
+  if (dict.contains("creation date")) {
+    qint64 ts = dict["creation date"].toLongLong();
+    if (ts > 0) {
+      info.creationDate = QDateTime::fromSecsSinceEpoch(ts);
+    }
+  }
+
+  // Extract info dictionary values
   if (dict.contains("info")) {
     QVariant infoVar = dict["info"];
     if (infoVar.typeId() == QMetaType::QVariantMap) {
       QVariantMap infoDict = infoVar.toMap();
       if (infoDict.contains("name")) {
         info.name = QString::fromUtf8(infoDict["name"].toByteArray());
+      }
+
+      if (infoDict.contains("length")) {
+        // Single file mode
+        TorrentFileInfo fileInfo;
+        fileInfo.path = info.name;
+        fileInfo.length = infoDict["length"].toLongLong();
+        info.files.append(fileInfo);
+        info.totalSize += fileInfo.length;
+      } else if (infoDict.contains("files")) {
+        // Multiple files mode
+        QVariantList filesList = infoDict["files"].toList();
+        for (const QVariant &fileVar : filesList) {
+          if (fileVar.typeId() == QMetaType::QVariantMap) {
+            QVariantMap fileDict = fileVar.toMap();
+            TorrentFileInfo fileInfo;
+            fileInfo.length = fileDict["length"].toLongLong();
+
+            if (fileDict.contains("path")) {
+              QVariantList pathList = fileDict["path"].toList();
+              QStringList pathParts;
+              for (const QVariant &part : pathList) {
+                pathParts.append(QString::fromUtf8(part.toByteArray()));
+              }
+              fileInfo.path = pathParts.join("/");
+            }
+
+            info.files.append(fileInfo);
+            info.totalSize += fileInfo.length;
+          }
+        }
       }
     }
   }
