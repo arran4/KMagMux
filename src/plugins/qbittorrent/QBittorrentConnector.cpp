@@ -1,8 +1,9 @@
 #include "QBittorrentConnector.h"
+#include "core/SecureStorage.h"
+#include <QCheckBox>
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
-#include <QCheckBox>
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
@@ -12,7 +13,6 @@
 #include <QSettings>
 #include <QUrlQuery>
 #include <QWidget>
-#include "core/SecureStorage.h"
 
 QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 
@@ -235,14 +235,16 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QLineEdit *passEdit = new QLineEdit(configWidget);
   passEdit->setObjectName("passEdit");
   passEdit->setEchoMode(QLineEdit::Password);
-  passEdit->setText(SecureStorage::readPassword("Plugins/qBittorrent", "password"));
+  passEdit->setText(
+      SecureStorage::readPassword("Plugins/qBittorrent", "password"));
   configLayout->addRow(tr("Password:"), passEdit);
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
 
   configWidget->setVisible(enabledCheck->isChecked());
-  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
+  connect(enabledCheck, &QCheckBox::toggled, configWidget,
+          &QWidget::setVisible);
 
   return widget;
 }
@@ -271,7 +273,8 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   }
   if (userEdit && passEdit) {
     settings.setValue("username", userEdit->text());
-    SecureStorage::writePassword("Plugins/qBittorrent", "password", passEdit->text());
+    SecureStorage::writePassword("Plugins/qBittorrent", "password",
+                                 passEdit->text());
     setCredentials(userEdit->text(), passEdit->text());
   }
 

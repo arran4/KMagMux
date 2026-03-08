@@ -1,7 +1,7 @@
 #include "ItemFilterProxyModel.h"
 #include "../core/ItemModel.h"
-#include <QJsonObject>
 #include <QJsonArray>
+#include <QJsonObject>
 #include <QVariant>
 
 ItemFilterProxyModel::ItemFilterProxyModel(QObject *parent)

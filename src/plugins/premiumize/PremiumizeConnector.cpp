@@ -1,4 +1,5 @@
 #include "PremiumizeConnector.h"
+#include "core/SecureStorage.h"
 #include <QCheckBox>
 #include <QDebug>
 #include <QFile>
@@ -12,7 +13,6 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 #include <QWidget>
-#include "core/SecureStorage.h"
 
 PremiumizeConnector::PremiumizeConnector() : PremiumizeConnector(nullptr) {}
 
@@ -39,25 +39,30 @@ void PremiumizeConnector::dispatch(const Item &item) {
   if (item.sourcePath.startsWith("magnet:")) {
     // Premiumize uses form-data or x-www-form-urlencoded for magnet links
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+    request.setHeader(QNetworkRequest::ContentTypeHeader,
+                      "application/x-www-form-urlencoded");
 
     QUrlQuery postData;
     postData.addQueryItem("apikey", m_apiKey);
     postData.addQueryItem("src", item.sourcePath);
 
-    QNetworkReply *reply = m_networkManager->post(request, postData.toString(QUrl::FullyEncoded).toUtf8());
+    QNetworkReply *reply = m_networkManager->post(
+        request, postData.toString(QUrl::FullyEncoded).toUtf8());
     reply->setProperty("itemId", item.id);
     connect(reply, &QNetworkReply::finished, this,
             &PremiumizeConnector::onAddTorrentReply);
   } else {
     // For files we need multipart
     QNetworkRequest request(url);
-    // Note: Do not set content-type for multipart, QNetworkAccessManager handles the boundary automatically
+    // Note: Do not set content-type for multipart, QNetworkAccessManager
+    // handles the boundary automatically
 
-    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+    QHttpMultiPart *multiPart =
+        new QHttpMultiPart(QHttpMultiPart::FormDataType);
 
     QHttpPart apiKeyPart;
-    apiKeyPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"apikey\""));
+    apiKeyPart.setHeader(QNetworkRequest::ContentDispositionHeader,
+                         QVariant("form-data; name=\"apikey\""));
     apiKeyPart.setBody(m_apiKey.toUtf8());
     multiPart->append(apiKeyPart);
 
@@ -71,9 +76,9 @@ void PremiumizeConnector::dispatch(const Item &item) {
     }
     QHttpPart filePart;
     QString filename = QFileInfo(item.sourcePath).fileName();
-    filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                       QVariant("form-data; name=\"src\"; filename=\"" +
-                                filename + "\""));
+    filePart.setHeader(
+        QNetworkRequest::ContentDispositionHeader,
+        QVariant("form-data; name=\"src\"; filename=\"" + filename + "\""));
     filePart.setBodyDevice(file);
     file->setParent(multiPart);
     multiPart->append(filePart);
@@ -121,14 +126,16 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   QLineEdit *tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
-  tokenEdit->setText(SecureStorage::readPassword("Plugins/Premiumize", "apiKey"));
+  tokenEdit->setText(
+      SecureStorage::readPassword("Plugins/Premiumize", "apiKey"));
   configLayout->addRow(tr("API Key:"), tokenEdit);
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
 
   configWidget->setVisible(enabledCheck->isChecked());
-  connect(enabledCheck, &QCheckBox::toggled, configWidget, &QWidget::setVisible);
+  connect(enabledCheck, &QCheckBox::toggled, configWidget,
+          &QWidget::setVisible);
 
   return widget;
 }
@@ -150,7 +157,8 @@ void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
     m_enabled = en;
   }
   if (tokenEdit) {
-    SecureStorage::writePassword("Plugins/Premiumize", "apiKey", tokenEdit->text());
+    SecureStorage::writePassword("Plugins/Premiumize", "apiKey",
+                                 tokenEdit->text());
     m_apiKey = tokenEdit->text();
   }
 

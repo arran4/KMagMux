@@ -106,7 +106,8 @@ Connector *Engine::getConnector(const QString &id) const {
 
 QStringList Engine::getAvailableConnectors() const {
   QStringList active;
-  for (auto it = m_connectors.constBegin(); it != m_connectors.constEnd(); ++it) {
+  for (auto it = m_connectors.constBegin(); it != m_connectors.constEnd();
+       ++it) {
     if (it.value()->isEnabled()) {
       active << it.key();
     }
@@ -114,9 +115,7 @@ QStringList Engine::getAvailableConnectors() const {
   return active;
 }
 
-QStringList Engine::getAllConnectors() const {
-  return m_connectors.keys();
-}
+QStringList Engine::getAllConnectors() const { return m_connectors.keys(); }
 
 void Engine::start() {
   if (!m_paused) {
@@ -145,17 +144,14 @@ void Engine::setPaused(bool paused) {
   }
 }
 
-bool Engine::isPaused() const {
-  return m_paused;
-}
+bool Engine::isPaused() const { return m_paused; }
 
 void Engine::processQueue() {
   if (m_paused)
     return;
 
-  // In a real implementation, we'd query the storage for items in 'Queued'
-  // state For now, load all (inefficient but works for MVP)
-  auto items = m_storage->loadAllItems();
+  auto items =
+      m_storage->loadItemsByStates({ItemState::Queued, ItemState::Scheduled});
 
   for (auto &item : items) {
     if (item.state == ItemState::Queued) {
