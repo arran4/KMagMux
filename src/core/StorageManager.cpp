@@ -2,12 +2,12 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
-#include <QSettings>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QtConcurrent>
 #include <utility>
@@ -313,22 +313,26 @@ void StorageManager::processNewFile(const QString &filePath) {
   int actionIndex = 0;
 
   if (autoMoveSetting.typeId() == QMetaType::Bool) {
-      actionIndex = autoMoveSetting.toBool() ? 2 : 0;
+    actionIndex = autoMoveSetting.toBool() ? 2 : 0;
   } else {
-      actionIndex = autoMoveSetting.toInt();
+    actionIndex = autoMoveSetting.toInt();
   }
 
   if (actionIndex == 1) { // Copy
     if (!moveToManaged(newItem, false, true)) {
-      qWarning() << "Failed to automatically copy new item to managed storage:" << newItem.sourcePath;
+      qWarning() << "Failed to automatically copy new item to managed storage:"
+                 << newItem.sourcePath;
     } else {
-      qDebug() << "Automatically copied new item to managed storage:" << newItem.sourcePath;
+      qDebug() << "Automatically copied new item to managed storage:"
+               << newItem.sourcePath;
     }
   } else if (actionIndex == 2) { // Move (Delete Source)
     if (!moveToManaged(newItem, true, true)) {
-      qWarning() << "Failed to automatically move new item to managed storage:" << newItem.sourcePath;
+      qWarning() << "Failed to automatically move new item to managed storage:"
+                 << newItem.sourcePath;
     } else {
-      qDebug() << "Automatically moved new item to managed storage:" << newItem.sourcePath;
+      qDebug() << "Automatically moved new item to managed storage:"
+               << newItem.sourcePath;
     }
   }
 
