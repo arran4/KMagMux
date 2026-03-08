@@ -1,5 +1,7 @@
 #include "PreferencesDialog.h"
 
+#include <QCheckBox>
+#include <QComboBox>
 #include "../core/Connector.h"
 #include "../core/Engine.h"
 #include <QCheckBox>
@@ -54,6 +56,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
             settings.setValue("minimizeToTray",
                               m_minimizeToTrayCb->isChecked());
             settings.setValue("autoStart", m_autoStartCb->isChecked());
+            settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
           });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
@@ -61,6 +64,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
     settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
     settings.setValue("autoStart", m_autoStartCb->isChecked());
+    settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
     accept();
   });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -101,6 +105,25 @@ void PreferencesDialog::createGeneralPage() {
   m_autoStartCb = new QCheckBox(tr("Start KMagMux automatically"), page);
   m_autoStartCb->setChecked(settings.value("autoStart", false).toBool());
   layout->addWidget(m_autoStartCb);
+
+  QHBoxLayout *autoMoveLayout = new QHBoxLayout;
+  autoMoveLayout->addWidget(new QLabel(tr("Automatically manage new inbox files:"), page));
+  m_autoMoveInboxCombo = new QComboBox(page);
+  m_autoMoveInboxCombo->addItem(tr("Do nothing"));
+  m_autoMoveInboxCombo->addItem(tr("Copy to managed storage"));
+  m_autoMoveInboxCombo->addItem(tr("Move (delete source) to managed storage"));
+
+  // Backwards compatibility with boolean
+  QVariant savedValue = settings.value("autoMoveInbox", 0);
+  if (savedValue.typeId() == QMetaType::Bool) {
+      m_autoMoveInboxCombo->setCurrentIndex(savedValue.toBool() ? 2 : 0);
+  } else {
+      m_autoMoveInboxCombo->setCurrentIndex(savedValue.toInt());
+  }
+
+  autoMoveLayout->addWidget(m_autoMoveInboxCombo);
+  autoMoveLayout->addStretch();
+  layout->addLayout(autoMoveLayout);
 
   layout->addStretch();
   m_pagesWidget->addWidget(page);
