@@ -1,5 +1,6 @@
 #include "AddItemDialog.h"
 #include "../core/Constants.h"
+#include "MaxWidthDelegate.h"
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -91,10 +92,12 @@ void AddItemDialog::setupUi() {
   m_itemsTable->setHorizontalHeaderLabels(
       {"Enable", "Delete file", "Name", "Link"});
   m_itemsTable->horizontalHeaderItem(1)->setToolTip("Delete file after import");
+  m_itemsTable->setItemDelegate(new MaxWidthDelegate(m_itemsTable));
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setStretchLastSection(true);
-  m_itemsTable->setTextElideMode(Qt::ElideNone); // Do not truncate
+  m_itemsTable->setTextElideMode(Qt::ElideRight);
+  m_itemsTable->setWordWrap(false);
   m_itemsTable->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
