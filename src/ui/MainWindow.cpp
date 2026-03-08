@@ -180,12 +180,63 @@ void MainWindow::setupUi() {
                           tr("&Preferences"), this, &MainWindow::onPreferences);
   prefAction->setShortcut(QKeySequence("Ctrl+,"));
 
+  // List View and Item Actions Initialization
+  m_selectAllAction = new QAction(tr("Select &All"), this);
+  m_selectAllAction->setShortcut(QKeySequence::SelectAll);
+  connect(m_selectAllAction, &QAction::triggered, this, [this]() {
+    QTableView *view = getCurrentView();
+    if (view) {
+      view->selectAll();
+    }
+  });
+
+  m_processAction = new QAction(tr("&Process..."), this);
+  connect(m_processAction, &QAction::triggered, this,
+          &MainWindow::onProcessItem);
+
+  m_reprocessAction = new QAction(tr("&Reprocess"), this);
+  connect(m_reprocessAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Queued); });
+
+  m_dismissAction = new QAction(tr("&Dismiss"), this);
+  connect(m_dismissAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Archived); });
+
+  m_queueAction = new QAction(tr("&Queue"), this);
+  connect(m_queueAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Queued); });
+
+  m_holdAction = new QAction(tr("&Hold"), this);
+  connect(m_holdAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Held); });
+
+  m_archiveAction = new QAction(tr("&Archive"), this);
+  connect(m_archiveAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Archived); });
+
+  m_deleteAction = new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
+  connect(m_deleteAction, &QAction::triggered, this, &MainWindow::onDeleteItems);
+
   QMenu *actionsMenu = menuBar()->addMenu(tr("A&ctions"));
-  QMenu *debugMenu = actionsMenu->addMenu(tr("&Debug"));
-  debugMenu->addAction(tr("Open &Cache directory"), this,
-                       &MainWindow::onOpenCacheDirectory);
+
+  // List View Actions
+  actionsMenu->addAction(m_selectAllAction);
+  actionsMenu->addSeparator();
+
+  // Item Actions
+  actionsMenu->addAction(m_processAction);
+  actionsMenu->addAction(m_reprocessAction);
+  actionsMenu->addAction(m_dismissAction);
+  actionsMenu->addAction(m_queueAction);
+  actionsMenu->addAction(m_holdAction);
+  actionsMenu->addAction(m_archiveAction);
+  actionsMenu->addSeparator();
+  actionsMenu->addAction(m_deleteAction);
 
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
+  QMenu *debugMenu = helpMenu->addMenu(tr("&Debug"));
+  debugMenu->addAction(tr("Open &Cache directory"), this,
+                       &MainWindow::onOpenCacheDirectory);
   helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
                       this, &MainWindow::onAbout);
 
@@ -238,6 +289,9 @@ void MainWindow::setupUi() {
     connect(view, &QTableView::customContextMenuRequested, this,
             &MainWindow::onCustomContextMenuRequested);
 
+    connect(view->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MainWindow::updateActionsState);
+
     tabLayout->addWidget(view);
     m_tabWidget->addTab(tab, title);
   };
@@ -281,6 +335,10 @@ void MainWindow::setupUi() {
   m_errorModel = new ItemModel(this);
   m_errorProxy = new ItemFilterProxyModel(this);
   setupView(m_errorView, m_errorModel, m_errorProxy, "Errors");
+
+  connect(m_tabWidget, &QTabWidget::currentChanged, this,
+          &MainWindow::updateActionsState);
+  updateActionsState();
 
   // System Tray Setup
   m_trayIcon = new QSystemTrayIcon(this);
@@ -461,43 +519,22 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
   // If we are in the Inbox view, offer a "Process..." action
   if (view == m_unprocessedView) {
-    QAction *processAction = menu.addAction("Process...");
-    connect(processAction, &QAction::triggered, this,
-            &MainWindow::onProcessItem);
+    menu.addAction(m_processAction);
     menu.addSeparator();
-  }
-
-  if (view == m_errorView) {
-    QAction *reprocessAction = menu.addAction("Reprocess");
-    connect(reprocessAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Queued); });
-
-    QAction *dismissAction = menu.addAction("Dismiss");
-    connect(dismissAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Archived); });
-
+  } else if (view == m_errorView) {
+    menu.addAction(m_reprocessAction);
+    menu.addAction(m_dismissAction);
     menu.addSeparator();
+    menu.addAction(m_queueAction);
+    menu.addAction(m_holdAction);
+  } else {
+    menu.addAction(m_queueAction);
+    menu.addAction(m_holdAction);
   }
 
-  if (view != m_unprocessedView) {
-    QAction *queueAction = menu.addAction("Queue");
-    QAction *holdAction = menu.addAction("Hold");
-
-    connect(queueAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Queued); });
-    connect(holdAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Held); });
-  }
-
-  QAction *archiveAction = menu.addAction("Archive");
-  connect(archiveAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Archived); });
-
+  menu.addAction(m_archiveAction);
   menu.addSeparator();
-
-  QAction *deleteAction =
-      menu.addAction(QIcon::fromTheme("edit-delete"), "Delete");
-  connect(deleteAction, &QAction::triggered, this, &MainWindow::onDeleteItems);
+  menu.addAction(m_deleteAction);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
 }
@@ -804,6 +841,43 @@ void MainWindow::onAbout() {
   QMessageBox::about(
       this, tr("About KMagMux"),
       tr("KMagMux\nTorrent and Magnet file handler and router."));
+}
+
+void MainWindow::updateActionsState() {
+  QTableView *view = getCurrentView();
+  if (!view) {
+    m_selectAllAction->setEnabled(false);
+    m_processAction->setEnabled(false);
+    m_reprocessAction->setEnabled(false);
+    m_dismissAction->setEnabled(false);
+    m_queueAction->setEnabled(false);
+    m_holdAction->setEnabled(false);
+    m_archiveAction->setEnabled(false);
+    m_deleteAction->setEnabled(false);
+    return;
+  }
+
+  bool hasSelection = view->selectionModel() && view->selectionModel()->hasSelection();
+  m_selectAllAction->setEnabled(true);
+
+  m_processAction->setVisible(view == m_unprocessedView);
+  m_processAction->setEnabled(hasSelection && view == m_unprocessedView);
+
+  m_reprocessAction->setVisible(view == m_errorView);
+  m_reprocessAction->setEnabled(hasSelection && view == m_errorView);
+
+  m_dismissAction->setVisible(view == m_errorView);
+  m_dismissAction->setEnabled(hasSelection && view == m_errorView);
+
+  bool showQueueAndHold = (view != m_unprocessedView);
+  m_queueAction->setVisible(showQueueAndHold);
+  m_queueAction->setEnabled(hasSelection && showQueueAndHold);
+
+  m_holdAction->setVisible(showQueueAndHold);
+  m_holdAction->setEnabled(hasSelection && showQueueAndHold);
+
+  m_archiveAction->setEnabled(hasSelection);
+  m_deleteAction->setEnabled(hasSelection);
 }
 
 void MainWindow::onToggleProcessing(bool checked) {

@@ -50,6 +50,7 @@ private slots:
   void onAbout();
   void onToggleProcessing(bool checked);
   void onOpenCacheDirectory();
+  void updateActionsState();
 
 private:
   StorageManager *m_storage;
@@ -78,6 +79,16 @@ private:
   QTableView *m_errorView;
 
   QAction *m_toggleProcessingAction;
+
+  // List View and Item Actions
+  QAction *m_selectAllAction;
+  QAction *m_processAction;
+  QAction *m_reprocessAction;
+  QAction *m_dismissAction;
+  QAction *m_queueAction;
+  QAction *m_holdAction;
+  QAction *m_archiveAction;
+  QAction *m_deleteAction;
 
   void setupUi();
   void loadData();
