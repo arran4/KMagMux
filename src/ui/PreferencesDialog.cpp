@@ -1,10 +1,9 @@
 #include "PreferencesDialog.h"
 
-#include <QCheckBox>
-#include <QComboBox>
 #include "../core/Connector.h"
 #include "../core/Engine.h"
 #include <QCheckBox>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QGroupBox>
@@ -56,7 +55,8 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
             settings.setValue("minimizeToTray",
                               m_minimizeToTrayCb->isChecked());
             settings.setValue("autoStart", m_autoStartCb->isChecked());
-            settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
+            settings.setValue("autoMoveInbox",
+                              m_autoMoveInboxCombo->currentIndex());
           });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
@@ -107,7 +107,8 @@ void PreferencesDialog::createGeneralPage() {
   layout->addWidget(m_autoStartCb);
 
   QHBoxLayout *autoMoveLayout = new QHBoxLayout;
-  autoMoveLayout->addWidget(new QLabel(tr("Automatically manage new inbox files:"), page));
+  autoMoveLayout->addWidget(
+      new QLabel(tr("Automatically manage new inbox files:"), page));
   m_autoMoveInboxCombo = new QComboBox(page);
   m_autoMoveInboxCombo->addItem(tr("Do nothing"));
   m_autoMoveInboxCombo->addItem(tr("Copy to managed storage"));
@@ -116,9 +117,9 @@ void PreferencesDialog::createGeneralPage() {
   // Backwards compatibility with boolean
   QVariant savedValue = settings.value("autoMoveInbox", 0);
   if (savedValue.typeId() == QMetaType::Bool) {
-      m_autoMoveInboxCombo->setCurrentIndex(savedValue.toBool() ? 2 : 0);
+    m_autoMoveInboxCombo->setCurrentIndex(savedValue.toBool() ? 2 : 0);
   } else {
-      m_autoMoveInboxCombo->setCurrentIndex(savedValue.toInt());
+    m_autoMoveInboxCombo->setCurrentIndex(savedValue.toInt());
   }
 
   autoMoveLayout->addWidget(m_autoMoveInboxCombo);

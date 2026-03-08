@@ -2,6 +2,7 @@
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
 #include "LinkExtractorDialog.h"
+#include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
 #include "ProcessItemDialog.h"
 #include <QApplication>
@@ -170,10 +171,11 @@ void MainWindow::setupUi() {
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
     view->setModel(model);
+    view->setItemDelegate(new MaxWidthDelegate(view));
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
-    view->setTextElideMode(Qt::ElideNone);
+    view->setTextElideMode(Qt::ElideRight);
     view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
