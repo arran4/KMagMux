@@ -246,7 +246,22 @@ void StorageManager::processNewFile(const QString &filePath) {
   newItem.createdTime = QDateTime::currentDateTime();
 
   QSettings settings;
-  if (settings.value("autoMoveInbox", false).toBool()) {
+  QVariant autoMoveSetting = settings.value("autoMoveInbox", 0);
+  int actionIndex = 0;
+
+  if (autoMoveSetting.typeId() == QMetaType::Bool) {
+      actionIndex = autoMoveSetting.toBool() ? 2 : 0;
+  } else {
+      actionIndex = autoMoveSetting.toInt();
+  }
+
+  if (actionIndex == 1) { // Copy
+    if (!moveToManaged(newItem, false, true)) {
+      qWarning() << "Failed to automatically copy new item to managed storage:" << newItem.sourcePath;
+    } else {
+      qDebug() << "Automatically copied new item to managed storage:" << newItem.sourcePath;
+    }
+  } else if (actionIndex == 2) { // Move (Delete Source)
     if (!moveToManaged(newItem, true, true)) {
       qWarning() << "Failed to automatically move new item to managed storage:" << newItem.sourcePath;
     } else {
