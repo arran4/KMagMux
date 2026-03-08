@@ -97,6 +97,7 @@ void ProcessItemDialog::setupUi() {
       QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setStretchLastSection(true);
   m_itemsTable->setTextElideMode(Qt::ElideRight);
+  m_itemsTable->setWordWrap(false);
   m_itemsTable->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
