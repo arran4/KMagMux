@@ -9,6 +9,9 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QEvent>
@@ -77,6 +80,61 @@ void MainWindow::changeEvent(QEvent *event) {
   }
 }
 
+void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
+  if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
+    event->acceptProposedAction();
+  }
+}
+
+void MainWindow::dropEvent(QDropEvent *event) {
+  QStringList lines;
+
+  if (event->mimeData()->hasUrls()) {
+    QList<QUrl> urls = event->mimeData()->urls();
+    for (const QUrl &url : urls) {
+      if (url.isLocalFile()) {
+        QString localPath = url.toLocalFile();
+        QFileInfo fileInfo(localPath);
+        if (fileInfo.suffix().toLower() == "torrent") {
+          lines.append("file://" + localPath);
+        } else if (fileInfo.suffix().toLower() == "txt" || fileInfo.suffix().isEmpty()) {
+          QFile file(localPath);
+          if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            while (!in.atEnd()) {
+              QString line = in.readLine().trimmed();
+              if (!line.isEmpty()) {
+                lines.append(line);
+              }
+            }
+          } else {
+            lines.append("file://" + localPath); // Fallback
+          }
+        } else {
+          lines.append("file://" + localPath);
+        }
+      } else {
+        lines.append(url.toString());
+      }
+    }
+  } else if (event->mimeData()->hasText()) {
+    QString text = event->mimeData()->text();
+    lines = text.split('\n', Qt::SkipEmptyParts);
+  }
+
+  if (!lines.isEmpty()) {
+    // Process the lines using ItemParser
+    std::vector<Item> parsedItems = ItemParser::parseLines(lines);
+    if (!parsedItems.empty()) {
+      m_storage->saveItems(parsedItems);
+    }
+
+    // Switch to Inbox tab
+    m_tabWidget->setCurrentIndex(0);
+  }
+  event->acceptProposedAction();
+}
+
 void MainWindow::setupUi() {
   setWindowTitle("KMagMux");
   resize(1000, 600);
@@ -84,7 +142,7 @@ void MainWindow::setupUi() {
   // Setup Menu Bar
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
   QAction *addItemsAction = fileMenu->addAction(
-      QIcon::fromTheme("document-open"), tr("&Find Item(s)..."), this,
+      QIcon::fromTheme("document-open"), tr("&Add..."), this,
       &MainWindow::onAddItems);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
 
@@ -194,6 +252,7 @@ void MainWindow::setupUi() {
   m_unprocessedView->hideColumn(ItemModel::ColError);
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
+  setAcceptDrops(true); // Allow drops on the main window
 
   // Queue Tab
   m_queueView = new QTableView(this);
@@ -231,6 +290,12 @@ void MainWindow::setupUi() {
   }
 
   m_trayIconMenu = new QMenu(this);
+
+  QAction *trayAddAction = new QAction(tr("&Add..."), this);
+  connect(trayAddAction, &QAction::triggered, this, &MainWindow::onAddItems);
+  m_trayIconMenu->addAction(trayAddAction);
+
+  m_trayIconMenu->addSeparator();
 
   m_showHideAction = new QAction(tr("Show/Hide"), this);
   connect(m_showHideAction, &QAction::triggered, this,
@@ -382,10 +447,17 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     return;
 
   QModelIndex index = view->indexAt(pos);
-  if (!index.isValid())
-    return;
-
   QMenu menu(this);
+
+  // If we clicked on an empty space in the Inbox view, offer an "Add..." action
+  if (!index.isValid()) {
+    if (view == m_unprocessedView) {
+      QAction *addAction = menu.addAction("Add...");
+      connect(addAction, &QAction::triggered, this, &MainWindow::onAddItems);
+      menu.exec(view->viewport()->mapToGlobal(pos));
+    }
+    return;
+  }
 
   // If we are in the Inbox view, offer a "Process..." action
   if (view == m_unprocessedView) {
@@ -508,7 +580,7 @@ void MainWindow::onDeleteItems() {
 
 void MainWindow::onAddItems() {
   QDialog dialog(this);
-  dialog.setWindowTitle(tr("Find Items"));
+  dialog.setWindowTitle(tr("Add Items"));
   dialog.resize(500, 400);
 
   QVBoxLayout *layout = new QVBoxLayout(&dialog);
