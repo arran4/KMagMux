@@ -1,7 +1,7 @@
 project(PutIoPlugin)
 
 add_library(putio MODULE PutIoConnector.cpp)
-target_link_libraries(putio PRIVATE KMagMuxCore Qt6::Core Qt6::Network)
+target_link_libraries(putio PRIVATE KMagMuxCore Qt5::Core Qt5::Network)
 
 # Ensure the plugin is built to the KMagMux plugins folder
 set_target_properties(putio PROPERTIES

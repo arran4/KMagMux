@@ -9,8 +9,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
-find_package(Qt6Keychain REQUIRED)
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
+find_package(Qt5Keychain REQUIRED)
+find_package(KF5XmlGui REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -23,7 +24,7 @@ add_library(KMagMuxCore SHARED
     src/core/ItemParser.cpp
     src/core/SecureStorage.cpp
 )
-target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent qt6keychain)
+target_link_libraries(KMagMuxCore PUBLIC Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Network Qt5::Concurrent qt5keychain)
 target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 file(RELATIVE_PATH REL_PLUGIN_DIR
@@ -44,7 +45,7 @@ add_executable(KMagMux
     resources/resources.qrc
 )
 
-target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent)
+target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Concurrent KF5::XmlGui)
 
 add_subdirectory(src/plugins/qbittorrent)
 add_subdirectory(src/plugins/torbox)
@@ -68,3 +69,6 @@ install(FILES resources/icons/kmagmux-64.png DESTINATION share/icons/hicolor/64x
 install(FILES resources/icons/kmagmux-128.png DESTINATION share/icons/hicolor/128x128/apps RENAME kmagmux.png)
 install(FILES resources/icons/kmagmux-256.png DESTINATION share/icons/hicolor/256x256/apps RENAME kmagmux.png)
 install(FILES resources/icons/kmagmux-512.png DESTINATION share/icons/hicolor/512x512/apps RENAME kmagmux.png)
+
+# Install KXmlGui UI definition
+install(FILES src/ui/kmagmuxui.rc DESTINATION share/kxmlgui5/kmagmux)

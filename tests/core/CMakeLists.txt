@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Test)
+find_package(Qt5 REQUIRED COMPONENTS Core Test)
 
 # Need to build a mock plugin to test loading
 add_library(mockplugin MODULE MockPlugin.cpp MockPlugin.h)
-target_link_libraries(mockplugin PRIVATE KMagMuxCore Qt6::Core)
+target_link_libraries(mockplugin PRIVATE KMagMuxCore Qt5::Core)
 set_target_properties(mockplugin PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/plugins"
 )
 
 add_executable(TestEngine TestEngine.cpp)
-target_link_libraries(TestEngine PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
+target_link_libraries(TestEngine PRIVATE KMagMuxCore Qt5::Core Qt5::Test)
 target_include_directories(TestEngine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 add_dependencies(TestEngine mockplugin)
 
@@ -26,6 +26,6 @@ endif()
 add_test(NAME TestEngine COMMAND TestEngine)
 
 add_executable(TestStorageManager TestStorageManager.cpp)
-target_link_libraries(TestStorageManager PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
+target_link_libraries(TestStorageManager PRIVATE KMagMuxCore Qt5::Core Qt5::Test)
 target_include_directories(TestStorageManager PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 add_test(NAME TestStorageManager COMMAND TestStorageManager)

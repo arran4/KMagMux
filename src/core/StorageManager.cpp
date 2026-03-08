@@ -312,7 +312,7 @@ void StorageManager::processNewFile(const QString &filePath) {
   QVariant autoMoveSetting = settings.value("autoMoveInbox", 0);
   int actionIndex = 0;
 
-  if (autoMoveSetting.typeId() == QMetaType::Bool) {
+  if (autoMoveSetting.type() == QVariant::Bool) {
       actionIndex = autoMoveSetting.toBool() ? 2 : 0;
   } else {
       actionIndex = autoMoveSetting.toInt();

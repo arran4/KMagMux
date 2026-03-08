@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gui name="kmagmux"
+     version="1"
+     xmlns="http://www.kde.org/standards/kxmlgui/1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.kde.org/standards/kxmlgui/1.0
+                         http://www.kde.org/standards/kxmlgui/1.0/kxmlgui.xsd">
+
+    <MenuBar>
+        <Menu name="file">
+            <Action name="add_items"/>
+            <Separator/>
+            <Action name="minimize_to_tray"/>
+            <Action name="quit"/>
+        </Menu>
+        <Menu name="edit">
+            <Action name="toggle_processing"/>
+            <Separator/>
+            <Action name="preferences"/>
+        </Menu>
+        <Menu name="actions_menu"><text>A&amp;ctions</text>
+            <Action name="select_all"/>
+            <Separator/>
+            <Action name="process_item"/>
+            <Action name="reprocess_item"/>
+            <Action name="dismiss_item"/>
+            <Action name="queue_item"/>
+            <Action name="hold_item"/>
+            <Action name="archive_item"/>
+            <Separator/>
+            <Action name="delete_items"/>
+        </Menu>
+        <Menu name="help">
+            <Menu name="debug_menu"><text>&amp;Debug</text>
+                <Action name="open_cache"/>
+            </Menu>
+            <Action name="about_app"/>
+        </Menu>
+    </MenuBar>
+
+    <ToolBar name="mainToolBar">
+        <text>Main Toolbar</text>
+        <Action name="toggle_processing"/>
+        <Separator/>
+        <Action name="add_items"/>
+        <Separator/>
+        <Action name="minimize_to_tray"/>
+        <Action name="quit"/>
+    </ToolBar>
+
+</gui>

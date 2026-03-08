@@ -8,7 +8,10 @@
 #include <QAction>
 #include <QCloseEvent>
 #include <QEvent>
-#include <QMainWindow>
+#include <KXmlGuiWindow>
+#include <KActionCollection>
+#include <KStandardAction>
+#include <QActionGroup>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMenu>
@@ -19,7 +22,7 @@
 #include <QTableView>
 #include <QToolBar>
 
-class MainWindow : public QMainWindow {
+class MainWindow : public KXmlGuiWindow {
   Q_OBJECT
 
 public:
