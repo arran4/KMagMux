@@ -1,11 +1,11 @@
 #include "TorrentInfoDialog.h"
 #include <QFormLayout>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QMessageBox>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QVBoxLayout>
 
 TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath, QWidget *parent)
     : QDialog(parent), m_sourcePath(sourcePath), m_isQuerying(false),
@@ -46,23 +46,31 @@ void TorrentInfoDialog::setupUi() {
     return field;
   };
 
-  infoLayout->addRow(new QLabel("<b>Name:</b>"), createReadOnlyField(m_info.name));
-  infoLayout->addRow(new QLabel("<b>Info Hash:</b>"), createReadOnlyField(m_info.infoHash.toHex()));
-  infoLayout->addRow(new QLabel("<b>Source:</b>"), createReadOnlyField(m_sourcePath));
+  infoLayout->addRow(new QLabel("<b>Name:</b>"),
+                     createReadOnlyField(m_info.name));
+  infoLayout->addRow(new QLabel("<b>Info Hash:</b>"),
+                     createReadOnlyField(m_info.infoHash.toHex()));
+  infoLayout->addRow(new QLabel("<b>Source:</b>"),
+                     createReadOnlyField(m_sourcePath));
 
   if (!m_info.comment.isEmpty()) {
-    infoLayout->addRow(new QLabel("<b>Comment:</b>"), createReadOnlyField(m_info.comment));
+    infoLayout->addRow(new QLabel("<b>Comment:</b>"),
+                       createReadOnlyField(m_info.comment));
   }
   if (!m_info.createdBy.isEmpty()) {
-    infoLayout->addRow(new QLabel("<b>Created By:</b>"), createReadOnlyField(m_info.createdBy));
+    infoLayout->addRow(new QLabel("<b>Created By:</b>"),
+                       createReadOnlyField(m_info.createdBy));
   }
   if (m_info.creationDate.isValid()) {
-    infoLayout->addRow(new QLabel("<b>Creation Date:</b>"), createReadOnlyField(m_info.creationDate.toString()));
+    infoLayout->addRow(new QLabel("<b>Creation Date:</b>"),
+                       createReadOnlyField(m_info.creationDate.toString()));
   }
 
   if (m_info.totalSize > 0) {
     double sizeMb = static_cast<double>(m_info.totalSize) / (1024.0 * 1024.0);
-    infoLayout->addRow(new QLabel("<b>Total Size:</b>"), createReadOnlyField(QString::number(sizeMb, 'f', 2) + " MB"));
+    infoLayout->addRow(
+        new QLabel("<b>Total Size:</b>"),
+        createReadOnlyField(QString::number(sizeMb, 'f', 2) + " MB"));
   }
 
   mainLayout->addLayout(infoLayout);
@@ -73,16 +81,20 @@ void TorrentInfoDialog::setupUi() {
 
     QTableWidget *filesTable = new QTableWidget(m_info.files.size(), 2, this);
     filesTable->setHorizontalHeaderLabels({"Path", "Size (MB)"});
-    filesTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    filesTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    filesTable->horizontalHeader()->setSectionResizeMode(0,
+                                                         QHeaderView::Stretch);
+    filesTable->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::ResizeToContents);
     filesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     filesTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     filesTable->setMaximumHeight(150);
 
     for (int i = 0; i < m_info.files.size(); ++i) {
       filesTable->setItem(i, 0, new QTableWidgetItem(m_info.files[i].path));
-      double fileMb = static_cast<double>(m_info.files[i].length) / (1024.0 * 1024.0);
-      QTableWidgetItem *sizeItem = new QTableWidgetItem(QString::number(fileMb, 'f', 2));
+      double fileMb =
+          static_cast<double>(m_info.files[i].length) / (1024.0 * 1024.0);
+      QTableWidgetItem *sizeItem =
+          new QTableWidgetItem(QString::number(fileMb, 'f', 2));
       sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
       filesTable->setItem(i, 1, sizeItem);
     }
@@ -90,15 +102,19 @@ void TorrentInfoDialog::setupUi() {
   }
 
   m_trackerTable = new QTableWidget(m_info.trackers.size(), 5, this);
-  m_trackerTable->setHorizontalHeaderLabels({"Tracker", "Status", "Seeders", "Leechers", "Downloaded"});
-  m_trackerTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-  m_trackerTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+  m_trackerTable->setHorizontalHeaderLabels(
+      {"Tracker", "Status", "Seeders", "Leechers", "Downloaded"});
+  m_trackerTable->horizontalHeader()->setSectionResizeMode(
+      0, QHeaderView::Stretch);
+  m_trackerTable->horizontalHeader()->setSectionResizeMode(
+      1, QHeaderView::ResizeToContents);
   m_trackerTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_trackerTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
   for (int i = 0; i < m_info.trackers.size(); ++i) {
     QTableWidgetItem *trackerItem = new QTableWidgetItem(m_info.trackers[i]);
-    trackerItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    trackerItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled |
+                          Qt::ItemIsSelectable);
     trackerItem->setCheckState(Qt::Checked);
 
     m_trackerTable->setItem(i, 0, trackerItem);
@@ -121,12 +137,14 @@ void TorrentInfoDialog::setupUi() {
 
   m_cancelBtn->setEnabled(false);
 
-  connect(m_queryBtn, &QPushButton::clicked, this, &TorrentInfoDialog::onQueryTrackers);
-  connect(m_cancelBtn, &QPushButton::clicked, this, &TorrentInfoDialog::onCancelQuery);
+  connect(m_queryBtn, &QPushButton::clicked, this,
+          &TorrentInfoDialog::onQueryTrackers);
+  connect(m_cancelBtn, &QPushButton::clicked, this,
+          &TorrentInfoDialog::onCancelQuery);
   connect(m_closeBtn, &QPushButton::clicked, this, &QDialog::accept);
 
   if (m_info.trackers.isEmpty()) {
-      m_queryBtn->setEnabled(false);
+    m_queryBtn->setEnabled(false);
   }
 
   btnLayout->addStretch();
@@ -138,7 +156,8 @@ void TorrentInfoDialog::setupUi() {
 }
 
 void TorrentInfoDialog::onQueryTrackers() {
-  if (m_info.trackers.isEmpty()) return;
+  if (m_info.trackers.isEmpty())
+    return;
 
   m_isQuerying = true;
   m_queryBtn->setEnabled(false);
@@ -168,8 +187,9 @@ void TorrentInfoDialog::onCancelQuery() {
   m_trackerClient->cancel();
 
   if (m_currentTrackerIndex < m_trackerTable->rowCount()) {
-      m_trackerTable->item(m_currentTrackerIndex, 1)->setText("Cancelled");
-      m_logView->append(QString("Cancelled query for %1").arg(m_info.trackers[m_currentTrackerIndex]));
+    m_trackerTable->item(m_currentTrackerIndex, 1)->setText("Cancelled");
+    m_logView->append(QString("Cancelled query for %1")
+                          .arg(m_info.trackers[m_currentTrackerIndex]));
   }
 
   // Mark remaining as cancelled
@@ -186,10 +206,12 @@ void TorrentInfoDialog::onCancelQuery() {
 }
 
 void TorrentInfoDialog::processNextTracker() {
-  if (!m_isQuerying) return;
+  if (!m_isQuerying)
+    return;
 
   while (m_currentTrackerIndex < m_trackerTable->rowCount() &&
-         m_trackerTable->item(m_currentTrackerIndex, 0)->checkState() != Qt::Checked) {
+         m_trackerTable->item(m_currentTrackerIndex, 0)->checkState() !=
+             Qt::Checked) {
     m_currentTrackerIndex++;
   }
 
@@ -209,11 +231,12 @@ void TorrentInfoDialog::processNextTracker() {
 }
 
 void TorrentInfoDialog::onScrapeFinished(const TrackerStats &stats) {
-  if (!m_isQuerying) return;
+  if (!m_isQuerying)
+    return;
 
   // Find the row for this tracker (should be m_currentTrackerIndex)
   if (m_currentTrackerIndex < m_trackerTable->rowCount()) {
-      updateTrackerRow(m_currentTrackerIndex, stats);
+    updateTrackerRow(m_currentTrackerIndex, stats);
   }
 
   m_currentTrackerIndex++;
@@ -227,9 +250,9 @@ void TorrentInfoDialog::updateTrackerRow(int row, const TrackerStats &stats) {
     m_trackerTable->item(row, 3)->setText(QString::number(stats.leechers));
     m_trackerTable->item(row, 4)->setText(QString::number(stats.downloaded));
     m_logView->append(QString("Success for %1: Seeders=%2, Leechers=%3")
-                      .arg(stats.trackerUrl)
-                      .arg(stats.seeders)
-                      .arg(stats.leechers));
+                          .arg(stats.trackerUrl)
+                          .arg(stats.seeders)
+                          .arg(stats.leechers));
   } else {
     m_trackerTable->item(row, 1)->setText("Error: " + stats.errorString);
     m_trackerTable->item(row, 1)->setToolTip(stats.errorString);
@@ -237,7 +260,7 @@ void TorrentInfoDialog::updateTrackerRow(int row, const TrackerStats &stats) {
     m_trackerTable->item(row, 3)->setText("-");
     m_trackerTable->item(row, 4)->setText("-");
     m_logView->append(QString("Error for %1: %2")
-                      .arg(stats.trackerUrl)
-                      .arg(stats.errorString));
+                          .arg(stats.trackerUrl)
+                          .arg(stats.errorString));
   }
 }

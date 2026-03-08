@@ -197,16 +197,35 @@ bool StorageManager::deleteItem(const QString &id) {
 
   Item item = optItem.value();
 
+  QString cleanManagedDir =
+      QDir::cleanPath(QDir(m_managedDir).absolutePath()) + "/";
+
   // Remove the managed file if it exists
   if (item.metadata.contains("managedFile")) {
     QString managedPath = item.metadata["managedFile"].toString();
     if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
-      QFile::remove(managedPath);
+      QString cleanManagedPath =
+          QDir::cleanPath(QFileInfo(managedPath).absoluteFilePath());
+      if (cleanManagedPath.startsWith(cleanManagedDir)) {
+        QFile::remove(managedPath);
+      } else {
+        qWarning() << "Security: Attempted to delete file outside managed "
+                      "directory:"
+                   << managedPath;
+      }
     }
   } else if (item.sourcePath.startsWith(m_managedDir) &&
              QFile::exists(item.sourcePath)) {
     // Sometimes sourcePath points directly to the managed dir
-    QFile::remove(item.sourcePath);
+    QString cleanSourcePath =
+        QDir::cleanPath(QFileInfo(item.sourcePath).absoluteFilePath());
+    if (cleanSourcePath.startsWith(cleanManagedDir)) {
+      QFile::remove(item.sourcePath);
+    } else {
+      qWarning() << "Security: Attempted to delete file outside managed "
+                    "directory:"
+                 << item.sourcePath;
+    }
   }
 
   // Remove the JSON data file

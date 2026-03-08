@@ -2,12 +2,12 @@
 #define TRACKERCLIENT_H
 
 #include <QByteArray>
-#include <QObject>
-#include <QString>
-#include <QUdpSocket>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QObject>
+#include <QString>
 #include <QTimer>
+#include <QUdpSocket>
 
 struct TrackerStats {
   QString trackerUrl;
@@ -52,11 +52,7 @@ private:
   QTimer *m_timer;
 
   // UDP protocol state
-  enum class UdpState {
-    Idle,
-    Connecting,
-    Scraping
-  };
+  enum class UdpState { Idle, Connecting, Scraping };
   UdpState m_udpState;
   uint32_t m_transactionId;
   uint64_t m_connectionId;

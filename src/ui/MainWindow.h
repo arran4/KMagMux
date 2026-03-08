@@ -7,10 +7,10 @@
 #include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QCloseEvent>
-#include <QEvent>
-#include <QMainWindow>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEvent>
+#include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
