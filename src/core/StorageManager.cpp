@@ -1,4 +1,5 @@
 #include "StorageManager.h"
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
 #include <QSettings>
@@ -9,7 +10,6 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QtConcurrent>
-#include <QCoreApplication>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
@@ -21,7 +21,7 @@ StorageManager::StorageManager(QObject *parent)
 
   QString appName = QCoreApplication::applicationName();
   if (appName.isEmpty()) {
-      appName = "kmagmux";
+    appName = "kmagmux";
   }
 
   // Set base directory
@@ -59,6 +59,10 @@ bool StorageManager::init() {
 
   if (success) {
     qDebug() << "Storage initialized at:" << m_baseDir;
+
+    // Initialize cache
+    loadAllItems();
+
     // Start watching inbox
     if (m_watcher->addPath(m_inboxDir)) {
       qDebug() << "Watching inbox:" << m_inboxDir;
@@ -125,6 +129,9 @@ bool StorageManager::saveItem(const Item &item) {
     return false;
   }
 
+  // Update cache
+  m_cache[item.id] = item;
+
   // Notify updates
   emit itemUpdated(item);
 
@@ -135,14 +142,34 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
   if (items.empty()) {
     return;
   }
+
+  // Update cache immediately on the main thread to prevent stale data
+  for (const Item &item : items) {
+    m_cache[item.id] = item;
+    emit itemUpdated(item);
+  }
+
   (void)QtConcurrent::run([this, items]() {
     for (const Item &item : items) {
-      saveItem(item);
+      if (item.id.isEmpty()) {
+        continue;
+      }
+
+      QString path = getItemPath(item.id);
+      QFile file(path);
+      if (file.open(QIODevice::WriteOnly)) {
+        QJsonDocument doc(item.toJson());
+        file.write(doc.toJson());
+      }
     }
   });
 }
 
 std::optional<Item> StorageManager::loadItem(const QString &id) {
+  if (m_cacheInitialized && m_cache.contains(id)) {
+    return m_cache[id];
+  }
+
   QString path = getItemPath(id);
   QFile file(path);
   if (!file.open(QIODevice::ReadOnly)) {
@@ -157,7 +184,9 @@ std::optional<Item> StorageManager::loadItem(const QString &id) {
     return std::nullopt;
   }
 
-  return Item::fromJson(doc.object());
+  Item item = Item::fromJson(doc.object());
+  m_cache[item.id] = item;
+  return item;
 }
 
 bool StorageManager::deleteItem(const QString &id) {
@@ -174,7 +203,8 @@ bool StorageManager::deleteItem(const QString &id) {
     if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
       QFile::remove(managedPath);
     }
-  } else if (item.sourcePath.startsWith(m_managedDir) && QFile::exists(item.sourcePath)) {
+  } else if (item.sourcePath.startsWith(m_managedDir) &&
+             QFile::exists(item.sourcePath)) {
     // Sometimes sourcePath points directly to the managed dir
     QFile::remove(item.sourcePath);
   }
@@ -188,12 +218,24 @@ bool StorageManager::deleteItem(const QString &id) {
     }
   }
 
+  m_cache.remove(id);
+
   emit itemDeleted(id);
   return true;
 }
 
 std::vector<Item> StorageManager::loadAllItems() {
   std::vector<Item> items;
+
+  if (m_cacheInitialized) {
+    items.reserve(m_cache.size());
+    for (auto it = m_cache.constBegin(); it != m_cache.constEnd(); ++it) {
+      items.push_back(it.value());
+    }
+    return items;
+  }
+
+  m_cache.clear();
   QDirIterator it(m_dataDir, QStringList() << "*.json", QDir::Files);
   while (it.hasNext()) {
     QString path = it.next();
@@ -202,10 +244,30 @@ std::vector<Item> StorageManager::loadAllItems() {
       QByteArray data = file.readAll();
       QJsonDocument doc = QJsonDocument::fromJson(data);
       if (!doc.isNull() && doc.isObject()) {
-        items.push_back(Item::fromJson(doc.object()));
+        Item item = Item::fromJson(doc.object());
+        items.push_back(item);
+        m_cache.insert(item.id, item);
       }
     }
   }
+  m_cacheInitialized = true;
+  return items;
+}
+
+std::vector<Item>
+StorageManager::loadItemsByStates(const QList<ItemState> &states) {
+  std::vector<Item> items;
+
+  if (!m_cacheInitialized) {
+    loadAllItems();
+  }
+
+  for (auto it = m_cache.constBegin(); it != m_cache.constEnd(); ++it) {
+    if (states.contains(it.value().state)) {
+      items.push_back(it.value());
+    }
+  }
+
   return items;
 }
 

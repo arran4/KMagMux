@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include "../core/Connector.h"
 #include "../core/Engine.h"
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QGroupBox>
@@ -12,8 +13,8 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QPushButton>
-#include <QSettings>
 #include <QScrollArea>
+#include <QSettings>
 #include <QStackedWidget>
 #include <QTableWidget>
 #include <QVBoxLayout>

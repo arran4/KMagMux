@@ -5,8 +5,9 @@
 
 class SecureStorage {
 public:
-    static QString readPassword(const QString& service, const QString& key);
-    static void writePassword(const QString& service, const QString& key, const QString& password);
+  static QString readPassword(const QString &service, const QString &key);
+  static void writePassword(const QString &service, const QString &key,
+                            const QString &password);
 };
 
 #endif // SECURESTORAGE_H

@@ -30,6 +30,7 @@ public:
   void saveItems(const std::vector<Item> &items);
   std::optional<Item> loadItem(const QString &id);
   std::vector<Item> loadAllItems();
+  std::vector<Item> loadItemsByStates(const QList<ItemState> &states);
   bool deleteItem(const QString &id);
 
   // Scanning
@@ -59,6 +60,9 @@ private:
 
   QFileSystemWatcher *m_watcher;
   QSet<QString> m_knownFiles; // To track new files vs existing
+
+  QMap<QString, Item> m_cache;
+  bool m_cacheInitialized = false;
 
   bool createDirIfNotExists(const QString &path);
   QString getItemPath(const QString &id) const;
