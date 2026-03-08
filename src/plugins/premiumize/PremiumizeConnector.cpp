@@ -164,3 +164,26 @@ void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
 
   settings.endGroup();
 }
+
+bool PremiumizeConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> PremiumizeConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint transferCreate;
+  transferCreate.name = "Transfer Create";
+  transferCreate.description = "Creates a new transfer (magnet or torrent)";
+  transferCreate.method = "POST";
+  transferCreate.url = "https://www.premiumize.me/api/transfer/create";
+  transferCreate.headers.insert("Content-Type", "application/x-www-form-urlencoded");
+  transferCreate.body = "apikey=${API_KEY}&src=${MAGNET_LINK}";
+  endpoints.append(transferCreate);
+
+  return endpoints;
+}
+
+QMap<QString, QString> PremiumizeConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("API_KEY", m_apiKey);
+  return subs;
+}
