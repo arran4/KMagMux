@@ -1,5 +1,38 @@
 #include "Item.h"
+#include <QFileInfo>
 #include <QJsonDocument>
+#include <QUrl>
+#include <QUrlQuery>
+
+QString Item::getDisplayName() const {
+  if (sourcePath.startsWith("magnet:?")) {
+    QUrl url(sourcePath);
+    QUrlQuery query(url);
+    if (query.hasQueryItem("dn")) {
+      return QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
+    } else if (query.hasQueryItem("tr")) {
+      return "Magnet Link (No Name)";
+    } else {
+      // maybe xt infohash?
+      QString fullQuery = url.query();
+      int xtIdx = fullQuery.indexOf("xt=");
+      if (xtIdx != -1) {
+        int endIdx = fullQuery.indexOf('&', xtIdx);
+        if (endIdx == -1)
+          endIdx = fullQuery.length();
+        return fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
+      }
+    }
+    return "Magnet Link";
+  }
+
+  QFileInfo fi(sourcePath);
+  QString name = fi.fileName();
+  if (!name.isEmpty()) {
+    return QUrl::fromPercentEncoding(name.toUtf8());
+  }
+  return sourcePath;
+}
 
 QJsonObject Item::toJson() const {
   QJsonObject json;

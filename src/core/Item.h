@@ -27,6 +27,8 @@ struct Item {
   QDateTime scheduledTime;
   QJsonObject metadata; // Flexible metadata storage
 
+  QString getDisplayName() const;
+
   // Serialization helpers
   QJsonObject toJson() const;
   static Item fromJson(const QJsonObject &json);
