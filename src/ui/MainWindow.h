@@ -7,10 +7,10 @@
 #include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QCloseEvent>
-#include <QEvent>
-#include <QMainWindow>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEvent>
+#include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
@@ -91,6 +91,9 @@ private:
   QAction *m_deleteAction;
 
   void setupUi();
+  void setupActionsAndMenus();
+  void setupTabs();
+  void setupSystemTray();
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
