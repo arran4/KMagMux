@@ -746,26 +746,30 @@ void MainWindow::onAddItems() {
 
   if (dialog.exec() == QDialog::Accepted) {
     QStringList lines = textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
-
-    // Offload parsing to a background thread
-    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
-
-    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
-            [this, watcher]() {
-              std::vector<Item> items = watcher->result();
-              if (!items.empty()) {
-                openAddItemsDialog(items);
-              }
-              watcher->deleteLater();
-            });
-
-    QFuture<std::vector<Item>> future =
-        QtConcurrent::run([lines]() -> std::vector<Item> {
-          return ItemParser::parseLines(lines);
-        });
-
-    watcher->setFuture(future);
+    processAddedLines(lines);
   }
+}
+
+void MainWindow::processAddedLines(const QStringList &lines) {
+  if (lines.isEmpty())
+    return;
+
+  // Offload parsing to a background thread
+  auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
+
+  connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+          [this, watcher]() {
+            std::vector<Item> items = watcher->result();
+            if (!items.empty()) {
+              openAddItemsDialog(items);
+            }
+            watcher->deleteLater();
+          });
+
+  QFuture<std::vector<Item>> future = QtConcurrent::run(
+      [lines]() -> std::vector<Item> { return ItemParser::parseLines(lines); });
+
+  watcher->setFuture(future);
 }
 
 void MainWindow::onProcessItem() {
