@@ -97,6 +97,7 @@ private:
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
+  void processAddedLines(const QStringList &lines);
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
   void saveItemsFromDialog(std::vector<Item> updatedItems);

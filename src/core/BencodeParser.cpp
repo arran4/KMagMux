@@ -14,8 +14,8 @@ bool BencodeParser::parse(const QByteArray &data) {
   QVariant root = parseElement(data, pos);
 
   if (pos != data.size() && m_errorString.isEmpty()) {
-      // Allow trailing garbage? Often best not to, but sometimes exists.
-      // We will just accept the root object if it parsed.
+    // Allow trailing garbage? Often best not to, but sometimes exists.
+    // We will just accept the root object if it parsed.
   }
 
   if (!m_errorString.isEmpty()) {

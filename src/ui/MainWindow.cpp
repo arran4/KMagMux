@@ -89,6 +89,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
 
 void MainWindow::dropEvent(QDropEvent *event) {
   QStringList lines;
+  QStringList filesToRead;
 
   if (event->mimeData()->hasUrls()) {
     QList<QUrl> urls = event->mimeData()->urls();
@@ -100,18 +101,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
           lines.append("file://" + localPath);
         } else if (fileInfo.suffix().toLower() == "txt" ||
                    fileInfo.suffix().isEmpty()) {
-          QFile file(localPath);
-          if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-            while (!in.atEnd()) {
-              QString line = in.readLine().trimmed();
-              if (!line.isEmpty()) {
-                lines.append(line);
-              }
-            }
-          } else {
-            lines.append("file://" + localPath); // Fallback
-          }
+          filesToRead.append(localPath);
         } else {
           lines.append("file://" + localPath);
         }
@@ -124,15 +114,41 @@ void MainWindow::dropEvent(QDropEvent *event) {
     lines = text.split('\n', Qt::SkipEmptyParts);
   }
 
-  if (!lines.isEmpty()) {
-    // Process the lines using ItemParser
-    std::vector<Item> parsedItems = ItemParser::parseLines(lines);
-    if (!parsedItems.empty()) {
-      m_storage->saveItems(parsedItems);
-    }
+  if (!lines.isEmpty() || !filesToRead.isEmpty()) {
+    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
 
-    // Switch to Inbox tab
-    m_tabWidget->setCurrentIndex(0);
+    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+            [this, watcher]() {
+              std::vector<Item> parsedItems = watcher->result();
+              if (!parsedItems.empty()) {
+                m_storage->saveItems(parsedItems);
+              }
+              // Switch to Inbox tab
+              m_tabWidget->setCurrentIndex(0);
+              watcher->deleteLater();
+            });
+
+    QFuture<std::vector<Item>> future =
+        QtConcurrent::run([lines, filesToRead]() -> std::vector<Item> {
+          QStringList finalLines = lines;
+          for (const QString &localPath : filesToRead) {
+            QFile file(localPath);
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+              QTextStream in(&file);
+              while (!in.atEnd()) {
+                QString line = in.readLine().trimmed();
+                if (!line.isEmpty()) {
+                  finalLines.append(line);
+                }
+              }
+            } else {
+              finalLines.append("file://" + localPath); // Fallback
+            }
+          }
+          return ItemParser::parseLines(finalLines);
+        });
+
+    watcher->setFuture(future);
   }
   event->acceptProposedAction();
 }
@@ -739,26 +755,30 @@ void MainWindow::onAddItems() {
 
   if (dialog.exec() == QDialog::Accepted) {
     QStringList lines = textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
-
-    // Offload parsing to a background thread
-    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
-
-    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
-            [this, watcher]() {
-              std::vector<Item> items = watcher->result();
-              if (!items.empty()) {
-                openAddItemsDialog(items);
-              }
-              watcher->deleteLater();
-            });
-
-    QFuture<std::vector<Item>> future =
-        QtConcurrent::run([lines]() -> std::vector<Item> {
-          return ItemParser::parseLines(lines);
-        });
-
-    watcher->setFuture(future);
+    processAddedLines(lines);
   }
+}
+
+void MainWindow::processAddedLines(const QStringList &lines) {
+  if (lines.isEmpty())
+    return;
+
+  // Offload parsing to a background thread
+  auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
+
+  connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+          [this, watcher]() {
+            std::vector<Item> items = watcher->result();
+            if (!items.empty()) {
+              openAddItemsDialog(items);
+            }
+            watcher->deleteLater();
+          });
+
+  QFuture<std::vector<Item>> future = QtConcurrent::run(
+      [lines]() -> std::vector<Item> { return ItemParser::parseLines(lines); });
+
+  watcher->setFuture(future);
 }
 
 void MainWindow::onProcessItem() {
