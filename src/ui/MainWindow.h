@@ -7,6 +7,8 @@
 #include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QCloseEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QEvent>
 #include <QMainWindow>
 #include <QMenu>
@@ -27,6 +29,8 @@ public:
 protected:
   void closeEvent(QCloseEvent *event) override;
   void changeEvent(QEvent *event) override;
+  void dragEnterEvent(QDragEnterEvent *event) override;
+  void dropEvent(QDropEvent *event) override;
 
 private slots:
   void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
@@ -47,6 +51,7 @@ private slots:
   void onToggleProcessing(bool checked);
   void onOpenCacheDirectory();
   void onOpenApiExplorer(Connector *connector);
+  void updateActionsState();
 
 private:
   StorageManager *m_storage;
@@ -76,10 +81,21 @@ private:
 
   QAction *m_toggleProcessingAction;
 
+  // List View and Item Actions
+  QAction *m_selectAllAction;
+  QAction *m_processAction;
+  QAction *m_reprocessAction;
+  QAction *m_dismissAction;
+  QAction *m_queueAction;
+  QAction *m_holdAction;
+  QAction *m_archiveAction;
+  QAction *m_deleteAction;
+
   void setupUi();
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
+  void processAddedLines(const QStringList &lines);
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
   void saveItemsFromDialog(std::vector<Item> updatedItems);

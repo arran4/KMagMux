@@ -12,6 +12,7 @@ public:
   enum Columns {
     ColId = 0,
     ColState,
+    ColName,
     ColSource,
     ColCreated,
     ColError,
