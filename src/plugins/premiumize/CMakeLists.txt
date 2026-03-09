@@ -1,7 +1,7 @@
 project(PremiumizePlugin)
 
 add_library(premiumize MODULE PremiumizeConnector.cpp)
-target_link_libraries(premiumize PRIVATE KMagMuxCore Qt5::Core Qt5::Network)
+target_link_libraries(premiumize PRIVATE KMagMuxCore Qt6::Core Qt6::Network)
 
 # Ensure the plugin is built to the KMagMux plugins folder
 set_target_properties(premiumize PROPERTIES

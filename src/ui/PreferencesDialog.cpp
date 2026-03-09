@@ -115,7 +115,7 @@ void PreferencesDialog::createGeneralPage() {
 
   // Backwards compatibility with boolean
   QVariant savedValue = settings.value("autoMoveInbox", 0);
-  if (savedValue.type() == QVariant::Bool) {
+  if (savedValue.typeId() == QMetaType::Bool) {
       m_autoMoveInboxCombo->setCurrentIndex(savedValue.toBool() ? 2 : 0);
   } else {
       m_autoMoveInboxCombo->setCurrentIndex(savedValue.toInt());
