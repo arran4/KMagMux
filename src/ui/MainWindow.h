@@ -44,6 +44,7 @@ private slots:
   void onItemUpdated(const Item &item);
   void onItemsUpdated();
   void onItemDeleted(const QString &id);
+  void onItemsDeleted(const std::vector<QString> &ids);
   void onProcessItem();
   void onDeleteItems();
   void onAddItems();

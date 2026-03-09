@@ -32,6 +32,7 @@ public:
   std::vector<Item> loadAllItems();
   std::vector<Item> loadItemsByStates(const QList<ItemState> &states);
   bool deleteItem(const QString &id);
+  void deleteItems(const std::vector<QString> &ids);
 
   // Scanning
   QStringList scanInbox() const;
@@ -44,6 +45,7 @@ signals:
   void itemUpdated(const Item &item);
   void itemsUpdated();
   void itemDeleted(const QString &id);
+  void itemsDeleted(const std::vector<QString> &ids);
 
 private slots:
   void onDirectoryChanged(const QString &path);

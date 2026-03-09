@@ -54,6 +54,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
           &MainWindow::onItemsUpdated);
   connect(m_storage, &StorageManager::itemDeleted, this,
           &MainWindow::onItemDeleted);
+  connect(m_storage, &StorageManager::itemsDeleted, this,
+          &MainWindow::onItemsDeleted);
 }
 
 MainWindow::~MainWindow() {}
@@ -612,6 +614,8 @@ void MainWindow::onItemsUpdated() { loadData(); }
 
 void MainWindow::onItemDeleted(const QString &id) { loadData(); }
 
+void MainWindow::onItemsDeleted(const std::vector<QString> &ids) { loadData(); }
+
 void MainWindow::onDeleteItems() {
   QTableView *view = getCurrentView();
   if (!view)
@@ -641,12 +645,8 @@ void MainWindow::onDeleteItems() {
       idsToDelete.push_back(model->getItem(index.row()).id);
     }
 
-    for (const QString &id : idsToDelete) {
-      qDebug() << "Deleting item:" << id;
-      if (!m_storage->deleteItem(id)) {
-        qWarning() << "Failed to delete item:" << id;
-      }
-    }
+    qDebug() << "Deleting" << idsToDelete.size() << "items";
+    m_storage->deleteItems(idsToDelete);
   }
 }
 
