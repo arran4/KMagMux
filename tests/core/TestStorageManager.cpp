@@ -57,6 +57,41 @@ private slots:
     // Cleanup
     QVERIFY(dir.rmdir(fakeDirName));
   }
+
+  void testDeleteItemSecurity() {
+    StorageManager storage;
+    QVERIFY(storage.init());
+
+    QString dataDir = storage.getDataDir();
+    QString sensitiveFile = dataDir + "/sensitive.txt";
+
+    // Create a dummy sensitive file
+    QFile file(sensitiveFile);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("secret");
+    file.close();
+
+    QVERIFY(QFile::exists(sensitiveFile));
+
+    Item item;
+    item.id = "test_security_deletion";
+    // Point managedFile outside the managed directory
+    QString traversalPath = storage.getManagedDir() + "/../data/sensitive.txt";
+    QJsonObject meta;
+    meta["managedFile"] = traversalPath;
+    item.metadata = meta;
+
+    QVERIFY(storage.saveItem(item));
+
+    // Delete item, which should trigger the security warning and skip deletion
+    QVERIFY(storage.deleteItem(item.id));
+
+    // Ensure the sensitive file still exists
+    QVERIFY(QFile::exists(sensitiveFile));
+
+    // Cleanup
+    QFile::remove(sensitiveFile);
+  }
 };
 
 QTEST_MAIN(TestStorageManager)
