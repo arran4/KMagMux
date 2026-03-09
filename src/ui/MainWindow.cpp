@@ -50,6 +50,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
           &MainWindow::onItemAdded);
   connect(m_storage, &StorageManager::itemUpdated, this,
           &MainWindow::onItemUpdated);
+  connect(m_storage, &StorageManager::itemsUpdated, this,
+          &MainWindow::onItemsUpdated);
   connect(m_storage, &StorageManager::itemDeleted, this,
           &MainWindow::onItemDeleted);
 }
@@ -605,6 +607,8 @@ void MainWindow::onItemAction(ItemState newState) {
 void MainWindow::onItemAdded(const Item &item) { loadData(); }
 
 void MainWindow::onItemUpdated(const Item &item) { loadData(); }
+
+void MainWindow::onItemsUpdated() { loadData(); }
 
 void MainWindow::onItemDeleted(const QString &id) { loadData(); }
 

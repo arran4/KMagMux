@@ -42,6 +42,7 @@ private slots:
   void onItemAction(ItemState newState);
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);
+  void onItemsUpdated();
   void onItemDeleted(const QString &id);
   void onProcessItem();
   void onDeleteItems();

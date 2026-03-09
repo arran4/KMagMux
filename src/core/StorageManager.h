@@ -42,6 +42,7 @@ public:
 signals:
   void itemAdded(const Item &item);
   void itemUpdated(const Item &item);
+  void itemsUpdated();
   void itemDeleted(const QString &id);
 
 private slots:
