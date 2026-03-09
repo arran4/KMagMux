@@ -13,10 +13,10 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
+#include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
-#include "TorrentInfoDialog.h"
 
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
                              const QStringList &connectors, QWidget *parent)
@@ -192,7 +192,7 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     if (col == 3) {
       text = item->data(Qt::UserRole).toString();
       if (text.isEmpty()) {
-          text = m_items[row].sourcePath;
+        text = m_items[row].sourcePath;
       }
     } else {
       text = item->text();
@@ -207,9 +207,8 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
       TorrentInfoDialog dialog(sourcePath, this);
       dialog.exec();
     } else {
-      QMessageBox::information(
-          this, "Item Information",
-          QString("Source Path:\n%1").arg(sourcePath));
+      QMessageBox::information(this, "Item Information",
+                               QString("Source Path:\n%1").arg(sourcePath));
     }
   });
 

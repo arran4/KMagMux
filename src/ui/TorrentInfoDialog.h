@@ -4,15 +4,16 @@
 #include "../core/TorrentParser.h"
 #include "../core/TrackerClient.h"
 #include <QDialog>
-#include <QTableWidget>
 #include <QPushButton>
+#include <QTableWidget>
 #include <QTextEdit>
 
 class TorrentInfoDialog : public QDialog {
   Q_OBJECT
 
 public:
-  explicit TorrentInfoDialog(const QString &sourcePath, QWidget *parent = nullptr);
+  explicit TorrentInfoDialog(const QString &sourcePath,
+                             QWidget *parent = nullptr);
   ~TorrentInfoDialog();
 
 private slots:
