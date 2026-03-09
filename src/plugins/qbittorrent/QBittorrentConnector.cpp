@@ -304,3 +304,54 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
 
   settings.endGroup();
 }
+
+bool QBittorrentConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> QBittorrentConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint login;
+  login.name = "Login";
+  login.description = "Authenticate with qBittorrent";
+  login.method = "POST";
+  login.url = "${BASE_URL}/api/v2/auth/login";
+  login.headers.insert("Content-Type", "application/x-www-form-urlencoded");
+  login.body = "username=${USERNAME}&password=${PASSWORD}";
+  endpoints.append(login);
+
+  HttpApiEndpoint getTorrents;
+  getTorrents.name = "Get Torrents";
+  getTorrents.description = "List all torrents";
+  getTorrents.method = "GET";
+  getTorrents.url = "${BASE_URL}/api/v2/torrents/info";
+  endpoints.append(getTorrents);
+
+  HttpApiEndpoint addTorrentMagnet;
+  addTorrentMagnet.name = "Add Torrent (Magnet)";
+  addTorrentMagnet.description = "Add a new torrent from a magnet link";
+  addTorrentMagnet.method = "POST";
+  addTorrentMagnet.url = "${BASE_URL}/api/v2/torrents/add";
+  addTorrentMagnet.isMultipart = true;
+  addTorrentMagnet.multipartParts.insert("urls", "${MAGNET_LINK}");
+  endpoints.append(addTorrentMagnet);
+
+  HttpApiEndpoint addTorrentFile;
+  addTorrentFile.name = "Add Torrent (File)";
+  addTorrentFile.description = "Add a new torrent from a .torrent file";
+  addTorrentFile.method = "POST";
+  addTorrentFile.url = "${BASE_URL}/api/v2/torrents/add";
+  addTorrentFile.isMultipart = true;
+  addTorrentFile.multipartParts.insert("torrents",
+                                       "file:///path/to/test.torrent");
+  endpoints.append(addTorrentFile);
+
+  return endpoints;
+}
+
+QMap<QString, QString> QBittorrentConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("BASE_URL", m_baseUrl);
+  subs.insert("USERNAME", m_username);
+  subs.insert("PASSWORD", m_password);
+  return subs;
+}

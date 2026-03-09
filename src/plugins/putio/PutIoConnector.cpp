@@ -143,3 +143,56 @@ void PutIoConnector::saveSettings(QWidget *settingsWidget) {
 
   settings.endGroup();
 }
+
+bool PutIoConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> PutIoConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint accountInfo;
+  accountInfo.name = "Account Info";
+  accountInfo.description = "Retrieves account information";
+  accountInfo.method = "GET";
+  accountInfo.url = "https://api.put.io/v2/account/info";
+  accountInfo.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  endpoints.append(accountInfo);
+
+  HttpApiEndpoint transferList;
+  transferList.name = "Transfer List";
+  transferList.description = "Lists all active transfers";
+  transferList.method = "GET";
+  transferList.url = "https://api.put.io/v2/transfers/list";
+  transferList.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  endpoints.append(transferList);
+
+  HttpApiEndpoint addTransferMagnet;
+  addTransferMagnet.name = "Add Transfer (Magnet)";
+  addTransferMagnet.description = "Creates a new transfer from a magnet link";
+  addTransferMagnet.method = "POST";
+  addTransferMagnet.url = "https://api.put.io/v2/transfers/add";
+  addTransferMagnet.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  addTransferMagnet.headers.insert("Content-Type",
+                                   "application/x-www-form-urlencoded");
+  addTransferMagnet.body = "url=${MAGNET_LINK}";
+  endpoints.append(addTransferMagnet);
+
+  HttpApiEndpoint addTransferTorrent;
+  addTransferTorrent.name = "Add Transfer (Torrent File)";
+  addTransferTorrent.description =
+      "Creates a new transfer from a .torrent file";
+  addTransferTorrent.method = "POST";
+  addTransferTorrent.url = "https://upload.put.io/v2/files/upload";
+  addTransferTorrent.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  addTransferTorrent.isMultipart = true;
+  addTransferTorrent.multipartParts.insert("file",
+                                           "file:///path/to/test.torrent");
+  endpoints.append(addTransferTorrent);
+
+  return endpoints;
+}
+
+QMap<QString, QString> PutIoConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("OAUTH_TOKEN", m_oauthToken);
+  return subs;
+}

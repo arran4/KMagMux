@@ -52,6 +52,7 @@ private slots:
   void onAbout();
   void onToggleProcessing(bool checked);
   void onOpenCacheDirectory();
+  void onOpenApiExplorer(Connector *connector);
   void updateActionsState();
 
 private:
@@ -117,6 +118,7 @@ private:
   bool m_forceQuit;
 
   void applySettings();
+  void setupPluginMenus(QMenu *helpMenu);
 };
 
 #endif // MAINWINDOW_H

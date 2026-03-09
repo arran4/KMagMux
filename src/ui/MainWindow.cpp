@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
+#include "ApiExplorerDialog.h"
 #include "LinkExtractorDialog.h"
 #include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
@@ -40,11 +41,11 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 
   applySettings();
 
-  setupUi();
-  loadData();
-
   m_engine = new Engine(m_storage, this);
   m_engine->start();
+
+  setupUi();
+  loadData();
 
   connect(m_storage, &StorageManager::itemAdded, this,
           &MainWindow::onItemAdded);
@@ -265,6 +266,8 @@ void MainWindow::setupActionsAndMenus() {
   actionsMenu->addAction(m_archiveAction);
   actionsMenu->addSeparator();
   actionsMenu->addAction(m_deleteAction);
+
+  setupPluginMenus(debugMenu);
 
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
   QMenu *debugMenu = helpMenu->addMenu(tr("&Debug"));
@@ -932,4 +935,32 @@ void MainWindow::onToggleProcessing(bool checked) {
 
 void MainWindow::onOpenCacheDirectory() {
   QDesktopServices::openUrl(QUrl::fromLocalFile(m_storage->getBaseDir()));
+}
+
+void MainWindow::setupPluginMenus(QMenu *helpMenu) {
+  if (!m_engine)
+    return;
+
+  for (const QString &connectorId : m_engine->getAvailableConnectors()) {
+    Connector *connector = m_engine->getConnector(connectorId);
+    if (connector && connector->hasDebugMenu()) {
+      QMenu *pluginMenu =
+          helpMenu->addMenu(QString("%1 Debug").arg(connector->getName()));
+
+      QList<HttpApiEndpoint> endpoints = connector->getHttpApiEndpoints();
+      if (!endpoints.isEmpty()) {
+        QAction *apiExplorerAction = pluginMenu->addAction("API Explorer");
+        connect(apiExplorerAction, &QAction::triggered, this,
+                [this, connector]() { onOpenApiExplorer(connector); });
+      }
+    }
+  }
+}
+
+void MainWindow::onOpenApiExplorer(Connector *connector) {
+  if (!connector)
+    return;
+
+  ApiExplorerDialog dialog(connector, this);
+  dialog.exec();
 }

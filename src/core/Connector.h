@@ -1,7 +1,10 @@
 #ifndef CONNECTOR_H
 #define CONNECTOR_H
 
+#include "HttpApiEndpoint.h"
 #include "Item.h"
+#include <QList>
+#include <QMap>
 #include <QString>
 
 class Connector {
@@ -19,6 +22,14 @@ public:
     return nullptr;
   }
   virtual void saveSettings(class QWidget *settingsWidget) {}
+
+  virtual bool hasDebugMenu() const { return false; }
+  virtual QList<HttpApiEndpoint> getHttpApiEndpoints() const {
+    return QList<HttpApiEndpoint>();
+  }
+  virtual QMap<QString, QString> getApiSubstitutions() const {
+    return QMap<QString, QString>();
+  }
 };
 
 #define Connector_iid "com.kmagmux.Connector/1.0"
