@@ -158,9 +158,22 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
               QVariantList pathList = fileDict["path"].toList();
               QStringList pathParts;
               for (const QVariant &part : pathList) {
-                pathParts.append(QString::fromUtf8(part.toByteArray()));
+                QString partStr = QString::fromUtf8(part.toByteArray());
+                // Sanitize path component to prevent directory traversal
+                if (partStr == ".." || partStr == ".") {
+                  continue;
+                }
+                // Prevent embedded separators
+                partStr.replace("/", "_");
+                partStr.replace("\\", "_");
+                if (!partStr.isEmpty()) {
+                  pathParts.append(partStr);
+                }
               }
               fileInfo.path = pathParts.join("/");
+              if (fileInfo.path.isEmpty()) {
+                fileInfo.path = "unnamed_file";
+              }
             }
 
             info.files.append(fileInfo);
