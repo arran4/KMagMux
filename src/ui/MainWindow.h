@@ -91,6 +91,9 @@ private:
   QAction *m_deleteAction;
 
   void setupUi();
+  void setupActionsAndMenus();
+  void setupTabs();
+  void setupSystemTray();
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;

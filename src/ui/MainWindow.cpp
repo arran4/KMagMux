@@ -157,6 +157,15 @@ void MainWindow::setupUi() {
   setWindowTitle("KMagMux");
   resize(1000, 600);
 
+  setupActionsAndMenus();
+  setupTabs();
+  setupSystemTray();
+
+  // Setup Status Bar
+  statusBar()->showMessage(tr("Ready"));
+}
+
+void MainWindow::setupActionsAndMenus() {
   // Setup Menu Bar
   QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
   QAction *addItemsAction =
@@ -268,10 +277,9 @@ void MainWindow::setupUi() {
   mainToolBar->addSeparator();
   mainToolBar->addAction(m_minimizeAction);
   mainToolBar->addAction(quitAction);
+}
 
-  // Setup Status Bar
-  statusBar()->showMessage(tr("Ready"));
-
+void MainWindow::setupTabs() {
   QWidget *centralWidget = new QWidget(this);
   setCentralWidget(centralWidget);
 
@@ -361,7 +369,9 @@ void MainWindow::setupUi() {
   connect(m_tabWidget, &QTabWidget::currentChanged, this,
           &MainWindow::updateActionsState);
   updateActionsState();
+}
 
+void MainWindow::setupSystemTray() {
   // System Tray Setup
   m_trayIcon = new QSystemTrayIcon(this);
   m_trayIcon->setIcon(QIcon(":/icons/kmagmux.svg"));
@@ -394,7 +404,6 @@ void MainWindow::setupUi() {
   connect(m_trayIcon, &QSystemTrayIcon::activated, this,
           &MainWindow::onTrayIconActivated);
 }
-
 void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
   if (reason == QSystemTrayIcon::DoubleClick ||
       reason == QSystemTrayIcon::Trigger) {
