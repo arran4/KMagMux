@@ -37,9 +37,6 @@ public:
     if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("magnet:") || text.startsWith("file://")) {
         // Change text color to standard link color (blue)
         opt.palette.setColor(QPalette::Text, QApplication::palette().color(QPalette::Link));
-
-        // Underline the text if we want to make it look even more like a link
-        // opt.font.setUnderline(true);
     }
 
     QStyledItemDelegate::paint(painter, opt, index);
