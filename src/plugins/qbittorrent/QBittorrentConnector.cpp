@@ -19,7 +19,9 @@ QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
       m_baseUrl(""), m_username(""), m_password(""), m_enabled(false),
-      m_pendingItem(), m_isPending(false) {
+      m_isLoggingIn(false) {
+  m_networkManager->setCookieJar(new QNetworkCookieJar(this));
+
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
   m_baseUrl = settings.value("baseUrl", "http://localhost:8080").toString();
@@ -50,15 +52,11 @@ void QBittorrentConnector::setCredentials(const QString &username,
 }
 
 void QBittorrentConnector::dispatch(const Item &item) {
-  // For now, assume we need to login first or check session.
-  // A robust implementation would check if we have a valid cookie.
-  // We'll just try to login every time for this MVP step to ensure it works,
-  // or better, try to dispatch and if 403/401, login and retry.
-  // Simplest reliable path: Login first, then dispatch.
-
-  m_pendingItem = item;
-  m_isPending = true;
-  login();
+  if (m_isLoggingIn) {
+    m_pendingItems.append(item);
+  } else {
+    performDispatch(item);
+  }
 }
 
 void QBittorrentConnector::login() {
@@ -82,19 +80,37 @@ void QBittorrentConnector::onLoginReply() {
   if (!reply)
     return;
 
+  m_isLoggingIn = false;
+
   if (reply->error() == QNetworkReply::NoError) {
-    // Login successful. The cookie jar in QNetworkAccessManager should handle
-    // the session cookie automatically. Proceed to dispatch pending item.
-    if (m_isPending) {
-      performDispatch(m_pendingItem);
-      m_isPending = false;
+    QString response = reply->readAll();
+    if (response.trimmed() == "Fails.") {
+      qWarning() << "qBittorrent Login failed: Invalid username or password.";
+      QList<Item> itemsToFail = m_pendingItems;
+      m_pendingItems.clear();
+
+      for (const Item &item : itemsToFail) {
+        emit dispatchFinished(item.id, false,
+                              "Login failed: Invalid username or password.");
+      }
+    } else {
+      // Login successful. The cookie jar in QNetworkAccessManager handles
+      // the session cookie automatically. Proceed to dispatch pending items.
+      QList<Item> itemsToDispatch = m_pendingItems;
+      m_pendingItems.clear();
+
+      for (const Item &item : itemsToDispatch) {
+        performDispatch(item);
+      }
     }
   } else {
     qWarning() << "qBittorrent Login failed:" << reply->errorString();
-    if (m_isPending) {
-      emit dispatchFinished(m_pendingItem.id, false,
+    QList<Item> itemsToFail = m_pendingItems;
+    m_pendingItems.clear();
+
+    for (const Item &item : itemsToFail) {
+      emit dispatchFinished(item.id, false,
                             "Login failed: " + reply->errorString());
-      m_isPending = false;
     }
   }
   reply->deleteLater();
@@ -172,10 +188,8 @@ void QBittorrentConnector::performDispatch(const Item &item) {
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply); // Delete multiPart with reply
 
-  // We need to pass the item ID to the reply handler, or store it in a map.
-  // Since we are processing one at a time via `m_pendingItem` (for now), we can
-  // use that, BUT since we might fire multiple requests if we improve the
-  // engine, let's attach the ID to the reply.
+  // Store the full item so we can re-dispatch if authentication fails
+  reply->setProperty("item", QVariant::fromValue(item));
   reply->setProperty("itemId", item.id);
 
   connect(reply, &QNetworkReply::finished, this,
@@ -187,9 +201,19 @@ void QBittorrentConnector::onAddTorrentReply() {
   if (!reply)
     return;
 
+  Item item = reply->property("item").value<Item>();
   QString itemId = reply->property("itemId").toString();
+  int statusCode =
+      reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
-  if (reply->error() == QNetworkReply::NoError) {
+  if (statusCode == 401 || statusCode == 403) {
+    // Authentication failed, queue the item and attempt to login
+    m_pendingItems.append(item);
+    if (!m_isLoggingIn) {
+      m_isLoggingIn = true;
+      login();
+    }
+  } else if (reply->error() == QNetworkReply::NoError) {
     QString response = reply->readAll();
     if (response.toLower().contains("fail")) {
       emit dispatchFinished(itemId, false,
