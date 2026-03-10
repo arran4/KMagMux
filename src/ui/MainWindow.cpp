@@ -271,6 +271,7 @@ void MainWindow::setupActionsAndMenus() {
   QMenu *debugMenu = helpMenu->addMenu(tr("&Debug"));
 
   setupPluginMenus(debugMenu);
+
   debugMenu->addAction(tr("Open &Cache directory"), this,
                        &MainWindow::onOpenCacheDirectory);
   helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
