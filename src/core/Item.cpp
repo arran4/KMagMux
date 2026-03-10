@@ -5,13 +5,19 @@
 #include <QUrlQuery>
 
 QString Item::getDisplayName() const {
+  QMutexLocker locker(&m_cacheMutex);
+  if (sourcePath == m_cachedSourcePath && !m_cachedDisplayName.isEmpty()) {
+    return m_cachedDisplayName;
+  }
+
+  QString result;
   if (sourcePath.startsWith("magnet:?")) {
     QUrl url(sourcePath);
     QUrlQuery query(url);
     if (query.hasQueryItem("dn")) {
-      return QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
+      result = QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
     } else if (query.hasQueryItem("tr")) {
-      return "Magnet Link (No Name)";
+      result = "Magnet Link (No Name)";
     } else {
       // maybe xt infohash?
       QString fullQuery = url.query();
@@ -20,18 +26,24 @@ QString Item::getDisplayName() const {
         int endIdx = fullQuery.indexOf('&', xtIdx);
         if (endIdx == -1)
           endIdx = fullQuery.length();
-        return fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
+        result = fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
+      } else {
+        result = "Magnet Link";
       }
     }
-    return "Magnet Link";
+  } else {
+    QFileInfo fi(sourcePath);
+    QString name = fi.fileName();
+    if (!name.isEmpty()) {
+      result = QUrl::fromPercentEncoding(name.toUtf8());
+    } else {
+      result = sourcePath;
+    }
   }
 
-  QFileInfo fi(sourcePath);
-  QString name = fi.fileName();
-  if (!name.isEmpty()) {
-    return QUrl::fromPercentEncoding(name.toUtf8());
-  }
-  return sourcePath;
+  m_cachedSourcePath = sourcePath;
+  m_cachedDisplayName = result;
+  return result;
 }
 
 QJsonObject Item::toJson() const {

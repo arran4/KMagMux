@@ -28,6 +28,7 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
 
   // Populate table
   m_itemsTable->setRowCount(m_items.size());
+  bool hasLocalFiles = false;
   for (size_t i = 0; i < m_items.size(); ++i) {
     QTableWidgetItem *checkItem = new QTableWidgetItem();
     checkItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
@@ -46,6 +47,7 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
     deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     if (isLocalFile) {
+      hasLocalFiles = true;
       deleteItem->setCheckState(Qt::Unchecked);
     } else {
       deleteItem->setFlags(
@@ -73,13 +75,6 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
   }
 
   // Check if any items are local files. If none are, hide the delete column.
-  bool hasLocalFiles = false;
-  for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-    if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
-      hasLocalFiles = true;
-      break;
-    }
-  }
   if (!hasLocalFiles) {
     m_itemsTable->hideColumn(1);
   }
