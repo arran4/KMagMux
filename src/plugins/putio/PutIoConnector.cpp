@@ -3,6 +3,7 @@
 #include <QCheckBox>
 #include <QDebug>
 #include <QFile>
+#include <QLabel>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHttpMultiPart>
@@ -108,6 +109,13 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   tokenEdit->setText(
       SecureStorage::readPassword("Plugins/PutIO", "oauthToken"));
   configLayout->addRow(tr("OAuth Token:"), tokenEdit);
+
+  QSettings mainSettings;
+  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+    QLabel *warningLabel = new QLabel(tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
+    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
+    configLayout->addRow("", warningLabel);
+  }
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();

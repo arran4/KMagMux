@@ -3,6 +3,7 @@
 #include <QCheckBox>
 #include <QDebug>
 #include <QFile>
+#include <QLabel>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHttpMultiPart>
@@ -262,6 +263,13 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   passEdit->setText(
       SecureStorage::readPassword("Plugins/qBittorrent", "password"));
   configLayout->addRow(tr("Password:"), passEdit);
+
+  QSettings mainSettings;
+  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+    QLabel *warningLabel = new QLabel(tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
+    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
+    configLayout->addRow("", warningLabel);
+  }
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
