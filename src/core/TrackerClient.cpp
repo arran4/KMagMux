@@ -210,12 +210,12 @@ void TrackerClient::startHttpScrape(const QString &urlStr,
 
   QByteArray encodedHash = infoHash.toPercentEncoding();
 
-  QString queryStr = url.query();
+  QString queryStr = url.query(QUrl::FullyEncoded);
   if (!queryStr.isEmpty())
     queryStr += "&";
   queryStr += "info_hash=" + encodedHash;
 
-  url.setQuery(queryStr);
+  url.setQuery(queryStr, QUrl::StrictMode);
 
   QNetworkRequest request(url);
   request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,

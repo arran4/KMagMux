@@ -28,6 +28,10 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
 
   // Populate table
   m_itemsTable->setRowCount(m_items.size());
+
+  QHash<QString, bool> localFileCache;
+
+  bool hasLocalFiles = false;
   for (size_t i = 0; i < m_items.size(); ++i) {
     QTableWidgetItem *checkItem = new QTableWidgetItem();
     checkItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
@@ -35,17 +39,31 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     m_itemsTable->setItem(i, 0, checkItem);
 
     bool isLocalFile = false;
-    QString pathToCheck = m_items[i].sourcePath;
-    if (pathToCheck.startsWith("file://")) {
-      pathToCheck = QUrl(pathToCheck).toLocalFile();
-      isLocalFile = QFileInfo(pathToCheck).exists();
+    const QString& pathToCheck = m_items[i].sourcePath;
+
+    if (pathToCheck.startsWith("magnet:", Qt::CaseInsensitive) ||
+        pathToCheck.startsWith("http://", Qt::CaseInsensitive) ||
+        pathToCheck.startsWith("https://", Qt::CaseInsensitive)) {
+      isLocalFile = false;
     } else {
-      isLocalFile = QFileInfo(pathToCheck).exists();
+      QString actualPath = pathToCheck;
+      if (pathToCheck.startsWith("file://", Qt::CaseInsensitive)) {
+        actualPath = QUrl(pathToCheck).toLocalFile();
+      }
+
+      auto it = localFileCache.find(actualPath);
+      if (it != localFileCache.end()) {
+        isLocalFile = it.value();
+      } else {
+        isLocalFile = QFileInfo(actualPath).exists();
+        localFileCache.insert(actualPath, isLocalFile);
+      }
     }
 
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
     deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     if (isLocalFile) {
+      hasLocalFiles = true;
       deleteItem->setCheckState(Qt::Unchecked);
     } else {
       deleteItem->setFlags(
@@ -73,13 +91,6 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
   }
 
   // Check if any items are local files. If none are, hide the delete column.
-  bool hasLocalFiles = false;
-  for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-    if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
-      hasLocalFiles = true;
-      break;
-    }
-  }
   if (!hasLocalFiles) {
     m_itemsTable->hideColumn(1);
   }
