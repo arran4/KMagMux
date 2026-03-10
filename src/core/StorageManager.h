@@ -65,6 +65,7 @@ private:
   QSet<QString> m_knownFiles; // To track new files vs existing
 
   QMap<QString, Item> m_cache;
+  QMap<ItemState, QSet<QString>> m_stateIndex;
   bool m_cacheInitialized = false;
 
   bool createDirIfNotExists(const QString &path);

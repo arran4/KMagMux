@@ -70,7 +70,7 @@ bool StorageManager::init() {
       QStringList initialFiles = scanInbox();
       m_knownFiles = QSet<QString>(initialFiles.begin(), initialFiles.end());
       if (!m_knownFiles.isEmpty()) {
-        (void)QtConcurrent::run([this, knownFiles = m_knownFiles]() {
+        QtConcurrent::run([this, knownFiles = m_knownFiles]() {
           for (const QString &file : std::as_const(knownFiles)) {
             processNewFile(m_inboxDir + "/" + file);
           }
@@ -129,8 +129,15 @@ bool StorageManager::saveItem(const Item &item) {
     return false;
   }
 
-  // Update cache
+  // Update cache and secondary index
+  if (m_cache.contains(item.id)) {
+    Item oldItem = m_cache[item.id];
+    if (oldItem.state != item.state) {
+      m_stateIndex[oldItem.state].remove(item.id);
+    }
+  }
   m_cache[item.id] = item;
+  m_stateIndex[item.state].insert(item.id);
 
   // Notify updates
   emit itemUpdated(item);
@@ -145,11 +152,18 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
 
   // Update cache immediately on the main thread to prevent stale data
   for (const Item &item : items) {
+    if (m_cache.contains(item.id)) {
+      Item oldItem = m_cache[item.id];
+      if (oldItem.state != item.state) {
+        m_stateIndex[oldItem.state].remove(item.id);
+      }
+    }
     m_cache[item.id] = item;
+    m_stateIndex[item.state].insert(item.id);
   }
   emit itemsUpdated();
 
-  (void)QtConcurrent::run([this, items]() {
+  QtConcurrent::run([this, items]() {
     for (const Item &item : items) {
       if (item.id.isEmpty()) {
         continue;
@@ -186,6 +200,7 @@ std::optional<Item> StorageManager::loadItem(const QString &id) {
 
   Item item = Item::fromJson(doc.object());
   m_cache[item.id] = item;
+  m_stateIndex[item.state].insert(item.id);
   return item;
 }
 
@@ -237,6 +252,7 @@ bool StorageManager::deleteItem(const QString &id) {
     }
   }
 
+  m_stateIndex[item.state].remove(id);
   m_cache.remove(id);
 
   emit itemDeleted(id);
@@ -280,6 +296,7 @@ void StorageManager::deleteItems(const std::vector<QString> &ids) {
       }
     }
 
+    m_stateIndex[item.state].remove(id);
     m_cache.remove(id);
     actuallyDeletedIds.push_back(id);
   }
@@ -301,6 +318,7 @@ std::vector<Item> StorageManager::loadAllItems() {
   }
 
   m_cache.clear();
+  m_stateIndex.clear();
   QDirIterator it(m_dataDir, QStringList() << "*.json", QDir::Files);
   while (it.hasNext()) {
     QString path = it.next();
@@ -312,6 +330,7 @@ std::vector<Item> StorageManager::loadAllItems() {
         Item item = Item::fromJson(doc.object());
         items.push_back(item);
         m_cache.insert(item.id, item);
+        m_stateIndex[item.state].insert(item.id);
       }
     }
   }
@@ -327,9 +346,21 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
     loadAllItems();
   }
 
-  for (auto it = m_cache.constBegin(); it != m_cache.constEnd(); ++it) {
-    if (states.contains(it.value().state)) {
-      items.push_back(it.value());
+  int totalSize = 0;
+  for (const ItemState &state : states) {
+    totalSize += m_stateIndex.value(state).size();
+  }
+  items.reserve(totalSize);
+
+  for (const ItemState &state : states) {
+    if (m_stateIndex.contains(state)) {
+      const QSet<QString> &ids = m_stateIndex.value(state);
+      for (const QString &id : ids) {
+        auto it = m_cache.constFind(id);
+        if (it != m_cache.constEnd()) {
+          items.push_back(it.value());
+        }
+      }
     }
   }
 
@@ -352,7 +383,7 @@ void StorageManager::onDirectoryChanged(const QString &path) {
     newFiles.subtract(m_knownFiles);
 
     if (!newFiles.isEmpty()) {
-      (void)QtConcurrent::run([self = QPointer<StorageManager>(this), newFiles = newFiles]() {
+      QtConcurrent::run([self = QPointer<StorageManager>(this), newFiles = newFiles]() {
         for (const QString &file : std::as_const(newFiles)) {
           if (self) {
             self->processNewFile(self->m_inboxDir + "/" + file);
