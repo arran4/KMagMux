@@ -28,6 +28,9 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
 
   // Populate table
   m_itemsTable->setRowCount(m_items.size());
+
+  QHash<QString, bool> localFileCache;
+
   bool hasLocalFiles = false;
   for (size_t i = 0; i < m_items.size(); ++i) {
     QTableWidgetItem *checkItem = new QTableWidgetItem();
@@ -36,12 +39,25 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     m_itemsTable->setItem(i, 0, checkItem);
 
     bool isLocalFile = false;
-    QString pathToCheck = m_items[i].sourcePath;
-    if (pathToCheck.startsWith("file://")) {
-      pathToCheck = QUrl(pathToCheck).toLocalFile();
-      isLocalFile = QFileInfo(pathToCheck).exists();
+    const QString& pathToCheck = m_items[i].sourcePath;
+
+    if (pathToCheck.startsWith("magnet:", Qt::CaseInsensitive) ||
+        pathToCheck.startsWith("http://", Qt::CaseInsensitive) ||
+        pathToCheck.startsWith("https://", Qt::CaseInsensitive)) {
+      isLocalFile = false;
     } else {
-      isLocalFile = QFileInfo(pathToCheck).exists();
+      QString actualPath = pathToCheck;
+      if (pathToCheck.startsWith("file://", Qt::CaseInsensitive)) {
+        actualPath = QUrl(pathToCheck).toLocalFile();
+      }
+
+      auto it = localFileCache.find(actualPath);
+      if (it != localFileCache.end()) {
+        isLocalFile = it.value();
+      } else {
+        isLocalFile = QFileInfo(actualPath).exists();
+        localFileCache.insert(actualPath, isLocalFile);
+      }
     }
 
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
