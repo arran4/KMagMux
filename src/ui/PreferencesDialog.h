@@ -38,6 +38,7 @@ private:
   QCheckBox *m_autoStartCb;
   QCheckBox *m_autoMoveInboxCb;
   QComboBox *m_autoMoveInboxCombo;
+  QCheckBox *m_allowPlaintextStorageCb;
 };
 
 #endif // PREFERENCESDIALOG_H
