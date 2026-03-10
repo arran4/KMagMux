@@ -267,10 +267,9 @@ void MainWindow::setupActionsAndMenus() {
   actionsMenu->addSeparator();
   actionsMenu->addAction(m_deleteAction);
 
-  setupPluginMenus(debugMenu);
-
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
   QMenu *debugMenu = helpMenu->addMenu(tr("&Debug"));
+  setupPluginMenus(debugMenu);
   debugMenu->addAction(tr("Open &Cache directory"), this,
                        &MainWindow::onOpenCacheDirectory);
   helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
