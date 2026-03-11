@@ -60,6 +60,10 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
+  if (m_trayIcon) {
+    m_trayIcon->hide();
+    m_trayIcon->deleteLater();
+  }
   if (m_engine) {
     m_engine->stop();
     m_engine->setParent(nullptr);
