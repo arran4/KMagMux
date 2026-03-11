@@ -13,10 +13,8 @@ int main(int argc, char *argv[]) {
   MainWindow* window = new MainWindow(&storage);
   window->show();
 
-  QTimer::singleShot(2000, [window]() {
-      window->close();
-      delete window;
-      QApplication::quit();
+  QTimer::singleShot(1000, [window]() {
+      window->close(); // trigger close event
   });
   return app.exec();
 }
