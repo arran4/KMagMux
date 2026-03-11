@@ -1,8 +1,0 @@
-cmake_minimum_required(VERSION 3.16)
-project(TestSegfault)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_AUTOMOC ON)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-add_executable(TestSegfault test_segfault.cpp src/ui/MainWindow.cpp src/ui/AddItemDialog.cpp src/ui/ProcessItemDialog.cpp src/ui/PreferencesDialog.cpp src/ui/LinkExtractorDialog.cpp src/ui/ItemFilterProxyModel.cpp src/ui/ApiExplorerDialog.cpp src/ui/TorrentInfoDialog.cpp resources/resources.qrc)
-target_link_libraries(TestSegfault KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)

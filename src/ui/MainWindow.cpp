@@ -66,8 +66,7 @@ MainWindow::~MainWindow() {
   }
   if (m_engine) {
     m_engine->stop();
-    m_engine->setParent(nullptr);
-    delete m_engine;
+    m_engine->deleteLater();
     m_engine = nullptr;
   }
 }
