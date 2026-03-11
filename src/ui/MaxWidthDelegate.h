@@ -39,8 +39,6 @@ public:
       // Change text color to standard link color (blue)
       opt.palette.setColor(QPalette::Text,
                            QApplication::palette().color(QPalette::Link));
-
-
     }
 
     QStyledItemDelegate::paint(painter, opt, index);

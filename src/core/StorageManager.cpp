@@ -70,7 +70,7 @@ bool StorageManager::init() {
       QStringList initialFiles = scanInbox();
       m_knownFiles = QSet<QString>(initialFiles.begin(), initialFiles.end());
       if (!m_knownFiles.isEmpty()) {
-        QtConcurrent::run([this, knownFiles = m_knownFiles]() {
+        (void)QtConcurrent::run([this, knownFiles = m_knownFiles]() {
           for (const QString &file : std::as_const(knownFiles)) {
             processNewFile(m_inboxDir + "/" + file);
           }
@@ -163,7 +163,7 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
   }
   emit itemsUpdated();
 
-  QtConcurrent::run([this, items]() {
+  (void)QtConcurrent::run([this, items]() {
     for (const Item &item : items) {
       if (item.id.isEmpty()) {
         continue;
@@ -383,13 +383,14 @@ void StorageManager::onDirectoryChanged(const QString &path) {
     newFiles.subtract(m_knownFiles);
 
     if (!newFiles.isEmpty()) {
-      QtConcurrent::run([self = QPointer<StorageManager>(this), newFiles = newFiles]() {
-        for (const QString &file : std::as_const(newFiles)) {
-          if (self) {
-            self->processNewFile(self->m_inboxDir + "/" + file);
-          }
-        }
-      });
+      (void)QtConcurrent::run(
+          [self = QPointer<StorageManager>(this), newFiles = newFiles]() {
+            for (const QString &file : std::as_const(newFiles)) {
+              if (self) {
+                self->processNewFile(self->m_inboxDir + "/" + file);
+              }
+            }
+          });
     }
 
     m_knownFiles = currentFiles;

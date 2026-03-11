@@ -39,7 +39,7 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     m_itemsTable->setItem(i, 0, checkItem);
 
     bool isLocalFile = false;
-    const QString& pathToCheck = m_items[i].sourcePath;
+    const QString &pathToCheck = m_items[i].sourcePath;
 
     if (pathToCheck.startsWith("magnet:", Qt::CaseInsensitive) ||
         pathToCheck.startsWith("http://", Qt::CaseInsensitive) ||

@@ -5,8 +5,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaType>
-#include <QString>
 #include <QMutex>
+#include <QString>
 
 enum class ItemState {
   Unprocessed,
@@ -20,7 +20,7 @@ enum class ItemState {
 
 struct Item {
   Item() = default;
-  Item(const Item& other) {
+  Item(const Item &other) {
     id = other.id;
     state = other.state;
     sourcePath = other.sourcePath;
@@ -35,7 +35,7 @@ struct Item {
     m_cachedSourcePath = other.m_cachedSourcePath;
   }
 
-  Item& operator=(const Item& other) {
+  Item &operator=(const Item &other) {
     if (this != &other) {
       id = other.id;
       state = other.state;

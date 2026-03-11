@@ -11,7 +11,6 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
 find_package(Qt6Keychain REQUIRED)
-find_package(KF6XmlGui REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -51,7 +50,7 @@ add_executable(KMagMux
     resources/resources.qrc
 )
 
-target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::XmlGui)
+target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)
 
 add_subdirectory(src/plugins/qbittorrent)
 add_subdirectory(src/plugins/torbox)
@@ -76,5 +75,3 @@ install(FILES resources/icons/kmagmux-128.png DESTINATION share/icons/hicolor/12
 install(FILES resources/icons/kmagmux-256.png DESTINATION share/icons/hicolor/256x256/apps RENAME kmagmux.png)
 install(FILES resources/icons/kmagmux-512.png DESTINATION share/icons/hicolor/512x512/apps RENAME kmagmux.png)
 
-# Install KXmlGui UI definition
-install(FILES resources/kmagmuxui.rc DESTINATION share/kxmlgui6/kmagmux)

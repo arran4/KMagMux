@@ -35,7 +35,7 @@
 #include <algorithm>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
-    : KXmlGuiWindow(parent), m_storage(storage), m_closeToTray(false),
+    : QMainWindow(parent), m_storage(storage), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false) {
   qApp->setQuitOnLastWindowClosed(false);
 
@@ -66,7 +66,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     hide();
     event->ignore();
   } else {
-    KXmlGuiWindow::closeEvent(event);
+    QMainWindow::closeEvent(event);
     qApp->quit();
   }
 }
@@ -78,7 +78,7 @@ void MainWindow::quitApplication() {
 }
 
 void MainWindow::changeEvent(QEvent *event) {
-  KXmlGuiWindow::changeEvent(event);
+  QMainWindow::changeEvent(event);
   if (event->type() == QEvent::WindowStateChange) {
     if (isMinimized() && m_minimizeToTray && m_trayIcon->isVisible()) {
       hide();
@@ -176,16 +176,21 @@ void MainWindow::setupActionsAndMenus() {
   QAction *addItemsAction =
       fileMenu->addAction(QIcon::fromTheme("document-open"), tr("&Add..."),
                           this, &MainWindow::onAddItems);
-  QAction *addItemsAction = new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
-  connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
-  actionCollection()->addAction("add_items", addItemsAction);
 
-  m_minimizeAction = new QAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"), this);
-  connect(m_minimizeAction, &QAction::triggered, this, &MainWindow::minimizeToTray);
-  actionCollection()->addAction("minimize_to_tray", m_minimizeAction);
+  m_minimizeAction =
+      new QAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"), this);
+  connect(m_minimizeAction, &QAction::triggered, this,
+          &MainWindow::minimizeToTray);
 
-  KStandardAction::quit(this, SLOT(quitApplication()), actionCollection());
+  m_quitAction =
+      new QAction(QIcon::fromTheme("application-exit"), tr("&Quit"), this);
+  m_quitAction->setShortcut(QKeySequence::Quit);
+  connect(m_quitAction, &QAction::triggered, this,
+          &MainWindow::quitApplication);
+  fileMenu->addAction(m_quitAction);
+
+  QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
 
   m_toggleProcessingAction = new QAction(
       QIcon::fromTheme("media-playback-pause"), tr("&Play / Pause"), this);
@@ -197,63 +202,83 @@ void MainWindow::setupActionsAndMenus() {
       tr("Play / Pause processing items in the list"));
   connect(m_toggleProcessingAction, &QAction::toggled, this,
           &MainWindow::onToggleProcessing);
-  actionCollection()->addAction("toggle_processing", m_toggleProcessingAction);
 
-  KStandardAction::preferences(this, SLOT(onPreferences()), actionCollection());
+  QAction *preferencesAction = new QAction(
+      QIcon::fromTheme("preferences-system"), tr("&Preferences..."), this);
+  connect(preferencesAction, &QAction::triggered, this,
+          &MainWindow::onPreferences);
+  editMenu->addAction(preferencesAction);
 
-  m_selectAllAction = new QAction(tr("Select &All"), this);
+  m_selectAllAction =
+      new QAction(QIcon::fromTheme("edit-select-all"), tr("Select All"), this);
   m_selectAllAction->setShortcut(QKeySequence::SelectAll);
   connect(m_selectAllAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
-    if (view) {
+    if (view)
       view->selectAll();
-    }
   });
-  actionCollection()->addAction("select_all", m_selectAllAction);
+  editMenu->addAction(m_selectAllAction);
 
-  m_processAction = new QAction(tr("&Process..."), this);
+  m_processAction = new QAction(QIcon::fromTheme("media-playback-start"),
+                                tr("Process"), this);
   connect(m_processAction, &QAction::triggered, this,
           &MainWindow::onProcessItem);
-  actionCollection()->addAction("process_item", m_processAction);
+  addAction(m_processAction);
 
-  m_reprocessAction = new QAction(tr("&Reprocess"), this);
+  m_reprocessAction =
+      new QAction(QIcon::fromTheme("view-refresh"), tr("Reprocess"), this);
   connect(m_reprocessAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Queued); });
-  actionCollection()->addAction("reprocess_item", m_reprocessAction);
+  addAction(m_reprocessAction);
 
-  m_dismissAction = new QAction(tr("&Dismiss"), this);
+  m_dismissAction =
+      new QAction(QIcon::fromTheme("dialog-close"), tr("Dismiss Error"), this);
   connect(m_dismissAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
-  actionCollection()->addAction("dismiss_item", m_dismissAction);
+  addAction(m_dismissAction);
 
-  m_queueAction = new QAction(tr("&Queue"), this);
+  m_queueAction = new QAction(QIcon::fromTheme("view-list-details"),
+                              tr("Move to Queue"), this);
   connect(m_queueAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Queued); });
-  actionCollection()->addAction("queue_item", m_queueAction);
+  addAction(m_queueAction);
 
-  m_holdAction = new QAction(tr("&Hold"), this);
+  m_holdAction = new QAction(QIcon::fromTheme("media-playback-pause"),
+                             tr("Put on Hold"), this);
   connect(m_holdAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Held); });
-  actionCollection()->addAction("hold_item", m_holdAction);
+  addAction(m_holdAction);
 
-  m_archiveAction = new QAction(tr("&Archive"), this);
+  m_archiveAction =
+      new QAction(QIcon::fromTheme("mail-archive"), tr("Archive"), this);
   connect(m_archiveAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
-  actionCollection()->addAction("archive_item", m_archiveAction);
+  addAction(m_archiveAction);
 
   m_deleteAction =
-      new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
+      new QAction(QIcon::fromTheme("edit-delete"), tr("Delete"), this);
+  m_deleteAction->setShortcut(QKeySequence::Delete);
   connect(m_deleteAction, &QAction::triggered, this,
           &MainWindow::onDeleteItems);
-  actionCollection()->addAction("delete_items", m_deleteAction);
+  addAction(m_deleteAction);
 
-  QAction *openCacheAction = new QAction(tr("Open &Cache directory"), this);
-  connect(openCacheAction, &QAction::triggered, this, &MainWindow::onOpenCacheDirectory);
-  actionCollection()->addAction("open_cache", openCacheAction);
+  QMenu *itemMenu = menuBar()->addMenu(tr("&Item"));
+  itemMenu->addAction(m_processAction);
+  itemMenu->addAction(m_reprocessAction);
+  itemMenu->addAction(m_queueAction);
+  itemMenu->addAction(m_holdAction);
+  itemMenu->addAction(m_archiveAction);
+  itemMenu->addAction(m_dismissAction);
+  itemMenu->addSeparator();
+  itemMenu->addAction(m_deleteAction);
 
-  KStandardAction::aboutApp(this, SLOT(onAbout()), actionCollection());
+  QAction *openCacheAction = new QAction(QIcon::fromTheme("folder-open"),
+                                         tr("Open Cache Directory..."), this);
+  connect(openCacheAction, &QAction::triggered, this,
+          &MainWindow::onOpenCacheDirectory);
+  fileMenu->addSeparator();
+  fileMenu->addAction(openCacheAction);
 
-  setupGUI(Default, ":/kmagmuxui.rc");
   QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
   QMenu *debugMenu = helpMenu->addMenu(tr("&Debug"));
 
@@ -261,8 +286,11 @@ void MainWindow::setupActionsAndMenus() {
 
   debugMenu->addAction(tr("Open &Cache directory"), this,
                        &MainWindow::onOpenCacheDirectory);
-  helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
-                      this, &MainWindow::onAbout);
+
+  QAction *aboutAction =
+      new QAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"), this);
+  connect(aboutAction, &QAction::triggered, this, &MainWindow::onAbout);
+  helpMenu->addAction(aboutAction);
 
   // Setup Tool Bar
   QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
@@ -271,7 +299,7 @@ void MainWindow::setupActionsAndMenus() {
   mainToolBar->addAction(addItemsAction);
   mainToolBar->addSeparator();
   mainToolBar->addAction(m_minimizeAction);
-  mainToolBar->addAction(quitAction);
+  mainToolBar->addAction(m_quitAction);
 }
 
 void MainWindow::setupTabs() {
