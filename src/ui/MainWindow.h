@@ -14,6 +14,8 @@
 #include <QActionGroup>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEvent>
+#include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
@@ -45,7 +47,9 @@ private slots:
   void onItemAction(ItemState newState);
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);
+  void onItemsUpdated();
   void onItemDeleted(const QString &id);
+  void onItemsDeleted(const std::vector<QString> &ids);
   void onProcessItem();
   void onDeleteItems();
   void onAddItems();
@@ -53,6 +57,7 @@ private slots:
   void onAbout();
   void onToggleProcessing(bool checked);
   void onOpenCacheDirectory();
+  void onOpenApiExplorer(Connector *connector);
   void updateActionsState();
 
 private:
@@ -94,9 +99,13 @@ private:
   QAction *m_deleteAction;
 
   void setupUi();
+  void setupActionsAndMenus();
+  void setupTabs();
+  void setupSystemTray();
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
+  void processAddedLines(const QStringList &lines);
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
   void saveItemsFromDialog(std::vector<Item> updatedItems);
@@ -114,6 +123,7 @@ private:
   bool m_forceQuit;
 
   void applySettings();
+  void setupPluginMenus(QMenu *helpMenu);
 };
 
 #endif // MAINWINDOW_H

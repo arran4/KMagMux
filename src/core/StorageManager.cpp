@@ -2,12 +2,12 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
-#include <QSettings>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QtConcurrent>
 #include <utility>
@@ -70,7 +70,7 @@ bool StorageManager::init() {
       QStringList initialFiles = scanInbox();
       m_knownFiles = QSet<QString>(initialFiles.begin(), initialFiles.end());
       if (!m_knownFiles.isEmpty()) {
-        (void)QtConcurrent::run([this, knownFiles = m_knownFiles]() {
+        QtConcurrent::run([this, knownFiles = m_knownFiles]() {
           for (const QString &file : std::as_const(knownFiles)) {
             processNewFile(m_inboxDir + "/" + file);
           }
@@ -129,8 +129,15 @@ bool StorageManager::saveItem(const Item &item) {
     return false;
   }
 
-  // Update cache
+  // Update cache and secondary index
+  if (m_cache.contains(item.id)) {
+    Item oldItem = m_cache[item.id];
+    if (oldItem.state != item.state) {
+      m_stateIndex[oldItem.state].remove(item.id);
+    }
+  }
   m_cache[item.id] = item;
+  m_stateIndex[item.state].insert(item.id);
 
   // Notify updates
   emit itemUpdated(item);
@@ -145,11 +152,18 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
 
   // Update cache immediately on the main thread to prevent stale data
   for (const Item &item : items) {
+    if (m_cache.contains(item.id)) {
+      Item oldItem = m_cache[item.id];
+      if (oldItem.state != item.state) {
+        m_stateIndex[oldItem.state].remove(item.id);
+      }
+    }
     m_cache[item.id] = item;
-    emit itemUpdated(item);
+    m_stateIndex[item.state].insert(item.id);
   }
+  emit itemsUpdated();
 
-  (void)QtConcurrent::run([this, items]() {
+  QtConcurrent::run([this, items]() {
     for (const Item &item : items) {
       if (item.id.isEmpty()) {
         continue;
@@ -186,6 +200,7 @@ std::optional<Item> StorageManager::loadItem(const QString &id) {
 
   Item item = Item::fromJson(doc.object());
   m_cache[item.id] = item;
+  m_stateIndex[item.state].insert(item.id);
   return item;
 }
 
@@ -197,16 +212,35 @@ bool StorageManager::deleteItem(const QString &id) {
 
   Item item = optItem.value();
 
+  QString cleanManagedDir =
+      QDir::cleanPath(QDir(m_managedDir).absolutePath()) + "/";
+
   // Remove the managed file if it exists
   if (item.metadata.contains("managedFile")) {
     QString managedPath = item.metadata["managedFile"].toString();
     if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
-      QFile::remove(managedPath);
+      QString cleanManagedPath =
+          QDir::cleanPath(QFileInfo(managedPath).absoluteFilePath());
+      if (cleanManagedPath.startsWith(cleanManagedDir)) {
+        QFile::remove(managedPath);
+      } else {
+        qWarning() << "Security: Attempted to delete file outside managed "
+                      "directory:"
+                   << managedPath;
+      }
     }
   } else if (item.sourcePath.startsWith(m_managedDir) &&
              QFile::exists(item.sourcePath)) {
     // Sometimes sourcePath points directly to the managed dir
-    QFile::remove(item.sourcePath);
+    QString cleanSourcePath =
+        QDir::cleanPath(QFileInfo(item.sourcePath).absoluteFilePath());
+    if (cleanSourcePath.startsWith(cleanManagedDir)) {
+      QFile::remove(item.sourcePath);
+    } else {
+      qWarning() << "Security: Attempted to delete file outside managed "
+                    "directory:"
+                 << item.sourcePath;
+    }
   }
 
   // Remove the JSON data file
@@ -218,10 +252,58 @@ bool StorageManager::deleteItem(const QString &id) {
     }
   }
 
+  m_stateIndex[item.state].remove(id);
   m_cache.remove(id);
 
   emit itemDeleted(id);
   return true;
+}
+
+void StorageManager::deleteItems(const std::vector<QString> &ids) {
+  if (ids.empty()) {
+    return;
+  }
+
+  std::vector<QString> actuallyDeletedIds;
+  actuallyDeletedIds.reserve(ids.size());
+
+  for (const QString &id : ids) {
+    std::optional<Item> optItem = loadItem(id);
+    if (!optItem.has_value()) {
+      continue;
+    }
+
+    Item item = optItem.value();
+
+    // Remove the managed file if it exists
+    if (item.metadata.contains("managedFile")) {
+      QString managedPath = item.metadata["managedFile"].toString();
+      if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
+        QFile::remove(managedPath);
+      }
+    } else if (item.sourcePath.startsWith(m_managedDir) &&
+               QFile::exists(item.sourcePath)) {
+      // Sometimes sourcePath points directly to the managed dir
+      QFile::remove(item.sourcePath);
+    }
+
+    // Remove the JSON data file
+    QString path = getItemPath(id);
+    if (QFile::exists(path)) {
+      if (!QFile::remove(path)) {
+        qWarning() << "Failed to delete item data file:" << path;
+        continue;
+      }
+    }
+
+    m_stateIndex[item.state].remove(id);
+    m_cache.remove(id);
+    actuallyDeletedIds.push_back(id);
+  }
+
+  if (!actuallyDeletedIds.empty()) {
+    emit itemsDeleted(actuallyDeletedIds);
+  }
 }
 
 std::vector<Item> StorageManager::loadAllItems() {
@@ -236,6 +318,7 @@ std::vector<Item> StorageManager::loadAllItems() {
   }
 
   m_cache.clear();
+  m_stateIndex.clear();
   QDirIterator it(m_dataDir, QStringList() << "*.json", QDir::Files);
   while (it.hasNext()) {
     QString path = it.next();
@@ -247,6 +330,7 @@ std::vector<Item> StorageManager::loadAllItems() {
         Item item = Item::fromJson(doc.object());
         items.push_back(item);
         m_cache.insert(item.id, item);
+        m_stateIndex[item.state].insert(item.id);
       }
     }
   }
@@ -262,9 +346,21 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
     loadAllItems();
   }
 
-  for (auto it = m_cache.constBegin(); it != m_cache.constEnd(); ++it) {
-    if (states.contains(it.value().state)) {
-      items.push_back(it.value());
+  int totalSize = 0;
+  for (const ItemState &state : states) {
+    totalSize += m_stateIndex.value(state).size();
+  }
+  items.reserve(totalSize);
+
+  for (const ItemState &state : states) {
+    if (m_stateIndex.contains(state)) {
+      const QSet<QString> &ids = m_stateIndex.value(state);
+      for (const QString &id : ids) {
+        auto it = m_cache.constFind(id);
+        if (it != m_cache.constEnd()) {
+          items.push_back(it.value());
+        }
+      }
     }
   }
 
@@ -286,8 +382,14 @@ void StorageManager::onDirectoryChanged(const QString &path) {
     QSet<QString> newFiles = currentFiles;
     newFiles.subtract(m_knownFiles);
 
-    for (const QString &file : std::as_const(newFiles)) {
-      processNewFile(m_inboxDir + "/" + file);
+    if (!newFiles.isEmpty()) {
+      QtConcurrent::run([self = QPointer<StorageManager>(this), newFiles = newFiles]() {
+        for (const QString &file : std::as_const(newFiles)) {
+          if (self) {
+            self->processNewFile(self->m_inboxDir + "/" + file);
+          }
+        }
+      });
     }
 
     m_knownFiles = currentFiles;
@@ -313,22 +415,26 @@ void StorageManager::processNewFile(const QString &filePath) {
   int actionIndex = 0;
 
   if (autoMoveSetting.typeId() == QMetaType::Bool) {
-      actionIndex = autoMoveSetting.toBool() ? 2 : 0;
+    actionIndex = autoMoveSetting.toBool() ? 2 : 0;
   } else {
-      actionIndex = autoMoveSetting.toInt();
+    actionIndex = autoMoveSetting.toInt();
   }
 
   if (actionIndex == 1) { // Copy
     if (!moveToManaged(newItem, false, true)) {
-      qWarning() << "Failed to automatically copy new item to managed storage:" << newItem.sourcePath;
+      qWarning() << "Failed to automatically copy new item to managed storage:"
+                 << newItem.sourcePath;
     } else {
-      qDebug() << "Automatically copied new item to managed storage:" << newItem.sourcePath;
+      qDebug() << "Automatically copied new item to managed storage:"
+               << newItem.sourcePath;
     }
   } else if (actionIndex == 2) { // Move (Delete Source)
     if (!moveToManaged(newItem, true, true)) {
-      qWarning() << "Failed to automatically move new item to managed storage:" << newItem.sourcePath;
+      qWarning() << "Failed to automatically move new item to managed storage:"
+                 << newItem.sourcePath;
     } else {
-      qDebug() << "Automatically moved new item to managed storage:" << newItem.sourcePath;
+      qDebug() << "Automatically moved new item to managed storage:"
+               << newItem.sourcePath;
     }
   }
 

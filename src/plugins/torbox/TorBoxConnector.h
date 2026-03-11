@@ -24,6 +24,10 @@ public:
   QWidget *createSettingsWidget(QWidget *parent) override;
   void saveSettings(QWidget *settingsWidget) override;
 
+  bool hasDebugMenu() const override;
+  QList<HttpApiEndpoint> getHttpApiEndpoints() const override;
+  QMap<QString, QString> getApiSubstitutions() const override;
+
 private slots:
   void onAddTorrentReply();
 

@@ -1,7 +1,9 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
+#include "ApiExplorerDialog.h"
 #include "LinkExtractorDialog.h"
+#include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
 #include "ProcessItemDialog.h"
 #include <QApplication>
@@ -9,11 +11,10 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
-#include <QDragEnterEvent>
-#include <QDropEvent>
-#include <QMimeData>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -22,6 +23,7 @@
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSettings>
@@ -39,18 +41,22 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 
   applySettings();
 
-  setupUi();
-  loadData();
-
   m_engine = new Engine(m_storage, this);
   m_engine->start();
+
+  setupUi();
+  loadData();
 
   connect(m_storage, &StorageManager::itemAdded, this,
           &MainWindow::onItemAdded);
   connect(m_storage, &StorageManager::itemUpdated, this,
           &MainWindow::onItemUpdated);
+  connect(m_storage, &StorageManager::itemsUpdated, this,
+          &MainWindow::onItemsUpdated);
   connect(m_storage, &StorageManager::itemDeleted, this,
           &MainWindow::onItemDeleted);
+  connect(m_storage, &StorageManager::itemsDeleted, this,
+          &MainWindow::onItemsDeleted);
 }
 
 MainWindow::~MainWindow() {}
@@ -88,6 +94,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
 
 void MainWindow::dropEvent(QDropEvent *event) {
   QStringList lines;
+  QStringList filesToRead;
 
   if (event->mimeData()->hasUrls()) {
     QList<QUrl> urls = event->mimeData()->urls();
@@ -97,19 +104,9 @@ void MainWindow::dropEvent(QDropEvent *event) {
         QFileInfo fileInfo(localPath);
         if (fileInfo.suffix().toLower() == "torrent") {
           lines.append("file://" + localPath);
-        } else if (fileInfo.suffix().toLower() == "txt" || fileInfo.suffix().isEmpty()) {
-          QFile file(localPath);
-          if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-            while (!in.atEnd()) {
-              QString line = in.readLine().trimmed();
-              if (!line.isEmpty()) {
-                lines.append(line);
-              }
-            }
-          } else {
-            lines.append("file://" + localPath); // Fallback
-          }
+        } else if (fileInfo.suffix().toLower() == "txt" ||
+                   fileInfo.suffix().isEmpty()) {
+          filesToRead.append(localPath);
         } else {
           lines.append("file://" + localPath);
         }
@@ -122,15 +119,41 @@ void MainWindow::dropEvent(QDropEvent *event) {
     lines = text.split('\n', Qt::SkipEmptyParts);
   }
 
-  if (!lines.isEmpty()) {
-    // Process the lines using ItemParser
-    std::vector<Item> parsedItems = ItemParser::parseLines(lines);
-    if (!parsedItems.empty()) {
-      m_storage->saveItems(parsedItems);
-    }
+  if (!lines.isEmpty() || !filesToRead.isEmpty()) {
+    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
 
-    // Switch to Inbox tab
-    m_tabWidget->setCurrentIndex(0);
+    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+            [this, watcher]() {
+              std::vector<Item> parsedItems = watcher->result();
+              if (!parsedItems.empty()) {
+                m_storage->saveItems(parsedItems);
+              }
+              // Switch to Inbox tab
+              m_tabWidget->setCurrentIndex(0);
+              watcher->deleteLater();
+            });
+
+    QFuture<std::vector<Item>> future =
+        QtConcurrent::run([lines, filesToRead]() -> std::vector<Item> {
+          QStringList finalLines = lines;
+          for (const QString &localPath : filesToRead) {
+            QFile file(localPath);
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+              QTextStream in(&file);
+              while (!in.atEnd()) {
+                QString line = in.readLine().trimmed();
+                if (!line.isEmpty()) {
+                  finalLines.append(line);
+                }
+              }
+            } else {
+              finalLines.append("file://" + localPath); // Fallback
+            }
+          }
+          return ItemParser::parseLines(finalLines);
+        });
+
+    watcher->setFuture(future);
   }
   event->acceptProposedAction();
 }
@@ -139,6 +162,20 @@ void MainWindow::setupUi() {
   setWindowTitle("KMagMux");
   resize(1000, 600);
 
+  setupActionsAndMenus();
+  setupTabs();
+  setupSystemTray();
+
+  // Setup Status Bar
+  statusBar()->showMessage(tr("Ready"));
+}
+
+void MainWindow::setupActionsAndMenus() {
+  // Setup Menu Bar
+  QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
+  QAction *addItemsAction =
+      fileMenu->addAction(QIcon::fromTheme("document-open"), tr("&Add..."),
+                          this, &MainWindow::onAddItems);
   QAction *addItemsAction = new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
   connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
@@ -204,8 +241,10 @@ void MainWindow::setupUi() {
           [this]() { onItemAction(ItemState::Archived); });
   actionCollection()->addAction("archive_item", m_archiveAction);
 
-  m_deleteAction = new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
-  connect(m_deleteAction, &QAction::triggered, this, &MainWindow::onDeleteItems);
+  m_deleteAction =
+      new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
+  connect(m_deleteAction, &QAction::triggered, this,
+          &MainWindow::onDeleteItems);
   actionCollection()->addAction("delete_items", m_deleteAction);
 
   QAction *openCacheAction = new QAction(tr("Open &Cache directory"), this);
@@ -215,10 +254,27 @@ void MainWindow::setupUi() {
   KStandardAction::aboutApp(this, SLOT(onAbout()), actionCollection());
 
   setupGUI(Default, ":/kmagmuxui.rc");
+  QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
+  QMenu *debugMenu = helpMenu->addMenu(tr("&Debug"));
 
-  // Setup Status Bar
-  statusBar()->showMessage(tr("Ready"));
+  setupPluginMenus(debugMenu);
 
+  debugMenu->addAction(tr("Open &Cache directory"), this,
+                       &MainWindow::onOpenCacheDirectory);
+  helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
+                      this, &MainWindow::onAbout);
+
+  // Setup Tool Bar
+  QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
+  mainToolBar->addAction(m_toggleProcessingAction);
+  mainToolBar->addSeparator();
+  mainToolBar->addAction(addItemsAction);
+  mainToolBar->addSeparator();
+  mainToolBar->addAction(m_minimizeAction);
+  mainToolBar->addAction(quitAction);
+}
+
+void MainWindow::setupTabs() {
   QWidget *centralWidget = new QWidget(this);
   setCentralWidget(centralWidget);
 
@@ -246,10 +302,12 @@ void MainWindow::setupUi() {
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
     view->setModel(model);
+    view->setItemDelegate(new MaxWidthDelegate(view));
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
-    view->setTextElideMode(Qt::ElideNone);
+    view->setTextElideMode(Qt::ElideRight);
+    view->setWordWrap(false);
     view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -306,7 +364,9 @@ void MainWindow::setupUi() {
   connect(m_tabWidget, &QTabWidget::currentChanged, this,
           &MainWindow::updateActionsState);
   updateActionsState();
+}
 
+void MainWindow::setupSystemTray() {
   // System Tray Setup
   m_trayIcon = new QSystemTrayIcon(this);
   m_trayIcon->setIcon(QIcon(":/icons/kmagmux.svg"));
@@ -339,7 +399,6 @@ void MainWindow::setupUi() {
   connect(m_trayIcon, &QSystemTrayIcon::activated, this,
           &MainWindow::onTrayIconActivated);
 }
-
 void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
   if (reason == QSystemTrayIcon::DoubleClick ||
       reason == QSystemTrayIcon::Trigger) {
@@ -542,7 +601,11 @@ void MainWindow::onItemAdded(const Item &item) { loadData(); }
 
 void MainWindow::onItemUpdated(const Item &item) { loadData(); }
 
+void MainWindow::onItemsUpdated() { loadData(); }
+
 void MainWindow::onItemDeleted(const QString &id) { loadData(); }
+
+void MainWindow::onItemsDeleted(const std::vector<QString> &ids) { loadData(); }
 
 void MainWindow::onDeleteItems() {
   QTableView *view = getCurrentView();
@@ -573,12 +636,8 @@ void MainWindow::onDeleteItems() {
       idsToDelete.push_back(model->getItem(index.row()).id);
     }
 
-    for (const QString &id : idsToDelete) {
-      qDebug() << "Deleting item:" << id;
-      if (!m_storage->deleteItem(id)) {
-        qWarning() << "Failed to delete item:" << id;
-      }
-    }
+    qDebug() << "Deleting" << idsToDelete.size() << "items";
+    m_storage->deleteItems(idsToDelete);
   }
 }
 
@@ -691,26 +750,30 @@ void MainWindow::onAddItems() {
 
   if (dialog.exec() == QDialog::Accepted) {
     QStringList lines = textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
-
-    // Offload parsing to a background thread
-    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
-
-    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
-            [this, watcher]() {
-              std::vector<Item> items = watcher->result();
-              if (!items.empty()) {
-                openAddItemsDialog(items);
-              }
-              watcher->deleteLater();
-            });
-
-    QFuture<std::vector<Item>> future =
-        QtConcurrent::run([lines]() -> std::vector<Item> {
-          return ItemParser::parseLines(lines);
-        });
-
-    watcher->setFuture(future);
+    processAddedLines(lines);
   }
+}
+
+void MainWindow::processAddedLines(const QStringList &lines) {
+  if (lines.isEmpty())
+    return;
+
+  // Offload parsing to a background thread
+  auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
+
+  connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+          [this, watcher]() {
+            std::vector<Item> items = watcher->result();
+            if (!items.empty()) {
+              openAddItemsDialog(items);
+            }
+            watcher->deleteLater();
+          });
+
+  QFuture<std::vector<Item>> future = QtConcurrent::run(
+      [lines]() -> std::vector<Item> { return ItemParser::parseLines(lines); });
+
+  watcher->setFuture(future);
 }
 
 void MainWindow::onProcessItem() {
@@ -824,7 +887,8 @@ void MainWindow::updateActionsState() {
     return;
   }
 
-  bool hasSelection = view->selectionModel() && view->selectionModel()->hasSelection();
+  bool hasSelection =
+      view->selectionModel() && view->selectionModel()->hasSelection();
   m_selectAllAction->setEnabled(true);
 
   m_processAction->setVisible(view == m_unprocessedView);
@@ -859,4 +923,32 @@ void MainWindow::onToggleProcessing(bool checked) {
 
 void MainWindow::onOpenCacheDirectory() {
   QDesktopServices::openUrl(QUrl::fromLocalFile(m_storage->getBaseDir()));
+}
+
+void MainWindow::setupPluginMenus(QMenu *helpMenu) {
+  if (!m_engine)
+    return;
+
+  for (const QString &connectorId : m_engine->getAvailableConnectors()) {
+    Connector *connector = m_engine->getConnector(connectorId);
+    if (connector && connector->hasDebugMenu()) {
+      QMenu *pluginMenu =
+          helpMenu->addMenu(QString("%1 Debug").arg(connector->getName()));
+
+      QList<HttpApiEndpoint> endpoints = connector->getHttpApiEndpoints();
+      if (!endpoints.isEmpty()) {
+        QAction *apiExplorerAction = pluginMenu->addAction("API Explorer");
+        connect(apiExplorerAction, &QAction::triggered, this,
+                [this, connector]() { onOpenApiExplorer(connector); });
+      }
+    }
+  }
+}
+
+void MainWindow::onOpenApiExplorer(Connector *connector) {
+  if (!connector)
+    return;
+
+  ApiExplorerDialog dialog(connector, this);
+  dialog.exec();
 }

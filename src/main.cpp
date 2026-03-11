@@ -29,32 +29,21 @@ static bool isValidInput(const QString &arg) {
   return fi.exists() && fi.isFile();
 }
 
-int main(int argc, char *argv[]) {
-  QApplication app(argc, argv);
+static QString setupApplication(QApplication &app) {
   app.setApplicationName("KMagMux");
   app.setOrganizationName("KMagMux");
   app.setWindowIcon(QIcon(":/icons/kmagmux.svg"));
-
-  // Using kmagmux for normal, maybe handle dev mode later. The comment asks to
-  // lowercase KMagMux and for dev copy name spacing. Wait, I will just change
-  // "KMagMux_SingleInstance" to "kmagmux_SingleInstance" for the socket, or
-  // read the PR comment again: "the exception should be the development copy
-  // which should be name spaced. It should also use a different configuration /
-  // share / cache directories too. Also the directory names should be lower
-  // case not `KMagMux` but `kmagmux` the dev can be `kmagmux-dev1`"
 
   QString appName = "kmagmux";
 #ifdef QT_DEBUG
   appName = "kmagmux-dev1";
 #endif
 
-  app.setApplicationName(
-      appName); // This will affect the config directory as well
+  app.setApplicationName(appName); // This will affect the config directory as well
+  return appName + "_SingleInstance";
+}
 
-  const QString serverName = appName + "_SingleInstance";
-  QStringList args = app.arguments();
-
-  // Try to connect to existing instance
+static bool sendArgsToExistingInstance(const QString &serverName, const QStringList &args) {
   QLocalSocket socket;
   socket.connectToServer(serverName);
   if (socket.waitForConnected(500)) {
@@ -69,28 +58,22 @@ int main(int argc, char *argv[]) {
     out << passedArgs;
     socket.write(block);
     socket.waitForBytesWritten(1000);
-    return 0; // Exit since the existing instance will handle it
+    return true; // Exit since the existing instance will handle it
   }
+  return false;
+}
 
-  // Initialize Core Storage
-  StorageManager storage;
-  if (!storage.init()) {
-    QMessageBox::critical(nullptr, "Error",
-                          "Failed to initialize storage directories.");
-    return 1;
-  }
-
+static void setupLocalServer(QLocalServer &server, const QString &serverName) {
   // Not running, clean up any stale socket
   QLocalServer::removeServer(serverName);
-  QLocalServer server;
   server.setSocketOptions(QLocalServer::UserAccessOption);
   if (!server.listen(serverName)) {
     qWarning() << "Failed to start local server for single instance logic:"
                << server.errorString();
   }
+}
 
-  MainWindow window(&storage);
-
+static void setupIpcHandler(QLocalServer &server, StorageManager &storage, MainWindow &window) {
   // Handle incoming connections from new instances
   QObject::connect(
       &server, &QLocalServer::newConnection, [&storage, &server, &window]() {
@@ -137,7 +120,9 @@ int main(int argc, char *argv[]) {
         QObject::connect(client, &QLocalSocket::disconnected, client,
                          &QLocalSocket::deleteLater);
       });
+}
 
+static void processCliArgs(const QStringList &args, StorageManager &storage) {
   // Handle CLI arguments (Files/URLs) from the FIRST instance
   for (int i = 1; i < args.size(); ++i) {
     QString arg = args[i];
@@ -160,6 +145,32 @@ int main(int argc, char *argv[]) {
       qWarning() << "Failed to import item from CLI:" << arg;
     }
   }
+}
+
+int main(int argc, char *argv[]) {
+  QApplication app(argc, argv);
+
+  const QString serverName = setupApplication(app);
+  QStringList args = app.arguments();
+
+  if (sendArgsToExistingInstance(serverName, args)) {
+    return 0;
+  }
+
+  // Initialize Core Storage
+  StorageManager storage;
+  if (!storage.init()) {
+    QMessageBox::critical(nullptr, "Error",
+                          "Failed to initialize storage directories.");
+    return 1;
+  }
+
+  QLocalServer server;
+  setupLocalServer(server, serverName);
+
+  MainWindow window(&storage);
+  setupIpcHandler(server, storage, window);
+  processCliArgs(args, storage);
 
   window.show();
 

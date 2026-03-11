@@ -32,6 +32,7 @@ public:
   std::vector<Item> loadAllItems();
   std::vector<Item> loadItemsByStates(const QList<ItemState> &states);
   bool deleteItem(const QString &id);
+  void deleteItems(const std::vector<QString> &ids);
 
   // Scanning
   QStringList scanInbox() const;
@@ -42,7 +43,9 @@ public:
 signals:
   void itemAdded(const Item &item);
   void itemUpdated(const Item &item);
+  void itemsUpdated();
   void itemDeleted(const QString &id);
+  void itemsDeleted(const std::vector<QString> &ids);
 
 private slots:
   void onDirectoryChanged(const QString &path);
@@ -62,6 +65,7 @@ private:
   QSet<QString> m_knownFiles; // To track new files vs existing
 
   QMap<QString, Item> m_cache;
+  QMap<ItemState, QSet<QString>> m_stateIndex;
   bool m_cacheInitialized = false;
 
   bool createDirIfNotExists(const QString &path);

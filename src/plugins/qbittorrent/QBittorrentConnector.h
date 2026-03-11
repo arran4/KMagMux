@@ -2,7 +2,9 @@
 #define QBITTORRENTCONNECTOR_H
 
 #include "core/Connector.h"
+#include <QList>
 #include <QNetworkAccessManager>
+#include <QNetworkCookieJar>
 #include <QNetworkReply>
 #include <QObject>
 #include <QUrl>
@@ -29,6 +31,10 @@ public:
   QWidget *createSettingsWidget(QWidget *parent) override;
   void saveSettings(QWidget *settingsWidget) override;
 
+  bool hasDebugMenu() const override;
+  QList<HttpApiEndpoint> getHttpApiEndpoints() const override;
+  QMap<QString, QString> getApiSubstitutions() const override;
+
 private slots:
   void onLoginReply();
   void onAddTorrentReply();
@@ -40,9 +46,9 @@ private:
   QString m_password;
   bool m_enabled;
 
-  // We store the pending item while waiting for login
-  Item m_pendingItem;
-  bool m_isPending;
+  // We store pending items while waiting for login
+  QList<Item> m_pendingItems;
+  bool m_isLoggingIn;
 
   void login();
   void performDispatch(const Item &item);

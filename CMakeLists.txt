@@ -23,6 +23,9 @@ add_library(KMagMuxCore SHARED
     src/core/ItemModel.cpp
     src/core/ItemParser.cpp
     src/core/SecureStorage.cpp
+    src/core/BencodeParser.cpp
+    src/core/TorrentParser.cpp
+    src/core/TrackerClient.cpp
 )
 target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent qt6keychain)
 target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -42,10 +45,13 @@ add_executable(KMagMux
     src/ui/PreferencesDialog.cpp
     src/ui/LinkExtractorDialog.cpp
     src/ui/ItemFilterProxyModel.cpp
+    src/ui/ApiExplorerDialog.cpp
+    src/ui/TorrentInfoDialog.cpp
+    src/ui/MaxWidthDelegate.h
     resources/resources.qrc
 )
 
-target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent KF6::XmlGui)
+target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::XmlGui)
 
 add_subdirectory(src/plugins/qbittorrent)
 add_subdirectory(src/plugins/torbox)

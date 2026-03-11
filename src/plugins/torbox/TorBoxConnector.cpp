@@ -3,6 +3,7 @@
 #include <QCheckBox>
 #include <QDebug>
 #include <QFile>
+#include <QLabel>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHttpMultiPart>
@@ -110,6 +111,13 @@ QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
   tokenEdit->setText(SecureStorage::readPassword("Plugins/TorBox", "apiToken"));
   configLayout->addRow(tr("API Token:"), tokenEdit);
 
+  QSettings mainSettings;
+  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+    QLabel *warningLabel = new QLabel(tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
+    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
+    configLayout->addRow("", warningLabel);
+  }
+
   mainLayout->addWidget(configWidget);
   settings.endGroup();
 
@@ -143,4 +151,79 @@ void TorBoxConnector::saveSettings(QWidget *settingsWidget) {
   }
 
   settings.endGroup();
+}
+
+bool TorBoxConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> TorBoxConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint userInfo;
+  userInfo.name = "User Info";
+  userInfo.description = "Retrieves user information";
+  userInfo.method = "GET";
+  userInfo.url = "https://api.torbox.app/v1/api/user/me";
+  userInfo.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  endpoints.append(userInfo);
+
+  HttpApiEndpoint listTorrents;
+  listTorrents.name = "List Torrents";
+  listTorrents.description = "Lists all torrents";
+  listTorrents.method = "GET";
+  listTorrents.url = "https://api.torbox.app/v1/api/torrents/mylist";
+  listTorrents.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  endpoints.append(listTorrents);
+
+  HttpApiEndpoint createTorrentMagnet;
+  createTorrentMagnet.name = "Create Torrent (Magnet)";
+  createTorrentMagnet.description =
+      "Creates a new torrent transfer from a magnet link";
+  createTorrentMagnet.method = "POST";
+  createTorrentMagnet.url =
+      "https://api.torbox.app/v1/api/torrents/createtorrent";
+  createTorrentMagnet.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  createTorrentMagnet.isMultipart = true;
+  createTorrentMagnet.multipartParts.insert("magnet", "${MAGNET_LINK}");
+  endpoints.append(createTorrentMagnet);
+
+  HttpApiEndpoint createTorrentFile;
+  createTorrentFile.name = "Create Torrent (File)";
+  createTorrentFile.description =
+      "Creates a new torrent transfer from a .torrent file";
+  createTorrentFile.method = "POST";
+  createTorrentFile.url =
+      "https://api.torbox.app/v1/api/torrents/createtorrent";
+  createTorrentFile.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  createTorrentFile.isMultipart = true;
+  createTorrentFile.multipartParts.insert("file",
+                                          "file:///path/to/test.torrent");
+  endpoints.append(createTorrentFile);
+
+  HttpApiEndpoint createUsenet;
+  createUsenet.name = "Create Usenet";
+  createUsenet.description = "Creates a new usenet transfer";
+  createUsenet.method = "POST";
+  createUsenet.url = "https://api.torbox.app/v1/api/usenet/createusenet";
+  createUsenet.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  createUsenet.isMultipart = true;
+  createUsenet.multipartParts.insert("link", "${USENET_LINK}");
+  endpoints.append(createUsenet);
+
+  HttpApiEndpoint createWebdl;
+  createWebdl.name = "Create Web Download";
+  createWebdl.description = "Creates a new web download";
+  createWebdl.method = "POST";
+  createWebdl.url = "https://api.torbox.app/v1/api/webdl/createwebdl";
+  createWebdl.headers.insert("Authorization", "Bearer ${API_TOKEN}");
+  createWebdl.isMultipart = true;
+  createWebdl.multipartParts.insert("link", "${WEB_LINK}");
+  endpoints.append(createWebdl);
+
+  return endpoints;
+}
+
+QMap<QString, QString> TorBoxConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("API_TOKEN", m_apiToken);
+  return subs;
 }

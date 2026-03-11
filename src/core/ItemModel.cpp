@@ -26,6 +26,8 @@ QVariant ItemModel::data(const QModelIndex &index, int role) const {
       return item.id;
     case ColState:
       return item.stateToString();
+    case ColName:
+      return item.getDisplayName();
     case ColSource:
       return item.sourcePath;
     case ColCreated:
@@ -51,6 +53,8 @@ QVariant ItemModel::headerData(int section, Qt::Orientation orientation,
     return "ID";
   case ColState:
     return "State";
+  case ColName:
+    return "Name";
   case ColSource:
     return "Source";
   case ColCreated:
