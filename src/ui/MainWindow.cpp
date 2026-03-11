@@ -56,11 +56,11 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 MainWindow::~MainWindow() {}
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-  if (m_closeToTray && m_trayIcon->isVisible()) {
+  if (m_closeToTray && m_trayIcon->isVisible() && !m_forceQuit) {
     hide();
     event->ignore();
   } else {
-    event->accept();
+    KXmlGuiWindow::closeEvent(event);
     qApp->quit();
   }
 }
@@ -214,7 +214,7 @@ void MainWindow::setupUi() {
 
   KStandardAction::aboutApp(this, SLOT(onAbout()), actionCollection());
 
-  setupGUI(Default, "kmagmuxui.rc");
+  setupGUI(Default, ":/kmagmuxui.rc");
 
   // Setup Status Bar
   statusBar()->showMessage(tr("Ready"));

@@ -71,4 +71,4 @@ install(FILES resources/icons/kmagmux-256.png DESTINATION share/icons/hicolor/25
 install(FILES resources/icons/kmagmux-512.png DESTINATION share/icons/hicolor/512x512/apps RENAME kmagmux.png)
 
 # Install KXmlGui UI definition
-install(FILES src/ui/kmagmuxui.rc DESTINATION share/kxmlgui6/kmagmux)
+install(FILES resources/kmagmuxui.rc DESTINATION share/kxmlgui6/kmagmux)
