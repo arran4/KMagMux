@@ -7,6 +7,11 @@
 #include "ItemFilterProxyModel.h"
 #include <QAction>
 #include <QCloseEvent>
+#include <QEvent>
+#include <KXmlGuiWindow>
+#include <KActionCollection>
+#include <KStandardAction>
+#include <QActionGroup>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QEvent>
@@ -19,7 +24,7 @@
 #include <QTableView>
 #include <QToolBar>
 
-class MainWindow : public QMainWindow {
+class MainWindow : public KXmlGuiWindow {
   Q_OBJECT
 
 public:

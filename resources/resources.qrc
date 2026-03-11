@@ -8,5 +8,6 @@
         <file>icons/kmagmux-128.png</file>
         <file>icons/kmagmux-256.png</file>
         <file>icons/kmagmux-512.png</file>
+        <file>kmagmuxui.rc</file>
     </qresource>
 </RCC>
