@@ -59,7 +59,13 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
           &MainWindow::onItemsDeleted);
 }
 
-MainWindow::~MainWindow() {}
+MainWindow::~MainWindow() {
+  if (m_engine) {
+    m_engine->stop();
+    m_engine->deleteLater();
+    m_engine = nullptr;
+  }
+}
 
 void MainWindow::closeEvent(QCloseEvent *event) {
   if (m_closeToTray && m_trayIcon->isVisible() && !m_forceQuit) {
