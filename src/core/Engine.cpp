@@ -70,6 +70,8 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 
       QObject *plugin = pluginLoader.instance();
       if (plugin) {
+        // Set parent to Engine to ensure it is deleted when Engine is deleted
+        plugin->setParent(this);
         Connector *connector = qobject_cast<Connector *>(plugin);
         if (connector) {
           if (!m_connectors.contains(connector->getId())) {
@@ -82,11 +84,15 @@ Engine::Engine(StorageManager *storage, QObject *parent)
           } else {
             // Already loaded this connector (e.g. from dev path instead of
             // install path)
+            plugin->setParent(nullptr); // clear parent before unload/delete
             pluginLoader.unload();
+            delete plugin;
           }
         } else {
           qWarning() << "Plugin" << fileName << "is not a Connector.";
+          plugin->setParent(nullptr);
           pluginLoader.unload();
+          delete plugin;
         }
       } else {
         // Since we iterate through everything, it might fail to load non-plugin
