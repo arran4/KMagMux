@@ -39,11 +39,13 @@ static QString setupApplication(QApplication &app) {
   appName = "kmagmux-dev1";
 #endif
 
-  app.setApplicationName(appName); // This will affect the config directory as well
+  app.setApplicationName(
+      appName); // This will affect the config directory as well
   return appName + "_SingleInstance";
 }
 
-static bool sendArgsToExistingInstance(const QString &serverName, const QStringList &args) {
+static bool sendArgsToExistingInstance(const QString &serverName,
+                                       const QStringList &args) {
   QLocalSocket socket;
   socket.connectToServer(serverName);
   if (socket.waitForConnected(500)) {
@@ -73,7 +75,8 @@ static void setupLocalServer(QLocalServer &server, const QString &serverName) {
   }
 }
 
-static void setupIpcHandler(QLocalServer &server, StorageManager &storage, MainWindow &window) {
+static void setupIpcHandler(QLocalServer &server, StorageManager &storage,
+                            MainWindow &window) {
   // Handle incoming connections from new instances
   QObject::connect(
       &server, &QLocalServer::newConnection, [&storage, &server, &window]() {

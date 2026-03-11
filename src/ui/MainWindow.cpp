@@ -171,18 +171,16 @@ void MainWindow::setupUi() {
 }
 
 void MainWindow::setupActionsAndMenus() {
-  // Setup Menu Bar
-  QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
   QAction *addItemsAction =
-      fileMenu->addAction(QIcon::fromTheme("document-open"), tr("&Add..."),
-                          this, &MainWindow::onAddItems);
-  QAction *addItemsAction = new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
+      new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
   addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
   connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
   actionCollection()->addAction("add_items", addItemsAction);
 
-  m_minimizeAction = new QAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"), this);
-  connect(m_minimizeAction, &QAction::triggered, this, &MainWindow::minimizeToTray);
+  m_minimizeAction =
+      new QAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"), this);
+  connect(m_minimizeAction, &QAction::triggered, this,
+          &MainWindow::minimizeToTray);
   actionCollection()->addAction("minimize_to_tray", m_minimizeAction);
 
   KStandardAction::quit(this, SLOT(quitApplication()), actionCollection());
@@ -247,31 +245,30 @@ void MainWindow::setupActionsAndMenus() {
           &MainWindow::onDeleteItems);
   actionCollection()->addAction("delete_items", m_deleteAction);
 
-  QAction *openCacheAction = new QAction(tr("Open &Cache directory"), this);
-  connect(openCacheAction, &QAction::triggered, this, &MainWindow::onOpenCacheDirectory);
+  QAction *openCacheAction = new QAction(QIcon::fromTheme("folder-open"),
+                                         tr("Open &Cache directory"), this);
+  connect(openCacheAction, &QAction::triggered, this,
+          &MainWindow::onOpenCacheDirectory);
   actionCollection()->addAction("open_cache", openCacheAction);
 
   KStandardAction::aboutApp(this, SLOT(onAbout()), actionCollection());
 
   setupGUI(Default, ":/kmagmuxui.rc");
-  QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
-  QMenu *debugMenu = helpMenu->addMenu(tr("&Debug"));
 
-  setupPluginMenus(debugMenu);
+  // We need to fetch the debug menu after setupGUI since it's defined in the
+  // .rc file
+  QMenu *debugMenu = nullptr;
+  QList<QMenu *> menus = menuBar()->findChildren<QMenu *>();
+  for (QMenu *menu : std::as_const(menus)) {
+    if (menu->objectName() == "debug_menu") {
+      debugMenu = menu;
+      break;
+    }
+  }
 
-  debugMenu->addAction(tr("Open &Cache directory"), this,
-                       &MainWindow::onOpenCacheDirectory);
-  helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
-                      this, &MainWindow::onAbout);
-
-  // Setup Tool Bar
-  QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
-  mainToolBar->addAction(m_toggleProcessingAction);
-  mainToolBar->addSeparator();
-  mainToolBar->addAction(addItemsAction);
-  mainToolBar->addSeparator();
-  mainToolBar->addAction(m_minimizeAction);
-  mainToolBar->addAction(quitAction);
+  if (debugMenu) {
+    setupPluginMenus(debugMenu);
+  }
 }
 
 void MainWindow::setupTabs() {

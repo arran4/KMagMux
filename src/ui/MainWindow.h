@@ -5,13 +5,12 @@
 #include "../core/ItemModel.h"
 #include "../core/StorageManager.h"
 #include "ItemFilterProxyModel.h"
-#include <QAction>
-#include <QCloseEvent>
-#include <QEvent>
-#include <KXmlGuiWindow>
 #include <KActionCollection>
 #include <KStandardAction>
+#include <KXmlGuiWindow>
+#include <QAction>
 #include <QActionGroup>
+#include <QCloseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QEvent>

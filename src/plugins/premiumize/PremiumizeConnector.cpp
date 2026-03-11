@@ -3,11 +3,11 @@
 #include <QCheckBox>
 #include <QDebug>
 #include <QFile>
-#include <QLabel>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSettings>
 #include <QUrl>
@@ -133,7 +133,8 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
 
   QSettings mainSettings;
   if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
-    QLabel *warningLabel = new QLabel(tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
+    QLabel *warningLabel = new QLabel(
+        tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
     warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
     configLayout->addRow("", warningLabel);
   }

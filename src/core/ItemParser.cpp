@@ -22,7 +22,7 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
     Item newItem;
     newItem.id = QString::number(now) + "_" + QString::number(idx++) + "_item";
     newItem.state = ItemState::Unprocessed;
-    newItem.sourcePath = line;
+    newItem.sourcePath = pathToCheck;
     newItem.createdTime = QDateTime::currentDateTime();
     parsedItems.push_back(newItem);
   };

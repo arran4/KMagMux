@@ -7,13 +7,13 @@
                          http://www.kde.org/standards/kxmlgui/1.0/kxmlgui.xsd">
 
     <MenuBar>
-        <Menu name="file">
+        <Menu name="file"><text>&amp;File</text>
             <Action name="add_items"/>
             <Separator/>
             <Action name="minimize_to_tray"/>
             <Action name="quit"/>
         </Menu>
-        <Menu name="edit">
+        <Menu name="edit"><text>&amp;Edit</text>
             <Action name="toggle_processing"/>
             <Separator/>
             <Action name="preferences"/>
@@ -30,7 +30,7 @@
             <Separator/>
             <Action name="delete_items"/>
         </Menu>
-        <Menu name="help">
+        <Menu name="help"><text>&amp;Help</text>
             <Menu name="debug_menu"><text>&amp;Debug</text>
                 <Action name="open_cache"/>
             </Menu>

@@ -26,8 +26,9 @@ QString SecureStorage::readPassword(const QString &service,
       result = settings.value(key, "").toString();
       settings.endGroup();
     } else {
-      qWarning() << "SecureStorage: Failed to read password for service" << service
-                 << "key" << key << ":" << qPrintable(job.errorString());
+      qWarning() << "SecureStorage: Failed to read password for service"
+                 << service << "key" << key << ":"
+                 << qPrintable(job.errorString());
     }
   }
 
@@ -54,8 +55,9 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
       settings.setValue(key, password);
       settings.endGroup();
     } else {
-      qWarning() << "SecureStorage: Failed to write password for service" << service
-                 << "key" << key << ":" << qPrintable(job.errorString());
+      qWarning() << "SecureStorage: Failed to write password for service"
+                 << service << "key" << key << ":"
+                 << qPrintable(job.errorString());
     }
   }
 }

@@ -1,4 +1,4 @@
-FROM archlinux:latest
+FROM docker.io/archlinux:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 

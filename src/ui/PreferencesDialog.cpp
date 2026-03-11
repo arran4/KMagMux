@@ -130,9 +130,10 @@ void PreferencesDialog::createGeneralPage() {
   autoMoveLayout->addStretch();
   layout->addLayout(autoMoveLayout);
 
-  m_allowPlaintextStorageCb = new QCheckBox(
-      tr("Allow plaintext password and API key storage (fallback if keychain fails)"),
-      page);
+  m_allowPlaintextStorageCb =
+      new QCheckBox(tr("Allow plaintext password and API key storage (fallback "
+                       "if keychain fails)"),
+                    page);
   m_allowPlaintextStorageCb->setChecked(
       settings.value("allowPlaintextStorage", false).toBool());
   layout->addWidget(m_allowPlaintextStorageCb);
