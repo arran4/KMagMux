@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(TestSegfault)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_executable(test_engine_free test_engine_free.cpp)
+target_link_libraries(test_engine_free KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)

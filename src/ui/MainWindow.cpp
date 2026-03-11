@@ -41,7 +41,7 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 
   applySettings();
 
-  m_engine = new Engine(m_storage, this);
+  m_engine = new Engine(m_storage, nullptr);
   m_engine->start();
 
   setupUi();
@@ -60,8 +60,15 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
+  if (m_trayIcon) {
+    m_trayIcon->hide();
+    delete m_trayIcon;
+    m_trayIcon = nullptr;
+  }
   if (m_engine) {
     m_engine->stop();
+    delete m_engine;
+    m_engine = nullptr;
   }
 }
 
@@ -369,7 +376,7 @@ void MainWindow::setupTabs() {
 
 void MainWindow::setupSystemTray() {
   // System Tray Setup
-  m_trayIcon = new QSystemTrayIcon(this);
+  m_trayIcon = new QSystemTrayIcon(nullptr);
   m_trayIcon->setIcon(QIcon(":/icons/kmagmux.svg"));
   if (m_trayIcon->icon().isNull()) {
     m_trayIcon->setIcon(QIcon::fromTheme("kmagmux"));
