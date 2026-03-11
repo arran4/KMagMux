@@ -5,6 +5,9 @@
 #include "../core/ItemModel.h"
 #include "../core/StorageManager.h"
 #include "ItemFilterProxyModel.h"
+#include <KActionCollection>
+#include <KStandardAction>
+#include <KXmlGuiWindow>
 #include <QAction>
 #include <QActionGroup>
 #include <QCloseEvent>
@@ -20,7 +23,7 @@
 #include <QTableView>
 #include <QToolBar>
 
-class MainWindow : public QMainWindow {
+class MainWindow : public KXmlGuiWindow {
   Q_OBJECT
 
 public:

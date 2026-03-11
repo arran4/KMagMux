@@ -383,7 +383,7 @@ void StorageManager::onDirectoryChanged(const QString &path) {
     newFiles.subtract(m_knownFiles);
 
     if (!newFiles.isEmpty()) {
-      (void)QtConcurrent::run(
+      QtConcurrent::run(
           [self = QPointer<StorageManager>(this), newFiles = newFiles]() {
             for (const QString &file : std::as_const(newFiles)) {
               if (self) {
