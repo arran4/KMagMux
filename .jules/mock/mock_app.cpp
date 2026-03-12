@@ -1,11 +1,10 @@
 #include <QApplication>
 #include <QTimer>
 #include <QDir>
-#include <QStandardPaths>
-#include <iostream>
 #include "core/StorageManager.h"
 #include "ui/MainWindow.h"
-#include "core/Item.h"
+#include <QStandardPaths>
+#include <iostream>
 
 void populateMockData(StorageManager& storage) {
     auto now = QDateTime::currentDateTime();
@@ -19,20 +18,12 @@ void populateMockData(StorageManager& storage) {
     item1.createdTime = now.addDays(-1);
     storage.saveItem(item1);
 
-    Item item1b;
-    item1b.id = "mock_unprocessed_2";
-    item1b.state = ItemState::Unprocessed;
-    item1b.sourcePath = "file:///home/user/Downloads/debian-12.torrent";
-    item1b.name = "debian-12.torrent";
-    item1b.createdTime = now.addSecs(-1000);
-    storage.saveItem(item1b);
-
     // Queued item
     Item item2;
     item2.id = "mock_queue_1";
     item2.state = ItemState::Queued;
-    item2.sourcePath = "file:///tmp/fedora-39.torrent";
-    item2.name = "fedora-39.torrent";
+    item2.sourcePath = "file:///tmp/debian-11.torrent";
+    item2.name = "debian-11.torrent";
     item2.connectorId = "qBittorrent";
     item2.createdTime = now.addSecs(-3600);
     storage.saveItem(item2);
@@ -70,8 +61,8 @@ void populateMockData(StorageManager& storage) {
     Item item5;
     item5.id = "mock_archive_1";
     item5.state = ItemState::Archived;
-    item5.sourcePath = "magnet:?xt=urn:btih:mock_mint_magnet&dn=linuxmint-21.2-cinnamon-64bit.iso";
-    item5.name = "linuxmint-21.2-cinnamon-64bit.iso";
+    item5.sourcePath = "magnet:?xt=urn:btih:mock_fedora_magnet&dn=Fedora-Workstation-Live-x86_64-39-1.5.iso";
+    item5.name = "Fedora-Workstation-Live-x86_64-39-1.5.iso";
     item5.createdTime = now.addDays(-30);
     storage.saveItem(item5);
 }
@@ -100,13 +91,13 @@ int main(int argc, char *argv[]) {
     MainWindow window(&storage);
 
     if (app.arguments().contains("--screenshot")) {
-        // Delay to allow UI to render completely, then write a signal to stdout
-        QTimer::singleShot(2000, [&]() {
+        // Here we could automate the screenshots
+        // For now just show and let python script handle or use QTimer to emit screenshot command
+        QTimer::singleShot(1000, [&]() {
             std::cout << "MOCK_READY" << std::endl;
         });
     }
 
-    window.resize(1024, 768);
     window.show();
 
     return app.exec();

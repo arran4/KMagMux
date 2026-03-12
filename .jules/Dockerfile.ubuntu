@@ -1,0 +1,28 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    qt6-base-dev \
+    qt6-tools-dev \
+    libqt6svg6-dev \
+    libqt6core5compat6-dev \
+    qtkeychain-qt6-dev \
+    libqt6keychain1 \
+    libkf6xmlgui-dev \
+    kf6-kxmlgui-dev \
+    xorg-server-xvfb \
+    imagemagick \
+    xdotool \
+    xvfb \
+    x11-utils
+
+WORKDIR /app
+COPY . /app
+
+RUN cmake -B build -S . && cmake --build build -j$(nproc)
+
+CMD ["/bin/bash"]

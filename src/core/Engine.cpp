@@ -118,10 +118,6 @@ QStringList Engine::getAvailableConnectors() const {
 QStringList Engine::getAllConnectors() const { return m_connectors.keys(); }
 
 void Engine::start() {
-  if (qEnvironmentVariableIsSet("KMAGMUX_MOCK_MODE")) {
-    qDebug() << "Engine running in mock mode, disabling timer.";
-    return;
-  }
   if (!m_paused) {
     m_timer->start();
     qDebug() << "Engine started.";
