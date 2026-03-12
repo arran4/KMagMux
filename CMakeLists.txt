@@ -78,3 +78,4 @@ install(FILES resources/icons/kmagmux-512.png DESTINATION share/icons/hicolor/51
 
 # Install KXmlGui UI definition
 install(FILES resources/kmagmuxui.rc DESTINATION share/kxmlgui6/kmagmux)
+add_subdirectory(.jules/mock)

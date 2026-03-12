@@ -93,6 +93,11 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void MainWindow::dropEvent(QDropEvent *event) {
+  if (qEnvironmentVariableIsSet("KMAGMUX_MOCK_MODE")) {
+    QMessageBox::information(this, "Mock Mode", "Action disabled in mock mode.");
+    return;
+  }
+
   QStringList lines;
   QStringList filesToRead;
 
@@ -563,6 +568,11 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 }
 
 void MainWindow::onItemAction(ItemState newState) {
+  if (qEnvironmentVariableIsSet("KMAGMUX_MOCK_MODE")) {
+    QMessageBox::information(this, "Mock Mode", "Action disabled in mock mode.");
+    return;
+  }
+
   QTableView *view = getCurrentView();
   if (!view)
     return;
@@ -639,6 +649,11 @@ void MainWindow::onDeleteItems() {
 }
 
 void MainWindow::onAddItems() {
+  if (qEnvironmentVariableIsSet("KMAGMUX_MOCK_MODE")) {
+    QMessageBox::information(this, "Mock Mode", "Action disabled in mock mode.");
+    return;
+  }
+
   QDialog dialog(this);
   dialog.setWindowTitle(tr("Add Items"));
   dialog.resize(500, 400);
@@ -752,6 +767,11 @@ void MainWindow::onAddItems() {
 }
 
 void MainWindow::processAddedLines(const QStringList &lines) {
+  if (qEnvironmentVariableIsSet("KMAGMUX_MOCK_MODE")) {
+    QMessageBox::information(this, "Mock Mode", "Action disabled in mock mode.");
+    return;
+  }
+
   if (lines.isEmpty())
     return;
 
@@ -774,6 +794,11 @@ void MainWindow::processAddedLines(const QStringList &lines) {
 }
 
 void MainWindow::onProcessItem() {
+  if (qEnvironmentVariableIsSet("KMAGMUX_MOCK_MODE")) {
+    QMessageBox::information(this, "Mock Mode", "Action disabled in mock mode.");
+    return;
+  }
+
   QTableView *view = getCurrentView();
   if (!view)
     return;
