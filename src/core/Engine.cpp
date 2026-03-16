@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QLibrary>
 #include <QPluginLoader>
+#include <QSet>
 
 Engine::Engine(StorageManager *storage, QObject *parent)
     : QObject(parent), m_storage(storage), m_paused(false) {
@@ -50,6 +51,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
                                  QStringLiteral(KMAGMUX_REL_PLUGIN_DIR));
 #endif
 
+  QSet<QString> loadedFiles;
   for (const QString &path : pluginPaths) {
     QDir pluginsDir(path);
     if (!pluginsDir.exists()) {
@@ -59,6 +61,11 @@ Engine::Engine(StorageManager *storage, QObject *parent)
     qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
 
     for (QString fileName : pluginsDir.entryList(QDir::Files)) {
+      if (loadedFiles.contains(fileName)) {
+        continue;
+      }
+      loadedFiles.insert(fileName);
+
       QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
 
       // Check metadata before instantiating to avoid loading non-plugin
