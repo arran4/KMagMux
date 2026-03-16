@@ -8,3 +8,7 @@ To build and run tests using Docker with Arch Linux and the latest Qt6/KF6 depen
 ```
 
 If you need to make changes to the `Dockerfile`, you can find it at `.jules/Dockerfile`.
+
+## Null Safety Policy
+- When a `deleteLater()` call is made on an object, wrap it with a null pointer check, then execute the deletion, then set the pointer to `nullptr`. (The "free then null" pattern).
+- Exception: If the pointer being deleted is captured by value in a lambda (e.g., `[this, watcher]`), it is read-only and assigning `nullptr` to it will cause a compilation error. In this specific case, only call `deleteLater()`. Do not set to `nullptr`.

@@ -140,7 +140,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
               m_tabWidget->setCurrentIndex(0);
               if (watcher) {
                 watcher->deleteLater();
-                watcher = nullptr;
+
               }
             });
 
@@ -777,7 +777,7 @@ void MainWindow::processAddedLines(const QStringList &lines) {
             }
             if (watcher) {
               watcher->deleteLater();
-              watcher = nullptr;
+
             }
           });
 
