@@ -77,7 +77,10 @@ MainWindow::~MainWindow() {
   }
   if (m_engine) {
     m_engine->stop();
-    m_engine->deleteLater();
+    if (m_engine) {
+      m_engine->deleteLater();
+      m_engine = nullptr;
+    }
   }
 }
 
@@ -150,7 +153,10 @@ void MainWindow::dropEvent(QDropEvent *event) {
               }
               // Switch to Inbox tab
               m_tabWidget->setCurrentIndex(0);
-              watcher->deleteLater();
+              if (watcher) {
+                watcher->deleteLater();
+
+              }
             });
 
     QFuture<std::vector<Item>> future =
@@ -784,7 +790,10 @@ void MainWindow::processAddedLines(const QStringList &lines) {
             if (!items.empty()) {
               openAddItemsDialog(items);
             }
-            watcher->deleteLater();
+            if (watcher) {
+              watcher->deleteLater();
+
+            }
           });
 
   QFuture<std::vector<Item>> future = QtConcurrent::run(

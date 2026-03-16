@@ -64,8 +64,10 @@ void LinkExtractorDialog::onCancelClicked() {
   m_cancelled = true;
   if (m_currentReply) {
     m_currentReply->abort();
-    m_currentReply->deleteLater();
-    m_currentReply = nullptr;
+    if (m_currentReply) {
+      m_currentReply->deleteLater();
+      m_currentReply = nullptr;
+    }
   }
   appendLog(tr("Cancelled."));
   reject();
@@ -172,7 +174,10 @@ void LinkExtractorDialog::onReplyFinished() {
                   .arg(url.toString(), reply->errorString()));
   }
 
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
   QMetaObject::invokeMethod(this, "processNext", Qt::QueuedConnection);
 }
 
