@@ -35,8 +35,19 @@
 #include <algorithm>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
-    : KXmlGuiWindow(parent), m_storage(storage), m_closeToTray(false),
-      m_minimizeToTray(false), m_autoStart(false) {
+    : KXmlGuiWindow(parent), m_storage(storage), m_engine(nullptr),
+      m_tabWidget(nullptr), m_unprocessedModel(nullptr), m_queueModel(nullptr),
+      m_doneModel(nullptr), m_archiveModel(nullptr), m_errorModel(nullptr),
+      m_unprocessedProxy(nullptr), m_queueProxy(nullptr), m_doneProxy(nullptr),
+      m_archiveProxy(nullptr), m_errorProxy(nullptr), m_unprocessedView(nullptr),
+      m_queueView(nullptr), m_doneView(nullptr), m_archiveView(nullptr),
+      m_errorView(nullptr), m_toggleProcessingAction(nullptr),
+      m_selectAllAction(nullptr), m_processAction(nullptr),
+      m_reprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
+      m_holdAction(nullptr), m_archiveAction(nullptr), m_deleteAction(nullptr),
+      m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
+      m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
+      m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
   qApp->setQuitOnLastWindowClosed(false);
 
   applySettings();
@@ -66,6 +77,7 @@ MainWindow::~MainWindow() {
   }
   if (m_engine) {
     m_engine->stop();
+    m_engine->deleteLater();
   }
 }
 
@@ -181,7 +193,7 @@ void MainWindow::setupUi() {
 void MainWindow::setupActionsAndMenus() {
   QAction *addItemsAction =
       new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
-  addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
+  actionCollection()->setDefaultShortcut(addItemsAction, QKeySequence("Ctrl+O"));
   connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
   actionCollection()->addAction("add_items", addItemsAction);
 
@@ -208,7 +220,7 @@ void MainWindow::setupActionsAndMenus() {
   KStandardAction::preferences(this, SLOT(onPreferences()), actionCollection());
 
   m_selectAllAction = new QAction(tr("Select &All"), this);
-  m_selectAllAction->setShortcut(QKeySequence::SelectAll);
+  actionCollection()->setDefaultShortcut(m_selectAllAction, QKeySequence::SelectAll);
   connect(m_selectAllAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
     if (view) {

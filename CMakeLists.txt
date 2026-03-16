@@ -12,6 +12,8 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
 find_package(Qt6Keychain REQUIRED)
 find_package(KF6XmlGui REQUIRED)
+find_package(KF6I18n REQUIRED)
+find_package(KF6CoreAddons REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -51,7 +53,7 @@ add_executable(KMagMux
     resources/resources.qrc
 )
 
-target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::XmlGui)
+target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::XmlGui KF6::I18n KF6::CoreAddons)
 
 add_subdirectory(src/plugins/qbittorrent)
 add_subdirectory(src/plugins/torbox)
