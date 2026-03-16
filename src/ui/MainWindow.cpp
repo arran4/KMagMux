@@ -464,7 +464,7 @@ void MainWindow::applySettings() {
     dir.mkpath(".");
   }
 
-  QString desktopFilePath = autostartPath + "/kmagmux.desktop";
+  QString desktopFilePath = autostartPath + "/org.kde.kmagmux.desktop";
   QFile file(desktopFilePath);
 
   if (m_autoStart) {
