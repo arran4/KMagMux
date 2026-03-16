@@ -36,7 +36,10 @@ ApiExplorerDialog::ApiExplorerDialog(Connector *connector, QWidget *parent)
 ApiExplorerDialog::~ApiExplorerDialog() {
   if (m_currentReply) {
     m_currentReply->abort();
-    m_currentReply->deleteLater();
+    if (m_currentReply) {
+      m_currentReply->deleteLater();
+      m_currentReply = nullptr;
+    }
   }
 }
 
@@ -294,8 +297,10 @@ void ApiExplorerDialog::onBrowseMultipartFile() {
 void ApiExplorerDialog::onSendRequest() {
   if (m_currentReply) {
     m_currentReply->abort();
-    m_currentReply->deleteLater();
-    m_currentReply = nullptr;
+    if (m_currentReply) {
+      m_currentReply->deleteLater();
+      m_currentReply = nullptr;
+    }
   }
 
   QString urlString = applySubstitutions(m_urlEdit->text());
@@ -364,8 +369,14 @@ void ApiExplorerDialog::onSendRequest() {
           } else {
             QMessageBox::warning(this, "File Error",
                                  "Failed to open file: " + filePath);
-            if (file) file->deleteLater();
-            if (multiPart) multiPart->deleteLater();
+            if (file) {
+              file->deleteLater();
+              file = nullptr;
+            }
+            if (multiPart) {
+              multiPart->deleteLater();
+              multiPart = nullptr;
+            }
             return;
           }
         } else {
@@ -442,7 +453,10 @@ void ApiExplorerDialog::onNetworkReplyFinished() {
 
   m_responseEdit->setPlainText(responseText);
 
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
 }
 
 void ApiExplorerDialog::onSslErrors(QNetworkReply *reply,

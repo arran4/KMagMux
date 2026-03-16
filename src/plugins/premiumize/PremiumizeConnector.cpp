@@ -71,8 +71,14 @@ void PremiumizeConnector::dispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      if (multiPart) multiPart->deleteLater();
-      if (file) file->deleteLater();
+      if (multiPart) {
+        multiPart->deleteLater();
+        multiPart = nullptr;
+      }
+      if (file) {
+        file->deleteLater();
+        file = nullptr;
+      }
       return;
     }
     QHttpPart filePart;
@@ -104,7 +110,10 @@ void PremiumizeConnector::onAddTorrentReply() {
     emit dispatchFinished(itemId, false,
                           "Network error: " + reply->errorString());
   }
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
 }
 
 bool PremiumizeConnector::hasSettings() const { return true; }
