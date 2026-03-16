@@ -86,9 +86,6 @@ Engine::Engine(StorageManager *storage, QObject *parent)
             // Connect to its signals via QObject cast
             connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
                     this, SLOT(onDispatchFinished(QString, bool, QString)));
-          } else {
-            // Already loaded this connector (e.g. from dev path instead of
-            // install path). Do not unload to avoid segfaults from deleted singletons.
           }
         } else {
           qWarning() << "Plugin" << fileName << "is not a Connector.";
