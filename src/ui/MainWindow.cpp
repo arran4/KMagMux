@@ -71,6 +71,10 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
+  if (m_trayIcon) {
+    m_trayIcon->hide();
+    m_trayIcon->setContextMenu(nullptr); // detach the menu before destruction
+  }
   if (m_engine) {
     m_engine->stop();
     m_engine->deleteLater();
