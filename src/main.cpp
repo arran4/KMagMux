@@ -1,5 +1,7 @@
 #include "core/StorageManager.h"
 #include "ui/MainWindow.h"
+#include <KAboutData>
+#include <KLocalizedString>
 #include <QApplication>
 #include <QDataStream>
 #include <QDebug>
@@ -152,6 +154,10 @@ static void processCliArgs(const QStringList &args, StorageManager &storage) {
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
+
+  KLocalizedString::setApplicationDomain("kmagmux");
+  KAboutData aboutData("kmagmux", i18n("KMagMux"), "0.1");
+  KAboutData::setApplicationData(aboutData);
 
   const QString serverName = setupApplication(app);
   QStringList args = app.arguments();
