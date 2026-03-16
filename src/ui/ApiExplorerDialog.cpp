@@ -364,8 +364,8 @@ void ApiExplorerDialog::onSendRequest() {
           } else {
             QMessageBox::warning(this, "File Error",
                                  "Failed to open file: " + filePath);
-            delete file;
-            delete multiPart;
+            if (file) file->deleteLater();
+            if (multiPart) multiPart->deleteLater();
             return;
           }
         } else {
