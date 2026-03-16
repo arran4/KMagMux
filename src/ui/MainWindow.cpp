@@ -178,7 +178,7 @@ void MainWindow::setupUi() {
 void MainWindow::setupActionsAndMenus() {
   QAction *addItemsAction =
       new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
-  addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
+  actionCollection()->setDefaultShortcut(addItemsAction, QKeySequence("Ctrl+O"));
   connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
   actionCollection()->addAction("add_items", addItemsAction);
 
@@ -205,7 +205,7 @@ void MainWindow::setupActionsAndMenus() {
   KStandardAction::preferences(this, SLOT(onPreferences()), actionCollection());
 
   m_selectAllAction = new QAction(tr("Select &All"), this);
-  m_selectAllAction->setShortcut(QKeySequence::SelectAll);
+  actionCollection()->setDefaultShortcut(m_selectAllAction, QKeySequence::SelectAll);
   connect(m_selectAllAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
     if (view) {
