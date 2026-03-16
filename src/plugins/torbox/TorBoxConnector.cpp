@@ -52,8 +52,8 @@ void TorBoxConnector::dispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      delete multiPart;
-      delete file;
+      if (multiPart) multiPart->deleteLater();
+      if (file) file->deleteLater();
       return;
     }
     QHttpPart filePart;
