@@ -50,6 +50,8 @@ Engine::Engine(StorageManager *storage, QObject *parent)
                                  QStringLiteral(KMAGMUX_REL_PLUGIN_DIR));
 #endif
 
+  QSet<QString> loadedFileNames;
+
   for (const QString &path : pluginPaths) {
     QDir pluginsDir(path);
     if (!pluginsDir.exists()) {
@@ -59,6 +61,10 @@ Engine::Engine(StorageManager *storage, QObject *parent)
     qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
 
     for (QString fileName : pluginsDir.entryList(QDir::Files)) {
+      if (loadedFileNames.contains(fileName)) {
+        continue;
+      }
+
       QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
 
       // Check metadata before instantiating to avoid loading non-plugin
@@ -76,17 +82,16 @@ Engine::Engine(StorageManager *storage, QObject *parent)
             qDebug() << "Loaded connector plugin:" << connector->getName()
                      << "from" << pluginsDir.absolutePath();
             m_connectors.insert(connector->getId(), connector);
+            loadedFileNames.insert(fileName);
             // Connect to its signals via QObject cast
             connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
                     this, SLOT(onDispatchFinished(QString, bool, QString)));
           } else {
             // Already loaded this connector (e.g. from dev path instead of
-            // install path)
-            pluginLoader.unload();
+            // install path). Do not unload to avoid segfaults from deleted singletons.
           }
         } else {
           qWarning() << "Plugin" << fileName << "is not a Connector.";
-          pluginLoader.unload();
         }
       } else {
         // Since we iterate through everything, it might fail to load non-plugin
