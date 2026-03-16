@@ -66,7 +66,7 @@ if(BUILD_TESTING)
 endif()
 
 install(TARGETS KMagMux KMagMuxCore DESTINATION bin)
-install(FILES KMagMux.desktop DESTINATION share/applications)
+install(FILES org.kde.kmagmux.desktop DESTINATION share/applications)
 
 # Install icons
 install(FILES resources/icons/kmagmux.svg DESTINATION share/icons/hicolor/scalable/apps)
