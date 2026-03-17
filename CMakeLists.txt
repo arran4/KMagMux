@@ -67,6 +67,7 @@ endif()
 
 install(TARGETS KMagMux KMagMuxCore DESTINATION bin)
 install(FILES org.kde.kmagmux.desktop DESTINATION share/applications)
+install(FILES org.kde.kmagmux.metainfo.xml DESTINATION share/metainfo)
 
 # Install icons
 install(FILES resources/icons/kmagmux.svg DESTINATION share/icons/hicolor/scalable/apps)
