@@ -5,6 +5,10 @@
 #include <QDir>
 #include <QLibrary>
 #include <QPluginLoader>
+#include <QSet>
+#include <QJsonObject>
+#include <QRegularExpression>
+#include <QVersionNumber>
 
 Engine::Engine(StorageManager *storage, QObject *parent)
     : QObject(parent), m_storage(storage), m_paused(false) {
@@ -50,6 +54,14 @@ Engine::Engine(StorageManager *storage, QObject *parent)
                                  QStringLiteral(KMAGMUX_REL_PLUGIN_DIR));
 #endif
 
+  struct PluginInfo {
+      QString filePath;
+      QVersionNumber version;
+      bool isDevelopment;
+  };
+
+  QMap<QString, PluginInfo> bestPlugins;
+
   for (const QString &path : pluginPaths) {
     QDir pluginsDir(path);
     if (!pluginsDir.exists()) {
@@ -59,7 +71,8 @@ Engine::Engine(StorageManager *storage, QObject *parent)
     qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
 
     for (QString fileName : pluginsDir.entryList(QDir::Files)) {
-      QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
+      QString filePath = pluginsDir.absoluteFilePath(fileName);
+      QPluginLoader pluginLoader(filePath);
 
       // Check metadata before instantiating to avoid loading non-plugin
       // libraries blockingly
@@ -68,39 +81,85 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         continue;
       }
 
-      QObject *plugin = pluginLoader.instance();
-      if (plugin) {
-        // Set parent to Engine to ensure it is deleted when Engine is deleted
-        plugin->setParent(this);
-        Connector *connector = qobject_cast<Connector *>(plugin);
-        if (connector) {
-          if (!m_connectors.contains(connector->getId())) {
-            qDebug() << "Loaded connector plugin:" << connector->getName()
-                     << "from" << pluginsDir.absolutePath();
-            m_connectors.insert(connector->getId(), connector);
-            // Connect to its signals via QObject cast
-            connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
-                    this, SLOT(onDispatchFinished(QString, bool, QString)));
-          } else {
-            // Already loaded this connector (e.g. from dev path instead of
-            // install path)
-            plugin->setParent(nullptr); // clear parent before unload/delete
-            pluginLoader.unload();
-            delete plugin;
+      QJsonObject metaDataObj = meta.value("MetaData").toObject();
+      QString versionStr = metaDataObj.value("version").toString();
+      if (versionStr.isEmpty()) {
+          versionStr = meta.value("version").toString();
+      }
+
+      QString name = metaDataObj.value("name").toString();
+      if (name.isEmpty()) {
+          name = fileName;
+      }
+
+      bool isDev = versionStr.contains("development", Qt::CaseInsensitive) ||
+                   versionStr.contains("dev", Qt::CaseInsensitive);
+
+      // Clean version string for QVersionNumber parsing
+      QString cleanVersionStr = versionStr;
+      cleanVersionStr.remove(QRegularExpression("[^0-9\\.]"));
+      QVersionNumber version = QVersionNumber::fromString(cleanVersionStr);
+
+      auto it = bestPlugins.find(name);
+      if (it == bestPlugins.end()) {
+          bestPlugins.insert(name, {filePath, version, isDev});
+      } else {
+          PluginInfo existing = it.value();
+          bool shouldReplace = false;
+
+          if (version > existing.version) {
+              shouldReplace = true;
+          } else if (version == existing.version) {
+              if (isDev && !existing.isDevelopment) {
+                  shouldReplace = true;
+              }
           }
+
+          if (shouldReplace) {
+              it.value() = {filePath, version, isDev};
+          }
+      }
+    }
+  }
+
+  QSet<QString> loadedFiles;
+
+  for (const auto &info : bestPlugins) {
+    if (loadedFiles.contains(info.filePath)) {
+        continue;
+    }
+    loadedFiles.insert(info.filePath);
+
+    QPluginLoader pluginLoader(info.filePath);
+    QObject *plugin = pluginLoader.instance();
+    if (plugin) {
+      // Set parent to Engine to ensure it is deleted when Engine is deleted
+      plugin->setParent(this);
+      Connector *connector = qobject_cast<Connector *>(plugin);
+      if (connector) {
+        if (!m_connectors.contains(connector->getId())) {
+          qDebug() << "Loaded connector plugin:" << connector->getName()
+                   << "from" << info.filePath;
+          m_connectors.insert(connector->getId(), connector);
+          // Connect to its signals via QObject cast
+          connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
+                  this, SLOT(onDispatchFinished(QString, bool, QString)));
         } else {
-          qWarning() << "Plugin" << fileName << "is not a Connector.";
-          plugin->setParent(nullptr);
+          // Already loaded this connector
+          plugin->setParent(nullptr); // clear parent before unload/delete
           pluginLoader.unload();
           delete plugin;
         }
       } else {
-        // Since we iterate through everything, it might fail to load non-plugin
-        // files but we only warn if it really is a library that failed.
-        if (QLibrary::isLibrary(fileName)) {
-          qWarning() << "Failed to load plugin" << fileName << ":"
-                     << pluginLoader.errorString();
-        }
+        qWarning() << "Plugin" << info.filePath << "is not a Connector.";
+        plugin->setParent(nullptr);
+        pluginLoader.unload();
+        delete plugin;
+      }
+    } else {
+      if (QLibrary::isLibrary(info.filePath)) {
+        qWarning() << "Failed to load plugin" << info.filePath << ":"
+                   << pluginLoader.errorString();
       }
     }
   }
