@@ -182,6 +182,7 @@ int main(int argc, char *argv[]) {
   setupLocalServer(server, serverName);
 
   MainWindow *window = new MainWindow(&storage);
+  window->setObjectName("KMagMuxMainWindow");
   setupIpcHandler(server, storage, window);
   processCliArgs(args, storage);
 
