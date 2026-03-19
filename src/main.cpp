@@ -78,13 +78,13 @@ static void setupLocalServer(QLocalServer &server, const QString &serverName) {
 }
 
 static void setupIpcHandler(QLocalServer &server, StorageManager &storage,
-                            MainWindow &window) {
+                            MainWindow *window) {
   // Handle incoming connections from new instances
   QObject::connect(
-      &server, &QLocalServer::newConnection, [&storage, &server, &window]() {
+      &server, &QLocalServer::newConnection, [&storage, &server, window]() {
         QLocalSocket *client = server.nextPendingConnection();
         QObject::connect(
-            client, &QLocalSocket::readyRead, [&storage, client, &window]() {
+            client, &QLocalSocket::readyRead, [&storage, client, window]() {
               QDataStream in(client);
               in.startTransaction();
               QStringList passedArgs;
@@ -118,9 +118,9 @@ static void setupIpcHandler(QLocalServer &server, StorageManager &storage,
               }
 
               // Bring window to front
-              window.show();
-              window.raise();
-              window.activateWindow();
+              window->show();
+              window->raise();
+              window->activateWindow();
             });
         QObject::connect(client, &QLocalSocket::disconnected, client,
                          &QLocalSocket::deleteLater);
@@ -177,11 +177,12 @@ int main(int argc, char *argv[]) {
   QLocalServer server;
   setupLocalServer(server, serverName);
 
-  MainWindow window(&storage);
+  MainWindow *window = new MainWindow(&storage);
+  window->setObjectName("KMagMuxMainWindow");
   setupIpcHandler(server, storage, window);
   processCliArgs(args, storage);
 
-  window.show();
+  window->show();
 
   return app.exec();
 }

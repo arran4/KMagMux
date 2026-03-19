@@ -48,6 +48,7 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
       m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
+  setAttribute(Qt::WA_DeleteOnClose);
   qApp->setQuitOnLastWindowClosed(false);
 
   applySettings();
@@ -188,8 +189,8 @@ void MainWindow::setupUi() {
   setWindowTitle("KMagMux");
   resize(1000, 600);
 
-  setupActionsAndMenus();
   setupTabs();
+  setupActionsAndMenus();
   setupSystemTray();
 
   // Setup Status Bar
