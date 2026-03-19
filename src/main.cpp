@@ -10,6 +10,7 @@
 #include <QLocalSocket>
 #include <QMessageBox>
 #include <QUrl>
+#include <QPointer>
 
 static bool isValidInput(const QString &arg) {
   if (arg.startsWith("magnet:?")) {
@@ -80,11 +81,12 @@ static void setupLocalServer(QLocalServer &server, const QString &serverName) {
 static void setupIpcHandler(QLocalServer &server, StorageManager &storage,
                             MainWindow *window) {
   // Handle incoming connections from new instances
+  QPointer<MainWindow> windowPtr(window);
   QObject::connect(
-      &server, &QLocalServer::newConnection, [&storage, &server, window]() {
+      &server, &QLocalServer::newConnection, [&storage, &server, windowPtr]() {
         QLocalSocket *client = server.nextPendingConnection();
         QObject::connect(
-            client, &QLocalSocket::readyRead, [&storage, client, window]() {
+            client, &QLocalSocket::readyRead, [&storage, client, windowPtr]() {
               QDataStream in(client);
               in.startTransaction();
               QStringList passedArgs;
@@ -118,9 +120,11 @@ static void setupIpcHandler(QLocalServer &server, StorageManager &storage,
               }
 
               // Bring window to front
-              window->show();
-              window->raise();
-              window->activateWindow();
+              if (windowPtr) {
+                windowPtr->show();
+                windowPtr->raise();
+                windowPtr->activateWindow();
+              }
             });
         QObject::connect(client, &QLocalSocket::disconnected, client,
                          &QLocalSocket::deleteLater);
