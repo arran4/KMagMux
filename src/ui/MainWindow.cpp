@@ -48,7 +48,6 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
       m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
-  setAttribute(Qt::WA_DeleteOnClose);
   qApp->setQuitOnLastWindowClosed(false);
 
   applySettings();
@@ -903,39 +902,53 @@ void MainWindow::onAbout() {
 void MainWindow::updateActionsState() {
   QTableView *view = getCurrentView();
   if (!view) {
-    m_selectAllAction->setEnabled(false);
-    m_processAction->setEnabled(false);
-    m_reprocessAction->setEnabled(false);
-    m_dismissAction->setEnabled(false);
-    m_queueAction->setEnabled(false);
-    m_holdAction->setEnabled(false);
-    m_archiveAction->setEnabled(false);
-    m_deleteAction->setEnabled(false);
+    if (m_selectAllAction) m_selectAllAction->setEnabled(false);
+    if (m_processAction) m_processAction->setEnabled(false);
+    if (m_reprocessAction) m_reprocessAction->setEnabled(false);
+    if (m_dismissAction) m_dismissAction->setEnabled(false);
+    if (m_queueAction) m_queueAction->setEnabled(false);
+    if (m_holdAction) m_holdAction->setEnabled(false);
+    if (m_archiveAction) m_archiveAction->setEnabled(false);
+    if (m_deleteAction) m_deleteAction->setEnabled(false);
     return;
   }
 
   bool hasSelection =
       view->selectionModel() && view->selectionModel()->hasSelection();
-  m_selectAllAction->setEnabled(true);
 
-  m_processAction->setVisible(view == m_unprocessedView);
-  m_processAction->setEnabled(hasSelection && view == m_unprocessedView);
+  if (m_selectAllAction)
+    m_selectAllAction->setEnabled(true);
 
-  m_reprocessAction->setVisible(view == m_errorView);
-  m_reprocessAction->setEnabled(hasSelection && view == m_errorView);
+  if (m_processAction) {
+    m_processAction->setVisible(view == m_unprocessedView);
+    m_processAction->setEnabled(hasSelection && view == m_unprocessedView);
+  }
 
-  m_dismissAction->setVisible(view == m_errorView);
-  m_dismissAction->setEnabled(hasSelection && view == m_errorView);
+  if (m_reprocessAction) {
+    m_reprocessAction->setVisible(view == m_errorView);
+    m_reprocessAction->setEnabled(hasSelection && view == m_errorView);
+  }
+
+  if (m_dismissAction) {
+    m_dismissAction->setVisible(view == m_errorView);
+    m_dismissAction->setEnabled(hasSelection && view == m_errorView);
+  }
 
   bool showQueueAndHold = (view != m_unprocessedView);
-  m_queueAction->setVisible(showQueueAndHold);
-  m_queueAction->setEnabled(hasSelection && showQueueAndHold);
+  if (m_queueAction) {
+    m_queueAction->setVisible(showQueueAndHold);
+    m_queueAction->setEnabled(hasSelection && showQueueAndHold);
+  }
 
-  m_holdAction->setVisible(showQueueAndHold);
-  m_holdAction->setEnabled(hasSelection && showQueueAndHold);
+  if (m_holdAction) {
+    m_holdAction->setVisible(showQueueAndHold);
+    m_holdAction->setEnabled(hasSelection && showQueueAndHold);
+  }
 
-  m_archiveAction->setEnabled(hasSelection);
-  m_deleteAction->setEnabled(hasSelection);
+  if (m_archiveAction)
+    m_archiveAction->setEnabled(hasSelection);
+  if (m_deleteAction)
+    m_deleteAction->setEnabled(hasSelection);
 }
 
 void MainWindow::onToggleProcessing(bool checked) {

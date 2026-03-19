@@ -1,0 +1,25 @@
+<<<<<<< SEARCH
+void MainWindow::setupUi() {
+  setWindowTitle("KMagMux");
+  resize(1000, 600);
+
+  setupActionsAndMenus();
+  setupTabs();
+  setupSystemTray();
+
+  // Setup Status Bar
+  statusBar()->showMessage(tr("Ready"));
+}
+=======
+void MainWindow::setupUi() {
+  setWindowTitle("KMagMux");
+  resize(1000, 600);
+
+  setupTabs();
+  setupActionsAndMenus();
+  setupSystemTray();
+
+  // Setup Status Bar
+  statusBar()->showMessage(tr("Ready"));
+}
+>>>>>>> REPLACE
