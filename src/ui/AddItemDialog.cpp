@@ -1,5 +1,6 @@
 #include "AddItemDialog.h"
 #include "../core/Constants.h"
+#include "MaxWidthDelegate.h"
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -12,6 +13,7 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
+#include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
@@ -64,7 +66,8 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     m_itemsTable->setCellWidget(i, 3, linkLabel);
 
     // Keep the actual data in the item for easy retrieval
-    QTableWidgetItem *linkItem = new QTableWidgetItem(m_items[i].sourcePath);
+    QTableWidgetItem *linkItem = new QTableWidgetItem();
+    linkItem->setData(Qt::UserRole, m_items[i].sourcePath);
     m_itemsTable->setItem(i, 3, linkItem);
   }
 
@@ -90,10 +93,12 @@ void AddItemDialog::setupUi() {
   m_itemsTable->setHorizontalHeaderLabels(
       {"Enable", "Delete file", "Name", "Link"});
   m_itemsTable->horizontalHeaderItem(1)->setToolTip("Delete file after import");
+  m_itemsTable->setItemDelegate(new MaxWidthDelegate(m_itemsTable));
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       QHeaderView::ResizeToContents);
   m_itemsTable->horizontalHeader()->setStretchLastSection(true);
-  m_itemsTable->setTextElideMode(Qt::ElideNone); // Do not truncate
+  m_itemsTable->setTextElideMode(Qt::ElideRight);
+  m_itemsTable->setWordWrap(false);
   m_itemsTable->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
   m_itemsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_itemsTable->setAlternatingRowColors(true);
@@ -185,7 +190,10 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   connect(copyAction, &QAction::triggered, this, [this, item, row, col]() {
     QString text;
     if (col == 3) {
-      text = m_items[row].sourcePath;
+      text = item->data(Qt::UserRole).toString();
+      if (text.isEmpty()) {
+        text = m_items[row].sourcePath;
+      }
     } else {
       text = item->text();
     }
@@ -194,9 +202,14 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
 
   QAction *infoAction = menu.addAction("Get Info");
   connect(infoAction, &QAction::triggered, this, [this, row]() {
-    QMessageBox::information(
-        this, "Item Information",
-        QString("Source Path:\n%1").arg(m_items[row].sourcePath));
+    QString sourcePath = m_items[row].sourcePath;
+    if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
+      TorrentInfoDialog dialog(sourcePath, this);
+      dialog.exec();
+    } else {
+      QMessageBox::information(this, "Item Information",
+                               QString("Source Path:\n%1").arg(sourcePath));
+    }
   });
 
   menu.exec(m_itemsTable->viewport()->mapToGlobal(pos));

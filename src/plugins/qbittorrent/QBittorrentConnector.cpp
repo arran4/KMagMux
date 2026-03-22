@@ -9,6 +9,7 @@
 #include <QHttpPart>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSettings>
 #include <QUrlQuery>
@@ -19,7 +20,9 @@ QBittorrentConnector::QBittorrentConnector() : QBittorrentConnector(nullptr) {}
 QBittorrentConnector::QBittorrentConnector(QObject *parent)
     : QObject(parent), m_networkManager(new QNetworkAccessManager(this)),
       m_baseUrl(""), m_username(""), m_password(""), m_enabled(false),
-      m_pendingItem(), m_isPending(false) {
+      m_isLoggingIn(false) {
+  m_networkManager->setCookieJar(new QNetworkCookieJar(this));
+
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
   m_baseUrl = settings.value("baseUrl", "http://localhost:8080").toString();
@@ -50,15 +53,11 @@ void QBittorrentConnector::setCredentials(const QString &username,
 }
 
 void QBittorrentConnector::dispatch(const Item &item) {
-  // For now, assume we need to login first or check session.
-  // A robust implementation would check if we have a valid cookie.
-  // We'll just try to login every time for this MVP step to ensure it works,
-  // or better, try to dispatch and if 403/401, login and retry.
-  // Simplest reliable path: Login first, then dispatch.
-
-  m_pendingItem = item;
-  m_isPending = true;
-  login();
+  if (m_isLoggingIn) {
+    m_pendingItems.append(item);
+  } else {
+    performDispatch(item);
+  }
 }
 
 void QBittorrentConnector::login() {
@@ -82,22 +81,43 @@ void QBittorrentConnector::onLoginReply() {
   if (!reply)
     return;
 
+  m_isLoggingIn = false;
+
   if (reply->error() == QNetworkReply::NoError) {
-    // Login successful. The cookie jar in QNetworkAccessManager should handle
-    // the session cookie automatically. Proceed to dispatch pending item.
-    if (m_isPending) {
-      performDispatch(m_pendingItem);
-      m_isPending = false;
+    QString response = reply->readAll();
+    if (response.trimmed() == "Fails.") {
+      qWarning() << "qBittorrent Login failed: Invalid username or password.";
+      QList<Item> itemsToFail = m_pendingItems;
+      m_pendingItems.clear();
+
+      for (const Item &item : itemsToFail) {
+        emit dispatchFinished(item.id, false,
+                              "Login failed: Invalid username or password.");
+      }
+    } else {
+      // Login successful. The cookie jar in QNetworkAccessManager handles
+      // the session cookie automatically. Proceed to dispatch pending items.
+      QList<Item> itemsToDispatch = m_pendingItems;
+      m_pendingItems.clear();
+
+      for (const Item &item : itemsToDispatch) {
+        performDispatch(item);
+      }
     }
   } else {
     qWarning() << "qBittorrent Login failed:" << reply->errorString();
-    if (m_isPending) {
-      emit dispatchFinished(m_pendingItem.id, false,
+    QList<Item> itemsToFail = m_pendingItems;
+    m_pendingItems.clear();
+
+    for (const Item &item : itemsToFail) {
+      emit dispatchFinished(item.id, false,
                             "Login failed: " + reply->errorString());
-      m_isPending = false;
     }
   }
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
 }
 
 void QBittorrentConnector::performDispatch(const Item &item) {
@@ -122,8 +142,14 @@ void QBittorrentConnector::performDispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      delete multiPart;
-      delete file;
+      if (multiPart) {
+        multiPart->deleteLater();
+        multiPart = nullptr;
+      }
+      if (file) {
+        file->deleteLater();
+        file = nullptr;
+      }
       return;
     }
 
@@ -172,10 +198,8 @@ void QBittorrentConnector::performDispatch(const Item &item) {
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply); // Delete multiPart with reply
 
-  // We need to pass the item ID to the reply handler, or store it in a map.
-  // Since we are processing one at a time via `m_pendingItem` (for now), we can
-  // use that, BUT since we might fire multiple requests if we improve the
-  // engine, let's attach the ID to the reply.
+  // Store the full item so we can re-dispatch if authentication fails
+  reply->setProperty("item", QVariant::fromValue(item));
   reply->setProperty("itemId", item.id);
 
   connect(reply, &QNetworkReply::finished, this,
@@ -187,9 +211,19 @@ void QBittorrentConnector::onAddTorrentReply() {
   if (!reply)
     return;
 
+  Item item = reply->property("item").value<Item>();
   QString itemId = reply->property("itemId").toString();
+  int statusCode =
+      reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
-  if (reply->error() == QNetworkReply::NoError) {
+  if (statusCode == 401 || statusCode == 403) {
+    // Authentication failed, queue the item and attempt to login
+    m_pendingItems.append(item);
+    if (!m_isLoggingIn) {
+      m_isLoggingIn = true;
+      login();
+    }
+  } else if (reply->error() == QNetworkReply::NoError) {
     QString response = reply->readAll();
     if (response.toLower().contains("fail")) {
       emit dispatchFinished(itemId, false,
@@ -201,7 +235,10 @@ void QBittorrentConnector::onAddTorrentReply() {
     emit dispatchFinished(itemId, false,
                           "Network error: " + reply->errorString());
   }
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
 }
 
 bool QBittorrentConnector::hasSettings() const { return true; }
@@ -238,6 +275,14 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   passEdit->setText(
       SecureStorage::readPassword("Plugins/qBittorrent", "password"));
   configLayout->addRow(tr("Password:"), passEdit);
+
+  QSettings mainSettings;
+  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+    QLabel *warningLabel = new QLabel(
+        tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
+    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
+    configLayout->addRow("", warningLabel);
+  }
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
@@ -279,4 +324,55 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   }
 
   settings.endGroup();
+}
+
+bool QBittorrentConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> QBittorrentConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint login;
+  login.name = "Login";
+  login.description = "Authenticate with qBittorrent";
+  login.method = "POST";
+  login.url = "${BASE_URL}/api/v2/auth/login";
+  login.headers.insert("Content-Type", "application/x-www-form-urlencoded");
+  login.body = "username=${USERNAME}&password=${PASSWORD}";
+  endpoints.append(login);
+
+  HttpApiEndpoint getTorrents;
+  getTorrents.name = "Get Torrents";
+  getTorrents.description = "List all torrents";
+  getTorrents.method = "GET";
+  getTorrents.url = "${BASE_URL}/api/v2/torrents/info";
+  endpoints.append(getTorrents);
+
+  HttpApiEndpoint addTorrentMagnet;
+  addTorrentMagnet.name = "Add Torrent (Magnet)";
+  addTorrentMagnet.description = "Add a new torrent from a magnet link";
+  addTorrentMagnet.method = "POST";
+  addTorrentMagnet.url = "${BASE_URL}/api/v2/torrents/add";
+  addTorrentMagnet.isMultipart = true;
+  addTorrentMagnet.multipartParts.insert("urls", "${MAGNET_LINK}");
+  endpoints.append(addTorrentMagnet);
+
+  HttpApiEndpoint addTorrentFile;
+  addTorrentFile.name = "Add Torrent (File)";
+  addTorrentFile.description = "Add a new torrent from a .torrent file";
+  addTorrentFile.method = "POST";
+  addTorrentFile.url = "${BASE_URL}/api/v2/torrents/add";
+  addTorrentFile.isMultipart = true;
+  addTorrentFile.multipartParts.insert("torrents",
+                                       "file:///path/to/test.torrent");
+  endpoints.append(addTorrentFile);
+
+  return endpoints;
+}
+
+QMap<QString, QString> QBittorrentConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("BASE_URL", m_baseUrl);
+  subs.insert("USERNAME", m_username);
+  subs.insert("PASSWORD", m_password);
+  return subs;
 }

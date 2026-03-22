@@ -7,6 +7,7 @@
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSettings>
 #include <QUrl>
@@ -70,8 +71,14 @@ void PremiumizeConnector::dispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      delete multiPart;
-      delete file;
+      if (multiPart) {
+        multiPart->deleteLater();
+        multiPart = nullptr;
+      }
+      if (file) {
+        file->deleteLater();
+        file = nullptr;
+      }
       return;
     }
     QHttpPart filePart;
@@ -103,7 +110,10 @@ void PremiumizeConnector::onAddTorrentReply() {
     emit dispatchFinished(itemId, false,
                           "Network error: " + reply->errorString());
   }
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
 }
 
 bool PremiumizeConnector::hasSettings() const { return true; }
@@ -129,6 +139,14 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   tokenEdit->setText(
       SecureStorage::readPassword("Plugins/Premiumize", "apiKey"));
   configLayout->addRow(tr("API Key:"), tokenEdit);
+
+  QSettings mainSettings;
+  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+    QLabel *warningLabel = new QLabel(
+        tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
+    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
+    configLayout->addRow("", warningLabel);
+  }
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
@@ -163,4 +181,57 @@ void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
   }
 
   settings.endGroup();
+}
+
+bool PremiumizeConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> PremiumizeConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint accountInfo;
+  accountInfo.name = "Account Info";
+  accountInfo.description = "Retrieves account information";
+  accountInfo.method = "GET";
+  accountInfo.url =
+      "https://www.premiumize.me/api/account/info?apikey=${API_KEY}";
+  endpoints.append(accountInfo);
+
+  HttpApiEndpoint transferList;
+  transferList.name = "Transfer List";
+  transferList.description = "Lists all active transfers";
+  transferList.method = "GET";
+  transferList.url =
+      "https://www.premiumize.me/api/transfer/list?apikey=${API_KEY}";
+  endpoints.append(transferList);
+
+  HttpApiEndpoint transferCreateMagnet;
+  transferCreateMagnet.name = "Transfer Create (Magnet)";
+  transferCreateMagnet.description =
+      "Creates a new transfer from a magnet link";
+  transferCreateMagnet.method = "POST";
+  transferCreateMagnet.url = "https://www.premiumize.me/api/transfer/create";
+  transferCreateMagnet.headers.insert("Content-Type",
+                                      "application/x-www-form-urlencoded");
+  transferCreateMagnet.body = "apikey=${API_KEY}&src=${MAGNET_LINK}";
+  endpoints.append(transferCreateMagnet);
+
+  HttpApiEndpoint transferCreateTorrent;
+  transferCreateTorrent.name = "Transfer Create (Torrent File)";
+  transferCreateTorrent.description =
+      "Creates a new transfer from a .torrent file";
+  transferCreateTorrent.method = "POST";
+  transferCreateTorrent.url = "https://www.premiumize.me/api/transfer/create";
+  transferCreateTorrent.isMultipart = true;
+  transferCreateTorrent.multipartParts.insert("apikey", "${API_KEY}");
+  transferCreateTorrent.multipartParts.insert("src",
+                                              "file:///path/to/test.torrent");
+  endpoints.append(transferCreateTorrent);
+
+  return endpoints;
+}
+
+QMap<QString, QString> PremiumizeConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("API_KEY", m_apiKey);
+  return subs;
 }

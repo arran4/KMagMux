@@ -1,4 +1,5 @@
 #include "SecureStorage.h"
+#include <QDebug>
 #include <QEventLoop>
 #include <QSettings>
 #include <qt6keychain/keychain.h>
@@ -18,11 +19,17 @@ QString SecureStorage::readPassword(const QString &service,
   if (job.error() == QKeychain::NoError) {
     result = job.textData();
   } else {
-    // Fallback to QSettings if not available (e.g. testing or unsupported)
-    QSettings settings;
-    settings.beginGroup(service);
-    result = settings.value(key, "").toString();
-    settings.endGroup();
+    QSettings mainSettings;
+    if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+      QSettings settings;
+      settings.beginGroup(service);
+      result = settings.value(key, "").toString();
+      settings.endGroup();
+    } else {
+      qWarning() << "SecureStorage: Failed to read password for service"
+                 << service << "key" << key << ":"
+                 << qPrintable(job.errorString());
+    }
   }
 
   return result;
@@ -41,10 +48,16 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
   loop.exec();
 
   if (job.error() != QKeychain::NoError) {
-    // Fallback to QSettings if writing failed
-    QSettings settings;
-    settings.beginGroup(service);
-    settings.setValue(key, password);
-    settings.endGroup();
+    QSettings mainSettings;
+    if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+      QSettings settings;
+      settings.beginGroup(service);
+      settings.setValue(key, password);
+      settings.endGroup();
+    } else {
+      qWarning() << "SecureStorage: Failed to write password for service"
+                 << service << "key" << key << ":"
+                 << qPrintable(job.errorString());
+    }
   }
 }

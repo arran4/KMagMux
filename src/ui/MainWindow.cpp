@@ -1,7 +1,9 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
 #include "AddItemDialog.h"
+#include "ApiExplorerDialog.h"
 #include "LinkExtractorDialog.h"
+#include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
 #include "ProcessItemDialog.h"
 #include <QApplication>
@@ -11,6 +13,8 @@
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -19,6 +23,7 @@
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSettings>
@@ -30,34 +35,61 @@
 #include <algorithm>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
-    : QMainWindow(parent), m_storage(storage), m_closeToTray(false),
-      m_minimizeToTray(false), m_autoStart(false) {
+    : KXmlGuiWindow(parent), m_storage(storage), m_engine(nullptr),
+      m_tabWidget(nullptr), m_unprocessedModel(nullptr), m_queueModel(nullptr),
+      m_doneModel(nullptr), m_archiveModel(nullptr), m_errorModel(nullptr),
+      m_unprocessedProxy(nullptr), m_queueProxy(nullptr), m_doneProxy(nullptr),
+      m_archiveProxy(nullptr), m_errorProxy(nullptr), m_unprocessedView(nullptr),
+      m_queueView(nullptr), m_doneView(nullptr), m_archiveView(nullptr),
+      m_errorView(nullptr), m_toggleProcessingAction(nullptr),
+      m_selectAllAction(nullptr), m_processAction(nullptr),
+      m_reprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
+      m_holdAction(nullptr), m_archiveAction(nullptr), m_deleteAction(nullptr),
+      m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
+      m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
+      m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
   qApp->setQuitOnLastWindowClosed(false);
 
   applySettings();
 
-  setupUi();
-  loadData();
-
   m_engine = new Engine(m_storage, this);
   m_engine->start();
+
+  setupUi();
+  loadData();
 
   connect(m_storage, &StorageManager::itemAdded, this,
           &MainWindow::onItemAdded);
   connect(m_storage, &StorageManager::itemUpdated, this,
           &MainWindow::onItemUpdated);
+  connect(m_storage, &StorageManager::itemsUpdated, this,
+          &MainWindow::onItemsUpdated);
   connect(m_storage, &StorageManager::itemDeleted, this,
           &MainWindow::onItemDeleted);
+  connect(m_storage, &StorageManager::itemsDeleted, this,
+          &MainWindow::onItemsDeleted);
 }
 
-MainWindow::~MainWindow() {}
+MainWindow::~MainWindow() {
+  if (m_trayIcon) {
+    m_trayIcon->hide();
+    m_trayIcon->setContextMenu(nullptr); // detach the menu before destruction
+  }
+  if (m_engine) {
+    m_engine->stop();
+    if (m_engine) {
+      m_engine->deleteLater();
+      m_engine = nullptr;
+    }
+  }
+}
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-  if (m_closeToTray && m_trayIcon->isVisible()) {
+  if (m_closeToTray && m_trayIcon->isVisible() && !m_forceQuit) {
     hide();
     event->ignore();
   } else {
-    event->accept();
+    KXmlGuiWindow::closeEvent(event);
     qApp->quit();
   }
 }
@@ -69,7 +101,7 @@ void MainWindow::quitApplication() {
 }
 
 void MainWindow::changeEvent(QEvent *event) {
-  QMainWindow::changeEvent(event);
+  KXmlGuiWindow::changeEvent(event);
   if (event->type() == QEvent::WindowStateChange) {
     if (isMinimized() && m_minimizeToTray && m_trayIcon->isVisible()) {
       hide();
@@ -77,33 +109,108 @@ void MainWindow::changeEvent(QEvent *event) {
   }
 }
 
+void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
+  if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
+    event->acceptProposedAction();
+  }
+}
+
+void MainWindow::dropEvent(QDropEvent *event) {
+  QStringList lines;
+  QStringList filesToRead;
+
+  if (event->mimeData()->hasUrls()) {
+    QList<QUrl> urls = event->mimeData()->urls();
+    for (const QUrl &url : urls) {
+      if (url.isLocalFile()) {
+        QString localPath = url.toLocalFile();
+        QFileInfo fileInfo(localPath);
+        if (fileInfo.suffix().toLower() == "torrent") {
+          lines.append("file://" + localPath);
+        } else if (fileInfo.suffix().toLower() == "txt" ||
+                   fileInfo.suffix().isEmpty()) {
+          filesToRead.append(localPath);
+        } else {
+          lines.append("file://" + localPath);
+        }
+      } else {
+        lines.append(url.toString());
+      }
+    }
+  } else if (event->mimeData()->hasText()) {
+    QString text = event->mimeData()->text();
+    lines = text.split('\n', Qt::SkipEmptyParts);
+  }
+
+  if (!lines.isEmpty() || !filesToRead.isEmpty()) {
+    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
+
+    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+            [this, watcher]() {
+              std::vector<Item> parsedItems = watcher->result();
+              if (!parsedItems.empty()) {
+                m_storage->saveItems(parsedItems);
+              }
+              // Switch to Inbox tab
+              m_tabWidget->setCurrentIndex(0);
+              if (watcher) {
+                watcher->deleteLater();
+
+              }
+            });
+
+    QFuture<std::vector<Item>> future =
+        QtConcurrent::run([lines, filesToRead]() -> std::vector<Item> {
+          QStringList finalLines = lines;
+          for (const QString &localPath : filesToRead) {
+            QFile file(localPath);
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+              QTextStream in(&file);
+              while (!in.atEnd()) {
+                QString line = in.readLine().trimmed();
+                if (!line.isEmpty()) {
+                  finalLines.append(line);
+                }
+              }
+            } else {
+              finalLines.append("file://" + localPath); // Fallback
+            }
+          }
+          return ItemParser::parseLines(finalLines);
+        });
+
+    watcher->setFuture(future);
+  }
+  event->acceptProposedAction();
+}
+
 void MainWindow::setupUi() {
   setWindowTitle("KMagMux");
   resize(1000, 600);
 
-  // Setup Menu Bar
-  QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-  QAction *addItemsAction = fileMenu->addAction(
-      QIcon::fromTheme("document-open"), tr("&Find Item(s)..."), this,
-      &MainWindow::onAddItems);
-  addItemsAction->setShortcut(QKeySequence("Ctrl+O"));
+  setupTabs();
+  setupActionsAndMenus();
+  setupSystemTray();
 
-  fileMenu->addSeparator();
+  // Setup Status Bar
+  statusBar()->showMessage(tr("Ready"));
+}
+
+void MainWindow::setupActionsAndMenus() {
+  QAction *addItemsAction =
+      new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
+  actionCollection()->setDefaultShortcut(addItemsAction, QKeySequence("Ctrl+O"));
+  connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
+  actionCollection()->addAction("add_items", addItemsAction);
+
   m_minimizeAction =
-      fileMenu->addAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"),
-                          this, &MainWindow::minimizeToTray);
+      new QAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"), this);
+  connect(m_minimizeAction, &QAction::triggered, this,
+          &MainWindow::minimizeToTray);
+  actionCollection()->addAction("minimize_to_tray", m_minimizeAction);
 
-  QAction *quitAction =
-      fileMenu->addAction(QIcon::fromTheme("application-exit"), tr("&Quit"),
-                          this, &MainWindow::quitApplication);
-  quitAction->setShortcut(QKeySequence("Ctrl+Q"));
+  KStandardAction::quit(this, SLOT(quitApplication()), actionCollection());
 
-  QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
-
-  // Since processing is ON by default (checked=true), the action should display
-  // the Pause icon to indicate what happens when you click it, or you can just
-  // use Pause to represent "Stop processing". Let's initialize it with Pause
-  // since the default state is "Playing".
   m_toggleProcessingAction = new QAction(
       QIcon::fromTheme("media-playback-pause"), tr("&Play / Pause"), this);
   m_toggleProcessingAction->setCheckable(true);
@@ -114,35 +221,83 @@ void MainWindow::setupUi() {
       tr("Play / Pause processing items in the list"));
   connect(m_toggleProcessingAction, &QAction::toggled, this,
           &MainWindow::onToggleProcessing);
-  editMenu->addAction(m_toggleProcessingAction);
-  editMenu->addSeparator();
+  actionCollection()->addAction("toggle_processing", m_toggleProcessingAction);
 
-  QAction *prefAction =
-      editMenu->addAction(QIcon::fromTheme("preferences-system"),
-                          tr("&Preferences"), this, &MainWindow::onPreferences);
-  prefAction->setShortcut(QKeySequence("Ctrl+,"));
+  KStandardAction::preferences(this, SLOT(onPreferences()), actionCollection());
 
-  QMenu *actionsMenu = menuBar()->addMenu(tr("A&ctions"));
-  QMenu *debugMenu = actionsMenu->addMenu(tr("&Debug"));
-  debugMenu->addAction(tr("Open &Cache directory"), this,
-                       &MainWindow::onOpenCacheDirectory);
+  m_selectAllAction = new QAction(tr("Select &All"), this);
+  actionCollection()->setDefaultShortcut(m_selectAllAction, QKeySequence::SelectAll);
+  connect(m_selectAllAction, &QAction::triggered, this, [this]() {
+    QTableView *view = getCurrentView();
+    if (view) {
+      view->selectAll();
+    }
+  });
+  actionCollection()->addAction("select_all", m_selectAllAction);
 
-  QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
-  helpMenu->addAction(QIcon::fromTheme("help-about"), tr("&About KMagMux"),
-                      this, &MainWindow::onAbout);
+  m_processAction = new QAction(tr("&Process..."), this);
+  connect(m_processAction, &QAction::triggered, this,
+          &MainWindow::onProcessItem);
+  actionCollection()->addAction("process_item", m_processAction);
 
-  // Setup Tool Bar
-  QToolBar *mainToolBar = addToolBar(tr("Main Toolbar"));
-  mainToolBar->addAction(m_toggleProcessingAction);
-  mainToolBar->addSeparator();
-  mainToolBar->addAction(addItemsAction);
-  mainToolBar->addSeparator();
-  mainToolBar->addAction(m_minimizeAction);
-  mainToolBar->addAction(quitAction);
+  m_reprocessAction = new QAction(tr("&Reprocess"), this);
+  connect(m_reprocessAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Queued); });
+  actionCollection()->addAction("reprocess_item", m_reprocessAction);
 
-  // Setup Status Bar
-  statusBar()->showMessage(tr("Ready"));
+  m_dismissAction = new QAction(tr("&Dismiss"), this);
+  connect(m_dismissAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Archived); });
+  actionCollection()->addAction("dismiss_item", m_dismissAction);
 
+  m_queueAction = new QAction(tr("&Queue"), this);
+  connect(m_queueAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Queued); });
+  actionCollection()->addAction("queue_item", m_queueAction);
+
+  m_holdAction = new QAction(tr("&Hold"), this);
+  connect(m_holdAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Held); });
+  actionCollection()->addAction("hold_item", m_holdAction);
+
+  m_archiveAction = new QAction(tr("&Archive"), this);
+  connect(m_archiveAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Archived); });
+  actionCollection()->addAction("archive_item", m_archiveAction);
+
+  m_deleteAction =
+      new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
+  connect(m_deleteAction, &QAction::triggered, this,
+          &MainWindow::onDeleteItems);
+  actionCollection()->addAction("delete_items", m_deleteAction);
+
+  QAction *openCacheAction = new QAction(QIcon::fromTheme("folder-open"),
+                                         tr("Open &Cache directory"), this);
+  connect(openCacheAction, &QAction::triggered, this,
+          &MainWindow::onOpenCacheDirectory);
+  actionCollection()->addAction("open_cache", openCacheAction);
+
+  KStandardAction::aboutApp(this, SLOT(onAbout()), actionCollection());
+
+  setupGUI(Default, ":/kmagmuxui.rc");
+
+  // We need to fetch the debug menu after setupGUI since it's defined in the
+  // .rc file
+  QMenu *debugMenu = nullptr;
+  QList<QMenu *> menus = menuBar()->findChildren<QMenu *>();
+  for (QMenu *menu : std::as_const(menus)) {
+    if (menu->objectName() == "debug_menu") {
+      debugMenu = menu;
+      break;
+    }
+  }
+
+  if (debugMenu) {
+    setupPluginMenus(debugMenu);
+  }
+}
+
+void MainWindow::setupTabs() {
   QWidget *centralWidget = new QWidget(this);
   setCentralWidget(centralWidget);
 
@@ -170,15 +325,20 @@ void MainWindow::setupUi() {
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
     view->setModel(model);
+    view->setItemDelegate(new MaxWidthDelegate(view));
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
     view->horizontalHeader()->setStretchLastSection(true);
-    view->setTextElideMode(Qt::ElideNone);
+    view->setTextElideMode(Qt::ElideRight);
+    view->setWordWrap(false);
     view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(view, &QTableView::customContextMenuRequested, this,
             &MainWindow::onCustomContextMenuRequested);
+
+    connect(view->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MainWindow::updateActionsState);
 
     tabLayout->addWidget(view);
     m_tabWidget->addTab(tab, title);
@@ -194,6 +354,7 @@ void MainWindow::setupUi() {
   m_unprocessedView->hideColumn(ItemModel::ColError);
   connect(m_unprocessedView, &QTableView::doubleClicked, this,
           &MainWindow::onProcessItem);
+  setAcceptDrops(true); // Allow drops on the main window
 
   // Queue Tab
   m_queueView = new QTableView(this);
@@ -223,6 +384,12 @@ void MainWindow::setupUi() {
   m_errorProxy = new ItemFilterProxyModel(this);
   setupView(m_errorView, m_errorModel, m_errorProxy, "Errors");
 
+  connect(m_tabWidget, &QTabWidget::currentChanged, this,
+          &MainWindow::updateActionsState);
+  updateActionsState();
+}
+
+void MainWindow::setupSystemTray() {
   // System Tray Setup
   m_trayIcon = new QSystemTrayIcon(this);
   m_trayIcon->setIcon(QIcon(":/icons/kmagmux.svg"));
@@ -231,6 +398,12 @@ void MainWindow::setupUi() {
   }
 
   m_trayIconMenu = new QMenu(this);
+
+  QAction *trayAddAction = new QAction(tr("&Add..."), this);
+  connect(trayAddAction, &QAction::triggered, this, &MainWindow::onAddItems);
+  m_trayIconMenu->addAction(trayAddAction);
+
+  m_trayIconMenu->addSeparator();
 
   m_showHideAction = new QAction(tr("Show/Hide"), this);
   connect(m_showHideAction, &QAction::triggered, this,
@@ -249,7 +422,6 @@ void MainWindow::setupUi() {
   connect(m_trayIcon, &QSystemTrayIcon::activated, this,
           &MainWindow::onTrayIconActivated);
 }
-
 void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
   if (reason == QSystemTrayIcon::DoubleClick ||
       reason == QSystemTrayIcon::Trigger) {
@@ -292,7 +464,7 @@ void MainWindow::applySettings() {
     dir.mkpath(".");
   }
 
-  QString desktopFilePath = autostartPath + "/kmagmux.desktop";
+  QString desktopFilePath = autostartPath + "/org.kde.kmagmux.desktop";
   QFile file(desktopFilePath);
 
   if (m_autoStart) {
@@ -382,50 +554,36 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     return;
 
   QModelIndex index = view->indexAt(pos);
-  if (!index.isValid())
-    return;
-
   QMenu menu(this);
+
+  // If we clicked on an empty space in the Inbox view, offer an "Add..." action
+  if (!index.isValid()) {
+    if (view == m_unprocessedView) {
+      QAction *addAction = menu.addAction("Add...");
+      connect(addAction, &QAction::triggered, this, &MainWindow::onAddItems);
+      menu.exec(view->viewport()->mapToGlobal(pos));
+    }
+    return;
+  }
 
   // If we are in the Inbox view, offer a "Process..." action
   if (view == m_unprocessedView) {
-    QAction *processAction = menu.addAction("Process...");
-    connect(processAction, &QAction::triggered, this,
-            &MainWindow::onProcessItem);
+    menu.addAction(m_processAction);
     menu.addSeparator();
-  }
-
-  if (view == m_errorView) {
-    QAction *reprocessAction = menu.addAction("Reprocess");
-    connect(reprocessAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Queued); });
-
-    QAction *dismissAction = menu.addAction("Dismiss");
-    connect(dismissAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Archived); });
-
+  } else if (view == m_errorView) {
+    menu.addAction(m_reprocessAction);
+    menu.addAction(m_dismissAction);
     menu.addSeparator();
+    menu.addAction(m_queueAction);
+    menu.addAction(m_holdAction);
+  } else {
+    menu.addAction(m_queueAction);
+    menu.addAction(m_holdAction);
   }
 
-  if (view != m_unprocessedView) {
-    QAction *queueAction = menu.addAction("Queue");
-    QAction *holdAction = menu.addAction("Hold");
-
-    connect(queueAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Queued); });
-    connect(holdAction, &QAction::triggered, this,
-            [this]() { onItemAction(ItemState::Held); });
-  }
-
-  QAction *archiveAction = menu.addAction("Archive");
-  connect(archiveAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Archived); });
-
+  menu.addAction(m_archiveAction);
   menu.addSeparator();
-
-  QAction *deleteAction =
-      menu.addAction(QIcon::fromTheme("edit-delete"), "Delete");
-  connect(deleteAction, &QAction::triggered, this, &MainWindow::onDeleteItems);
+  menu.addAction(m_deleteAction);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
 }
@@ -466,7 +624,11 @@ void MainWindow::onItemAdded(const Item &item) { loadData(); }
 
 void MainWindow::onItemUpdated(const Item &item) { loadData(); }
 
+void MainWindow::onItemsUpdated() { loadData(); }
+
 void MainWindow::onItemDeleted(const QString &id) { loadData(); }
+
+void MainWindow::onItemsDeleted(const std::vector<QString> &ids) { loadData(); }
 
 void MainWindow::onDeleteItems() {
   QTableView *view = getCurrentView();
@@ -497,18 +659,14 @@ void MainWindow::onDeleteItems() {
       idsToDelete.push_back(model->getItem(index.row()).id);
     }
 
-    for (const QString &id : idsToDelete) {
-      qDebug() << "Deleting item:" << id;
-      if (!m_storage->deleteItem(id)) {
-        qWarning() << "Failed to delete item:" << id;
-      }
-    }
+    qDebug() << "Deleting" << idsToDelete.size() << "items";
+    m_storage->deleteItems(idsToDelete);
   }
 }
 
 void MainWindow::onAddItems() {
   QDialog dialog(this);
-  dialog.setWindowTitle(tr("Find Items"));
+  dialog.setWindowTitle(tr("Add Items"));
   dialog.resize(500, 400);
 
   QVBoxLayout *layout = new QVBoxLayout(&dialog);
@@ -615,26 +773,33 @@ void MainWindow::onAddItems() {
 
   if (dialog.exec() == QDialog::Accepted) {
     QStringList lines = textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
-
-    // Offload parsing to a background thread
-    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
-
-    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
-            [this, watcher]() {
-              std::vector<Item> items = watcher->result();
-              if (!items.empty()) {
-                openAddItemsDialog(items);
-              }
-              watcher->deleteLater();
-            });
-
-    QFuture<std::vector<Item>> future =
-        QtConcurrent::run([lines]() -> std::vector<Item> {
-          return ItemParser::parseLines(lines);
-        });
-
-    watcher->setFuture(future);
+    processAddedLines(lines);
   }
+}
+
+void MainWindow::processAddedLines(const QStringList &lines) {
+  if (lines.isEmpty())
+    return;
+
+  // Offload parsing to a background thread
+  auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
+
+  connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+          [this, watcher]() {
+            std::vector<Item> items = watcher->result();
+            if (!items.empty()) {
+              openAddItemsDialog(items);
+            }
+            if (watcher) {
+              watcher->deleteLater();
+
+            }
+          });
+
+  QFuture<std::vector<Item>> future = QtConcurrent::run(
+      [lines]() -> std::vector<Item> { return ItemParser::parseLines(lines); });
+
+  watcher->setFuture(future);
 }
 
 void MainWindow::onProcessItem() {
@@ -734,6 +899,58 @@ void MainWindow::onAbout() {
       tr("KMagMux\nTorrent and Magnet file handler and router."));
 }
 
+void MainWindow::updateActionsState() {
+  QTableView *view = getCurrentView();
+  if (!view) {
+    if (m_selectAllAction) m_selectAllAction->setEnabled(false);
+    if (m_processAction) m_processAction->setEnabled(false);
+    if (m_reprocessAction) m_reprocessAction->setEnabled(false);
+    if (m_dismissAction) m_dismissAction->setEnabled(false);
+    if (m_queueAction) m_queueAction->setEnabled(false);
+    if (m_holdAction) m_holdAction->setEnabled(false);
+    if (m_archiveAction) m_archiveAction->setEnabled(false);
+    if (m_deleteAction) m_deleteAction->setEnabled(false);
+    return;
+  }
+
+  bool hasSelection =
+      view->selectionModel() && view->selectionModel()->hasSelection();
+
+  if (m_selectAllAction)
+    m_selectAllAction->setEnabled(true);
+
+  if (m_processAction) {
+    m_processAction->setVisible(view == m_unprocessedView);
+    m_processAction->setEnabled(hasSelection && view == m_unprocessedView);
+  }
+
+  if (m_reprocessAction) {
+    m_reprocessAction->setVisible(view == m_errorView);
+    m_reprocessAction->setEnabled(hasSelection && view == m_errorView);
+  }
+
+  if (m_dismissAction) {
+    m_dismissAction->setVisible(view == m_errorView);
+    m_dismissAction->setEnabled(hasSelection && view == m_errorView);
+  }
+
+  bool showQueueAndHold = (view != m_unprocessedView);
+  if (m_queueAction) {
+    m_queueAction->setVisible(showQueueAndHold);
+    m_queueAction->setEnabled(hasSelection && showQueueAndHold);
+  }
+
+  if (m_holdAction) {
+    m_holdAction->setVisible(showQueueAndHold);
+    m_holdAction->setEnabled(hasSelection && showQueueAndHold);
+  }
+
+  if (m_archiveAction)
+    m_archiveAction->setEnabled(hasSelection);
+  if (m_deleteAction)
+    m_deleteAction->setEnabled(hasSelection);
+}
+
 void MainWindow::onToggleProcessing(bool checked) {
   if (checked) {
     m_engine->setPaused(false);
@@ -746,4 +963,32 @@ void MainWindow::onToggleProcessing(bool checked) {
 
 void MainWindow::onOpenCacheDirectory() {
   QDesktopServices::openUrl(QUrl::fromLocalFile(m_storage->getBaseDir()));
+}
+
+void MainWindow::setupPluginMenus(QMenu *helpMenu) {
+  if (!m_engine)
+    return;
+
+  for (const QString &connectorId : m_engine->getAvailableConnectors()) {
+    Connector *connector = m_engine->getConnector(connectorId);
+    if (connector && connector->hasDebugMenu()) {
+      QMenu *pluginMenu =
+          helpMenu->addMenu(QString("%1 Debug").arg(connector->getName()));
+
+      QList<HttpApiEndpoint> endpoints = connector->getHttpApiEndpoints();
+      if (!endpoints.isEmpty()) {
+        QAction *apiExplorerAction = pluginMenu->addAction("API Explorer");
+        connect(apiExplorerAction, &QAction::triggered, this,
+                [this, connector]() { onOpenApiExplorer(connector); });
+      }
+    }
+  }
+}
+
+void MainWindow::onOpenApiExplorer(Connector *connector) {
+  if (!connector)
+    return;
+
+  ApiExplorerDialog dialog(connector, this);
+  dialog.exec();
 }

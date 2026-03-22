@@ -7,6 +7,7 @@
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSettings>
 #include <QUrl>
@@ -49,8 +50,14 @@ void PutIoConnector::dispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      delete multiPart;
-      delete file;
+      if (multiPart) {
+        multiPart->deleteLater();
+        multiPart = nullptr;
+      }
+      if (file) {
+        file->deleteLater();
+        file = nullptr;
+      }
       return;
     }
     QHttpPart filePart;
@@ -82,7 +89,10 @@ void PutIoConnector::onAddTorrentReply() {
     emit dispatchFinished(itemId, false,
                           "Network error: " + reply->errorString());
   }
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
 }
 
 bool PutIoConnector::hasSettings() const { return true; }
@@ -108,6 +118,14 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   tokenEdit->setText(
       SecureStorage::readPassword("Plugins/PutIO", "oauthToken"));
   configLayout->addRow(tr("OAuth Token:"), tokenEdit);
+
+  QSettings mainSettings;
+  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
+    QLabel *warningLabel = new QLabel(
+        tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
+    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
+    configLayout->addRow("", warningLabel);
+  }
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
@@ -142,4 +160,57 @@ void PutIoConnector::saveSettings(QWidget *settingsWidget) {
   }
 
   settings.endGroup();
+}
+
+bool PutIoConnector::hasDebugMenu() const { return true; }
+
+QList<HttpApiEndpoint> PutIoConnector::getHttpApiEndpoints() const {
+  QList<HttpApiEndpoint> endpoints;
+
+  HttpApiEndpoint accountInfo;
+  accountInfo.name = "Account Info";
+  accountInfo.description = "Retrieves account information";
+  accountInfo.method = "GET";
+  accountInfo.url = "https://api.put.io/v2/account/info";
+  accountInfo.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  endpoints.append(accountInfo);
+
+  HttpApiEndpoint transferList;
+  transferList.name = "Transfer List";
+  transferList.description = "Lists all active transfers";
+  transferList.method = "GET";
+  transferList.url = "https://api.put.io/v2/transfers/list";
+  transferList.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  endpoints.append(transferList);
+
+  HttpApiEndpoint addTransferMagnet;
+  addTransferMagnet.name = "Add Transfer (Magnet)";
+  addTransferMagnet.description = "Creates a new transfer from a magnet link";
+  addTransferMagnet.method = "POST";
+  addTransferMagnet.url = "https://api.put.io/v2/transfers/add";
+  addTransferMagnet.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  addTransferMagnet.headers.insert("Content-Type",
+                                   "application/x-www-form-urlencoded");
+  addTransferMagnet.body = "url=${MAGNET_LINK}";
+  endpoints.append(addTransferMagnet);
+
+  HttpApiEndpoint addTransferTorrent;
+  addTransferTorrent.name = "Add Transfer (Torrent File)";
+  addTransferTorrent.description =
+      "Creates a new transfer from a .torrent file";
+  addTransferTorrent.method = "POST";
+  addTransferTorrent.url = "https://upload.put.io/v2/files/upload";
+  addTransferTorrent.headers.insert("Authorization", "Bearer ${OAUTH_TOKEN}");
+  addTransferTorrent.isMultipart = true;
+  addTransferTorrent.multipartParts.insert("file",
+                                           "file:///path/to/test.torrent");
+  endpoints.append(addTransferTorrent);
+
+  return endpoints;
+}
+
+QMap<QString, QString> PutIoConnector::getApiSubstitutions() const {
+  QMap<QString, QString> subs;
+  subs.insert("OAUTH_TOKEN", m_oauthToken);
+  return subs;
 }
