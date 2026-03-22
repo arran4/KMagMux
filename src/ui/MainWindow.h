@@ -98,6 +98,7 @@ private:
   QAction *m_archiveAction;
   QAction *m_archiveAllAction;
   QAction *m_deleteAction;
+  QAction *m_infoAction;
 
   void setupUi();
   void setupActionsAndMenus();

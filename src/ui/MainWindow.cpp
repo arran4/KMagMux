@@ -44,7 +44,7 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_errorView(nullptr), m_toggleProcessingAction(nullptr),
       m_selectAllAction(nullptr), m_processAction(nullptr),
       m_reprocessAction(nullptr), m_unprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
-      m_holdAction(nullptr), m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr),
+      m_holdAction(nullptr), m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr), m_infoAction(nullptr),
       m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
       m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
@@ -617,6 +617,7 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addAction(m_archiveAllAction);
   }
   menu.addSeparator();
+  menu.addAction(m_infoAction);
   menu.addAction(m_deleteAction);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
@@ -949,6 +950,7 @@ void MainWindow::updateActionsState() {
     if (m_archiveAction) m_archiveAction->setEnabled(false);
     if (m_archiveAllAction) m_archiveAllAction->setEnabled(false);
     if (m_deleteAction) m_deleteAction->setEnabled(false);
+    if (m_infoAction) m_infoAction->setEnabled(false);
     return;
   }
 
@@ -998,6 +1000,8 @@ void MainWindow::updateActionsState() {
   }
   if (m_deleteAction)
     m_deleteAction->setEnabled(hasSelection);
+  if (m_infoAction)
+    m_infoAction->setEnabled(hasSelection && selection.size() == 1);
 }
 
 void MainWindow::onToggleProcessing(bool checked) {

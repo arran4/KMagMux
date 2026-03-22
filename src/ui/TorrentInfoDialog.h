@@ -4,6 +4,7 @@
 #include "../core/TorrentParser.h"
 #include "../core/TrackerClient.h"
 #include <QDialog>
+#include "../core/Item.h"
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -27,6 +28,7 @@ private:
   void processNextTracker();
 
   QString m_sourcePath;
+  const Item *m_item;
   TorrentInfo m_info;
   QTableWidget *m_trackerTable;
   QTextEdit *m_logView;
