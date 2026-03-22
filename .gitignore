@@ -13,3 +13,4 @@ KMagMux_autogen/
 *.pro.user
 /plugins/
 /src/plugins/qbittorrent/qbittorrent_autogen/
+docker_build.log
