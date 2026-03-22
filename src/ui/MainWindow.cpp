@@ -43,8 +43,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_queueView(nullptr), m_doneView(nullptr), m_archiveView(nullptr),
       m_errorView(nullptr), m_toggleProcessingAction(nullptr),
       m_selectAllAction(nullptr), m_processAction(nullptr),
-      m_reprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
-      m_holdAction(nullptr), m_archiveAction(nullptr), m_deleteAction(nullptr),
+      m_reprocessAction(nullptr), m_unprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
+      m_holdAction(nullptr), m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr),
       m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
       m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
@@ -241,6 +241,11 @@ void MainWindow::setupActionsAndMenus() {
   actionCollection()->addAction("process_item", m_processAction);
 
   m_reprocessAction = new QAction(tr("&Reprocess"), this);
+  m_unprocessAction = new QAction(tr("&Send back to Inbox"), this);
+  connect(m_unprocessAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Unprocessed); });
+  actionCollection()->addAction("unprocess_item", m_unprocessAction);
+
   connect(m_reprocessAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Queued); });
   actionCollection()->addAction("reprocess_item", m_reprocessAction);
@@ -261,6 +266,28 @@ void MainWindow::setupActionsAndMenus() {
   actionCollection()->addAction("hold_item", m_holdAction);
 
   m_archiveAction = new QAction(tr("&Archive"), this);
+  m_archiveAllAction = new QAction(tr("Archive &All"), this);
+  connect(m_archiveAllAction, &QAction::triggered, this, [this]() {
+    QTableView *view = getCurrentView();
+    if (!view) return;
+    const ItemModel *model = getCurrentModel();
+    if (!model) return;
+
+    std::vector<Item> itemsToSave;
+    itemsToSave.reserve(model->rowCount());
+    for (int i = 0; i < model->rowCount(); ++i) {
+      Item item = model->getItem(i);
+      QString oldState = item.stateToString();
+      item.state = ItemState::Archived;
+      item.addHistory(QString("State changed from %1 to Archived via Bulk Archive.").arg(oldState));
+      itemsToSave.push_back(item);
+    }
+    if (!itemsToSave.empty()) {
+      m_storage->saveItems(itemsToSave);
+    }
+  });
+  actionCollection()->addAction("archive_all_items", m_archiveAllAction);
+
   connect(m_archiveAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
   actionCollection()->addAction("archive_item", m_archiveAction);
@@ -580,8 +607,15 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addAction(m_queueAction);
     menu.addAction(m_holdAction);
   }
+  if (view != m_unprocessedView) {
+    menu.addSeparator();
+    menu.addAction(m_unprocessAction);
+  }
 
   menu.addAction(m_archiveAction);
+  if (view == m_doneView || view == m_errorView) {
+    menu.addAction(m_archiveAllAction);
+  }
   menu.addSeparator();
   menu.addAction(m_deleteAction);
 
@@ -612,7 +646,10 @@ void MainWindow::onItemAction(ItemState newState) {
 
   qDebug() << "Changing item state for:" << item.id << "to" << (int)newState;
 
+  QString oldState = item.stateToString();
   item.state = newState;
+  item.addHistory(QString("State changed from %1 to %2 by user action.").arg(oldState, item.stateToString()));
+
   if (m_storage->saveItem(item)) {
     // Model refresh happens via itemUpdated signal
   } else {
@@ -905,10 +942,12 @@ void MainWindow::updateActionsState() {
     if (m_selectAllAction) m_selectAllAction->setEnabled(false);
     if (m_processAction) m_processAction->setEnabled(false);
     if (m_reprocessAction) m_reprocessAction->setEnabled(false);
+    if (m_unprocessAction) m_unprocessAction->setEnabled(false);
     if (m_dismissAction) m_dismissAction->setEnabled(false);
     if (m_queueAction) m_queueAction->setEnabled(false);
     if (m_holdAction) m_holdAction->setEnabled(false);
     if (m_archiveAction) m_archiveAction->setEnabled(false);
+    if (m_archiveAllAction) m_archiveAllAction->setEnabled(false);
     if (m_deleteAction) m_deleteAction->setEnabled(false);
     return;
   }
@@ -929,6 +968,11 @@ void MainWindow::updateActionsState() {
     m_reprocessAction->setEnabled(hasSelection && view == m_errorView);
   }
 
+  if (m_unprocessAction) {
+    m_unprocessAction->setVisible(view != m_unprocessedView);
+    m_unprocessAction->setEnabled(hasSelection && view != m_unprocessedView);
+  }
+
   if (m_dismissAction) {
     m_dismissAction->setVisible(view == m_errorView);
     m_dismissAction->setEnabled(hasSelection && view == m_errorView);
@@ -947,6 +991,11 @@ void MainWindow::updateActionsState() {
 
   if (m_archiveAction)
     m_archiveAction->setEnabled(hasSelection);
+  if (m_archiveAllAction) {
+    const ItemModel *model = getCurrentModel();
+    m_archiveAllAction->setVisible(view == m_doneView || view == m_errorView);
+    m_archiveAllAction->setEnabled(model && model->rowCount() > 0 && (view == m_doneView || view == m_errorView));
+  }
   if (m_deleteAction)
     m_deleteAction->setEnabled(hasSelection);
 }

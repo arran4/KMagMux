@@ -118,3 +118,15 @@ ItemState Item::stringToState(const QString &s) {
     return ItemState::Archived;
   return ItemState::Unprocessed;
 }
+
+
+#include <QJsonArray>
+
+void Item::addHistory(const QString &message) {
+  QJsonArray history = metadata["history"].toArray();
+  QJsonObject entry;
+  entry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+  entry["message"] = message;
+  history.append(entry);
+  metadata["history"] = history;
+}

@@ -55,6 +55,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
             settings.setValue("minimizeToTray",
                               m_minimizeToTrayCb->isChecked());
             settings.setValue("autoStart", m_autoStartCb->isChecked());
+            settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
             settings.setValue("autoMoveInbox",
                               m_autoMoveInboxCombo->currentIndex());
             settings.setValue("allowPlaintextStorage",
@@ -66,6 +67,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
     settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
     settings.setValue("autoStart", m_autoStartCb->isChecked());
+            settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
     settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
     settings.setValue("allowPlaintextStorage",
                       m_allowPlaintextStorageCb->isChecked());
@@ -108,6 +110,17 @@ void PreferencesDialog::createGeneralPage() {
 
   m_autoStartCb = new QCheckBox(tr("Start KMagMux automatically"), page);
   m_autoStartCb->setChecked(settings.value("autoStart", false).toBool());
+
+  QHBoxLayout *autoArchiveLayout = new QHBoxLayout();
+  QLabel *autoArchiveLabel = new QLabel(tr("Auto Archive 'Done' items after (days):"), page);
+  m_autoArchiveDays = new QSpinBox(page);
+  m_autoArchiveDays->setRange(0, 3650);
+  m_autoArchiveDays->setSpecialValueText(tr("Disabled"));
+  m_autoArchiveDays->setValue(settings.value("autoArchiveDays", 0).toInt());
+  autoArchiveLayout->addWidget(autoArchiveLabel);
+  autoArchiveLayout->addWidget(m_autoArchiveDays);
+  autoArchiveLayout->addStretch();
+  layout->addLayout(autoArchiveLayout);
   layout->addWidget(m_autoStartCb);
 
   QHBoxLayout *autoMoveLayout = new QHBoxLayout;

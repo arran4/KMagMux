@@ -1,4 +1,6 @@
 #include "TorrentInfoDialog.h"
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>

@@ -63,6 +63,8 @@ struct Item {
   QDateTime scheduledTime;
   QJsonObject metadata; // Flexible metadata storage
 
+  void addHistory(const QString &message);
+
   mutable QString m_cachedDisplayName;
   mutable QString m_cachedSourcePath;
   mutable QMutex m_cacheMutex;
