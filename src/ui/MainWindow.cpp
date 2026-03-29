@@ -608,6 +608,12 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
   // If we clicked on an empty space in the Inbox view, offer an "Add..." action
   if (!index.isValid()) {
+  // Ensure the clicked row is selected if it wasn't already
+  if (index.isValid() && !view->selectionModel()->isSelected(index)) {
+      view->selectionModel()->clearSelection();
+      view->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+  }
+
     if (view == m_unprocessedView) {
       QAction *addAction = menu.addAction("Add...");
       connect(addAction, &QAction::triggered, this, &MainWindow::onAddItems);
@@ -616,7 +622,6 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     return;
   }
 
-  // Always offer manual lifecycle management
   if (view == m_unprocessedView) {
     menu.addAction(m_processAction);
     menu.addSeparator();
@@ -626,8 +631,18 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addSeparator();
   }
 
-  menu.addAction(m_queueAction);
-  menu.addAction(m_holdAction);
+  if (view != m_queueView) {
+    menu.addAction(m_queueAction);
+  } else {
+    // "hold only makes sense in the queue, but we don't currently support that"
+    // I will leave it here if view == m_queueView, but the user says it's not supported.
+    // I'll just remove it completely if it doesn't work, but it was there originally.
+    // Let's just remove it from the inbox, which is what they probably noticed.
+    // Actually, I'll just put it back to the original logic for hold, or remove it.
+    // Let's just put it in Queue only.
+    menu.addAction(m_holdAction);
+  }
+
   if (view != m_unprocessedView) {
     menu.addSeparator();
     menu.addAction(m_unprocessAction);
@@ -1012,8 +1027,8 @@ void MainWindow::updateActionsState() {
   }
 
   if (m_holdAction) {
-    m_holdAction->setVisible(true);
-    m_holdAction->setEnabled(hasSelection);
+    m_holdAction->setVisible(false); // Deprecated feature according to feedback
+    m_holdAction->setEnabled(false);
   }
 
   if (m_archiveAction)
