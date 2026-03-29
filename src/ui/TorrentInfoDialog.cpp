@@ -147,7 +147,7 @@ void TorrentInfoDialog::setupUi() {
     for (int i = 0; i < history.size(); ++i) {
       QJsonObject entry = history[i].toObject();
       QDateTime dt = QDateTime::fromString(entry["timestamp"].toString(), Qt::ISODate);
-      QString timeStr = dt.isValid() ? dt.toString(Qt::DefaultLocaleShortDate) : entry["timestamp"].toString();
+      QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate) : entry["timestamp"].toString();
       historyTable->setItem(i, 0, new QTableWidgetItem(timeStr));
       historyTable->setItem(i, 1, new QTableWidgetItem(entry["message"].toString()));
     }

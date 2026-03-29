@@ -1000,8 +1000,10 @@ void MainWindow::updateActionsState() {
   }
   if (m_deleteAction)
     m_deleteAction->setEnabled(hasSelection);
-  if (m_infoAction)
+  if (m_infoAction) {
+    QModelIndexList selection = view->selectionModel()->selectedRows();
     m_infoAction->setEnabled(hasSelection && selection.size() == 1);
+  }
 }
 
 void MainWindow::onToggleProcessing(bool checked) {

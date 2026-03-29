@@ -13,7 +13,7 @@ class TorrentInfoDialog : public QDialog {
   Q_OBJECT
 
 public:
-  explicit TorrentInfoDialog(const QString &sourcePath,
+  explicit TorrentInfoDialog(const QString &sourcePath, const Item *item = nullptr,
                              QWidget *parent = nullptr);
   ~TorrentInfoDialog();
 
