@@ -14,3 +14,4 @@ KMagMux_autogen/
 /plugins/
 /src/plugins/qbittorrent/qbittorrent_autogen/
 *.py
+docker_build.log

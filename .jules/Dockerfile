@@ -1,27 +1,24 @@
-FROM docker.io/archlinux:latest
+FROM invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
 
-RUN pacman -Syu --noconfirm \
-    base-devel \
+# Switch to root to install packages if necessary, though ci-images usually run as root or allow sudo.
+USER root
+
+# In a SUSE image, use zypper. However, the KDE CI images often already contain the required tools.
+# Let's ensure cmake and gcc are present just in case.
+RUN zypper install -y \
     cmake \
-    git \
-    qt6-base \
-    qt6-svg \
-    qt6-tools \
-    qtkeychain-qt6 \
-    kxmlgui \
-    kconfig \
-    kconfigwidgets \
-    kcoreaddons \
-    ki18n \
-    xorg-server-xvfb \
-    imagemagick \
-    xorg-xwd
+    gcc-c++ \
+    make \
+    qtkeychain-qt6-devel
 
 WORKDIR /app
 COPY . /app
 
-RUN cmake -B build -S . && cmake --build build -j$(nproc)
+# Ensure correct permissions
+RUN chown -R root:root /app
 
-CMD ["/bin/bash"]
+RUN cmake -B build -DBUILD_TESTING=ON && cmake --build build -j$(nproc)
+
+CMD ["/app/build/KMagMux"]
