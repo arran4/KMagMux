@@ -5,6 +5,7 @@
 #include "LinkExtractorDialog.h"
 #include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
+#include "TorrentInfoDialog.h"
 #include "ProcessItemDialog.h"
 #include <QApplication>
 #include <QCloseEvent>
@@ -294,6 +295,28 @@ void MainWindow::setupActionsAndMenus() {
 
   m_deleteAction =
       new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
+  m_infoAction = new QAction(QIcon::fromTheme("document-properties"), tr("&Get Info / History"), this);
+  connect(m_infoAction, &QAction::triggered, this, [this]() {
+    QTableView *view = getCurrentView();
+    if (!view) return;
+    const ItemModel *model = getCurrentModel();
+    if (!model) return;
+    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+    if (!proxy) return;
+    QModelIndexList selection = view->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
+    QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+    Item item = model->getItem(sourceIndex.row());
+    QString sourcePath = item.sourcePath;
+    if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
+      TorrentInfoDialog dialog(sourcePath, &item, this);
+      dialog.exec();
+    } else {
+      QMessageBox::information(this, "Item Information", QString("Source Path:\n%1").arg(sourcePath));
+    }
+  });
+  actionCollection()->addAction("info_item", m_infoAction);
+
   connect(m_deleteAction, &QAction::triggered, this,
           &MainWindow::onDeleteItems);
   actionCollection()->addAction("delete_items", m_deleteAction);
