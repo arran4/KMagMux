@@ -44,8 +44,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_queueView(nullptr), m_doneView(nullptr), m_archiveView(nullptr),
       m_errorView(nullptr), m_toggleProcessingAction(nullptr),
       m_selectAllAction(nullptr), m_processAction(nullptr),
-      m_reprocessAction(nullptr), m_unprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
-      m_holdAction(nullptr), m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr), m_infoAction(nullptr),
+      m_unprocessAction(nullptr), m_dismissAction(nullptr),
+      m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr), m_infoAction(nullptr),
       m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
       m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
@@ -241,30 +241,15 @@ void MainWindow::setupActionsAndMenus() {
           &MainWindow::onProcessItem);
   actionCollection()->addAction("process_item", m_processAction);
 
-  m_reprocessAction = new QAction(tr("&Reprocess"), this);
   m_unprocessAction = new QAction(tr("&Send back to Inbox"), this);
   connect(m_unprocessAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Unprocessed); });
   actionCollection()->addAction("unprocess_item", m_unprocessAction);
 
-  connect(m_reprocessAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Queued); });
-  actionCollection()->addAction("reprocess_item", m_reprocessAction);
-
   m_dismissAction = new QAction(tr("&Dismiss"), this);
   connect(m_dismissAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
   actionCollection()->addAction("dismiss_item", m_dismissAction);
-
-  m_queueAction = new QAction(tr("&Queue"), this);
-  connect(m_queueAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Queued); });
-  actionCollection()->addAction("queue_item", m_queueAction);
-
-  m_holdAction = new QAction(tr("&Hold"), this);
-  connect(m_holdAction, &QAction::triggered, this,
-          [this]() { onItemAction(ItemState::Held); });
-  actionCollection()->addAction("hold_item", m_holdAction);
 
   m_archiveAction = new QAction(tr("&Archive"), this);
   m_archiveAllAction = new QAction(tr("Archive &All"), this);
@@ -412,6 +397,8 @@ void MainWindow::setupTabs() {
   m_queueProxy = new ItemFilterProxyModel(this);
   setupView(m_queueView, m_queueModel, m_queueProxy, "Queue");
   m_queueView->hideColumn(ItemModel::ColError);
+  connect(m_queueView, &QTableView::doubleClicked, this,
+          &MainWindow::onProcessItem);
 
   // Done Tab
   m_doneView = new QTableView(this);
@@ -420,6 +407,8 @@ void MainWindow::setupTabs() {
   setupView(m_doneView, m_doneModel, m_doneProxy, "Done");
   m_doneView->hideColumn(ItemModel::ColState);
   m_doneView->hideColumn(ItemModel::ColError);
+  connect(m_doneView, &QTableView::doubleClicked, this,
+          &MainWindow::onProcessItem);
 
   // Archive Tab
   m_archiveView = new QTableView(this);
@@ -427,12 +416,16 @@ void MainWindow::setupTabs() {
   m_archiveProxy = new ItemFilterProxyModel(this);
   setupView(m_archiveView, m_archiveModel, m_archiveProxy, "Archive");
   m_archiveView->hideColumn(ItemModel::ColError);
+  connect(m_archiveView, &QTableView::doubleClicked, this,
+          &MainWindow::onProcessItem);
 
   // Errors Tab
   m_errorView = new QTableView(this);
   m_errorModel = new ItemModel(this);
   m_errorProxy = new ItemFilterProxyModel(this);
   setupView(m_errorView, m_errorModel, m_errorProxy, "Errors");
+  connect(m_errorView, &QTableView::doubleClicked, this,
+          &MainWindow::onProcessItem);
 
   connect(m_tabWidget, &QTabWidget::currentChanged, this,
           &MainWindow::updateActionsState);
@@ -622,29 +615,15 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     return;
   }
 
-  if (view == m_unprocessedView) {
-    menu.addAction(m_processAction);
-    menu.addSeparator();
-  } else if (view == m_errorView) {
-    menu.addAction(m_reprocessAction);
+  menu.addAction(m_processAction);
+  menu.addSeparator();
+
+  if (view == m_errorView) {
     menu.addAction(m_dismissAction);
     menu.addSeparator();
   }
 
-  if (view != m_queueView) {
-    menu.addAction(m_queueAction);
-  } else {
-    // "hold only makes sense in the queue, but we don't currently support that"
-    // I will leave it here if view == m_queueView, but the user says it's not supported.
-    // I'll just remove it completely if it doesn't work, but it was there originally.
-    // Let's just remove it from the inbox, which is what they probably noticed.
-    // Actually, I'll just put it back to the original logic for hold, or remove it.
-    // Let's just put it in Queue only.
-    menu.addAction(m_holdAction);
-  }
-
   if (view != m_unprocessedView) {
-    menu.addSeparator();
     menu.addAction(m_unprocessAction);
   }
 
@@ -989,11 +968,8 @@ void MainWindow::updateActionsState() {
   if (!view) {
     if (m_selectAllAction) m_selectAllAction->setEnabled(false);
     if (m_processAction) m_processAction->setEnabled(false);
-    if (m_reprocessAction) m_reprocessAction->setEnabled(false);
     if (m_unprocessAction) m_unprocessAction->setEnabled(false);
     if (m_dismissAction) m_dismissAction->setEnabled(false);
-    if (m_queueAction) m_queueAction->setEnabled(false);
-    if (m_holdAction) m_holdAction->setEnabled(false);
     if (m_archiveAction) m_archiveAction->setEnabled(false);
     if (m_archiveAllAction) m_archiveAllAction->setEnabled(false);
     if (m_deleteAction) m_deleteAction->setEnabled(false);
@@ -1008,13 +984,8 @@ void MainWindow::updateActionsState() {
     m_selectAllAction->setEnabled(true);
 
   if (m_processAction) {
-    m_processAction->setVisible(view == m_unprocessedView);
-    m_processAction->setEnabled(hasSelection && view == m_unprocessedView);
-  }
-
-  if (m_reprocessAction) {
-    m_reprocessAction->setVisible(view == m_errorView);
-    m_reprocessAction->setEnabled(hasSelection && view == m_errorView);
+    m_processAction->setVisible(true);
+    m_processAction->setEnabled(hasSelection);
   }
 
   if (m_unprocessAction) {
@@ -1025,16 +996,6 @@ void MainWindow::updateActionsState() {
   if (m_dismissAction) {
     m_dismissAction->setVisible(view == m_errorView);
     m_dismissAction->setEnabled(hasSelection && view == m_errorView);
-  }
-
-  if (m_queueAction) {
-    m_queueAction->setVisible(true);
-    m_queueAction->setEnabled(hasSelection);
-  }
-
-  if (m_holdAction) {
-    m_holdAction->setVisible(false); // Deprecated feature according to feedback
-    m_holdAction->setEnabled(false);
   }
 
   if (m_archiveAction)

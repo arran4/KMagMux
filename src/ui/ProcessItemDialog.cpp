@@ -17,6 +17,7 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
+#include <QUuid>
 
 ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
                                      const QStringList &connectors,
@@ -142,12 +143,30 @@ void ProcessItemDialog::setupUi() {
       false); // Initially disabled unless "Hold" is selected
   formLayout->addRow("Hold Until:", m_holdTimeEdit);
 
-  m_connectorCombo = new QComboBox(this);
-  m_connectorCombo->addItems(m_connectors);
-  if (m_connectors.contains(Constants::DefaultActionName)) {
-    m_connectorCombo->setCurrentText(Constants::DefaultActionName);
+  m_connectorList = new QListWidget(this);
+  for (const QString &connector : m_connectors) {
+    QListWidgetItem *item = new QListWidgetItem(connector, m_connectorList);
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    if (connector == Constants::DefaultActionName) {
+      item->setCheckState(Qt::Checked);
+    } else {
+      item->setCheckState(Qt::Unchecked);
+    }
   }
-  formLayout->addRow("Connector:", m_connectorCombo);
+
+  // If Default is not in the list or nothing is checked, check the first one if available
+  bool anythingChecked = false;
+  for (int i = 0; i < m_connectorList->count(); ++i) {
+    if (m_connectorList->item(i)->checkState() == Qt::Checked) {
+      anythingChecked = true;
+      break;
+    }
+  }
+  if (!anythingChecked && m_connectorList->count() > 0) {
+    m_connectorList->item(0)->setCheckState(Qt::Checked);
+  }
+
+  formLayout->addRow("Connectors:", m_connectorList);
 
   mainLayout->addLayout(formLayout);
 
@@ -183,40 +202,64 @@ void ProcessItemDialog::onProcessClicked() {
     selectedState = ItemState::Archived;
   }
 
+  QStringList selectedConnectors;
+  for (int i = 0; i < m_connectorList->count(); ++i) {
+    if (m_connectorList->item(i)->checkState() == Qt::Checked) {
+      selectedConnectors.append(m_connectorList->item(i)->text());
+    }
+  }
+
+  if (selectedConnectors.isEmpty()) {
+    QMessageBox::warning(this, "No Connector Selected", "Please select at least one destination connector.");
+    return;
+  }
+
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
     QTableWidgetItem *checkItem = m_itemsTable->item(i, 0);
     if (checkItem && checkItem->checkState() == Qt::Checked) {
-      Item item = m_items[i];
-      QString oldState = item.stateToString();
-      item.state = selectedState;
-      item.addHistory(QString("Processed and state set to %1").arg(item.stateToString()));
-      item.connectorId = m_connectorCombo->currentText();
-      if (selectedState == ItemState::Held) {
-        item.scheduledTime = m_holdTimeEdit->dateTime();
-      } else {
-        item.scheduledTime = QDateTime(); // Clear scheduled time if not holding
-      }
+      Item originalItem = m_items[i];
 
-      QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
-      if (deleteItem && deleteItem->flags() & Qt::ItemIsUserCheckable) {
-        if (deleteItem->checkState() == Qt::Checked) {
-          QJsonObject meta = item.metadata;
-          meta["delete_source_file"] = true;
-          item.metadata = meta;
+      for (const QString &connectorId : selectedConnectors) {
+        Item item = originalItem; // Duplicate the item for each connector
+        // For multiple connectors we need to generate unique IDs if it's more than one
+        // If it's more than one connector, we should really assign a new ID to the duplicates
+        // but since they all share the same source file, they might conflict if deleted source file is requested.
+        // Actually, let's keep the original item ID for the first one, and generate a new ID for the others
+        if (connectorId != selectedConnectors.first()) {
+           item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         }
-      }
 
-
-      QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
-      if (deleteWhenDoneItem && deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
-        if (deleteWhenDoneItem->checkState() == Qt::Checked) {
-          QJsonObject meta = item.metadata;
-          meta["delete_once_submitted"] = true;
-          item.metadata = meta;
+        QString oldState = item.stateToString();
+        item.state = selectedState;
+        item.addHistory(QString("Processed and state set to %1").arg(item.stateToString()));
+        item.connectorId = connectorId;
+        if (selectedState == ItemState::Held) {
+          item.scheduledTime = m_holdTimeEdit->dateTime();
+        } else {
+          item.scheduledTime = QDateTime(); // Clear scheduled time if not holding
         }
-      }
 
-      processedItems.push_back(item);
+        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
+        if (deleteItem && deleteItem->flags() & Qt::ItemIsUserCheckable) {
+          if (deleteItem->checkState() == Qt::Checked) {
+            QJsonObject meta = item.metadata;
+            meta["delete_source_file"] = true;
+            item.metadata = meta;
+          }
+        }
+
+
+        QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
+        if (deleteWhenDoneItem && deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
+          if (deleteWhenDoneItem->checkState() == Qt::Checked) {
+            QJsonObject meta = item.metadata;
+            meta["delete_once_submitted"] = true;
+            item.metadata = meta;
+          }
+        }
+
+        processedItems.push_back(item);
+      }
     }
   }
 
