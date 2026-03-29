@@ -1,4 +1,7 @@
 #include "TorrentInfoDialog.h"
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -7,8 +10,8 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath, QWidget *parent)
-    : QDialog(parent), m_sourcePath(sourcePath), m_isQuerying(false),
+TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath, const Item *item, QWidget *parent)
+    : QDialog(parent), m_sourcePath(sourcePath), m_item(item), m_isQuerying(false),
       m_currentTrackerIndex(0) {
 
   m_trackerClient = new TrackerClient(this);
@@ -125,6 +128,33 @@ void TorrentInfoDialog::setupUi() {
   }
 
   mainLayout->addWidget(m_trackerTable);
+
+  if (m_item && m_item->metadata.contains("history")) {
+    QLabel *historyLabel = new QLabel("<b>History:</b>", this);
+    mainLayout->addWidget(historyLabel);
+
+    QTableWidget *historyTable = new QTableWidget(this);
+    historyTable->setColumnCount(2);
+    historyTable->setHorizontalHeaderLabels({"Time", "Event"});
+    historyTable->horizontalHeader()->setStretchLastSection(true);
+    historyTable->verticalHeader()->setVisible(false);
+    historyTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    historyTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    historyTable->setShowGrid(false);
+
+    QJsonArray history = m_item->metadata["history"].toArray();
+    historyTable->setRowCount(history.size());
+    for (int i = 0; i < history.size(); ++i) {
+      QJsonObject entry = history[i].toObject();
+      QDateTime dt = QDateTime::fromString(entry["timestamp"].toString(), Qt::ISODate);
+      QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate) : entry["timestamp"].toString();
+      historyTable->setItem(i, 0, new QTableWidgetItem(timeStr));
+      historyTable->setItem(i, 1, new QTableWidgetItem(entry["message"].toString()));
+    }
+    historyTable->resizeColumnsToContents();
+    mainLayout->addWidget(historyTable);
+  }
+
 
   m_logView = new QTextEdit(this);
   m_logView->setReadOnly(true);

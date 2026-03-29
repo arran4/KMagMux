@@ -2,6 +2,7 @@
 #define PREFERENCESDIALOG_H
 
 #include <QDialog>
+#include <QSpinBox>
 
 class QCheckBox;
 class QComboBox;
@@ -38,6 +39,7 @@ private:
   QCheckBox *m_autoStartCb;
   QCheckBox *m_autoMoveInboxCb;
   QComboBox *m_autoMoveInboxCombo;
+  QSpinBox *m_autoArchiveDays;
   QCheckBox *m_allowPlaintextStorageCb;
 };
 

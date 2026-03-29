@@ -4,6 +4,7 @@
 #include "../core/TorrentParser.h"
 #include "../core/TrackerClient.h"
 #include <QDialog>
+#include "../core/Item.h"
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -12,7 +13,7 @@ class TorrentInfoDialog : public QDialog {
   Q_OBJECT
 
 public:
-  explicit TorrentInfoDialog(const QString &sourcePath,
+  explicit TorrentInfoDialog(const QString &sourcePath, const Item *item = nullptr,
                              QWidget *parent = nullptr);
   ~TorrentInfoDialog();
 
@@ -27,6 +28,7 @@ private:
   void processNextTracker();
 
   QString m_sourcePath;
+  const Item *m_item;
   TorrentInfo m_info;
   QTableWidget *m_trackerTable;
   QTextEdit *m_logView;

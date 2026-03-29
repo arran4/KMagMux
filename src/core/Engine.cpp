@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include <QSettings>
 #include "Constants.h"
 #include <QCoreApplication>
 #include <QDebug>
@@ -218,6 +219,28 @@ void Engine::processQueue() {
   auto items =
       m_storage->loadItemsByStates({ItemState::Queued, ItemState::Scheduled});
 
+  QSettings settings;
+  int autoArchiveDays = settings.value("autoArchiveDays", 0).toInt();
+  if (autoArchiveDays > 0) {
+    auto doneItems = m_storage->loadItemsByStates({ItemState::Done});
+    std::vector<Item> itemsToArchive;
+    QDateTime threshold = QDateTime::currentDateTime().addDays(-autoArchiveDays);
+
+    for (auto &item : doneItems) {
+      if (!item.metadata["lastDispatchTime"].toString().isEmpty()) {
+        QDateTime lastDispatch = QDateTime::fromString(item.metadata["lastDispatchTime"].toString(), Qt::ISODate);
+        if (lastDispatch.isValid() && lastDispatch < threshold) {
+          item.state = ItemState::Archived;
+          item.addHistory(QString("Auto-archived after %1 days in Done state.").arg(autoArchiveDays));
+          itemsToArchive.push_back(item);
+        }
+      }
+    }
+    if (!itemsToArchive.empty()) {
+      m_storage->saveItems(itemsToArchive);
+    }
+  }
+
   for (auto &item : items) {
     if (item.state == ItemState::Queued) {
       dispatchItem(item);
@@ -231,6 +254,7 @@ void Engine::processQueue() {
           item.scheduledTime <= QDateTime::currentDateTime()) {
         qDebug() << "Scheduled item due:" << item.id;
         item.state = ItemState::Queued;
+        item.addHistory("Scheduled time reached, moved to Queued.");
         m_storage->saveItem(item);
         // Will be picked up next tick
       }
@@ -279,8 +303,15 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
   meta["dispatchResult"] = message;
 
   if (success) {
-    item.state = ItemState::Done;
-    qDebug() << "Item dispatched successfully:" << itemId;
+    if (meta["delete_once_submitted"].toBool(false)) {
+      item.addHistory(QString("Item dispatched successfully to %1 and deleted as requested.").arg(item.connectorId));
+      qDebug() << "Item dispatched successfully and deleted as requested:" << itemId;
+      m_storage->deleteItem(item.id);
+      return;
+    } else {
+      item.state = ItemState::Done;
+      qDebug() << "Item dispatched successfully:" << itemId;
+    }
   } else {
     item.state = ItemState::Failed;
     meta["error"] = message;

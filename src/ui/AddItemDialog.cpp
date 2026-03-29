@@ -204,7 +204,7 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   connect(infoAction, &QAction::triggered, this, [this, row]() {
     QString sourcePath = m_items[row].sourcePath;
     if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
-      TorrentInfoDialog dialog(sourcePath, this);
+      TorrentInfoDialog dialog(sourcePath, &m_items[row], this);
       dialog.exec();
     } else {
       QMessageBox::information(this, "Item Information",

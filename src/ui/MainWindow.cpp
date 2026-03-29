@@ -5,6 +5,7 @@
 #include "LinkExtractorDialog.h"
 #include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
+#include "TorrentInfoDialog.h"
 #include "ProcessItemDialog.h"
 #include <QApplication>
 #include <QCloseEvent>
@@ -43,8 +44,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_queueView(nullptr), m_doneView(nullptr), m_archiveView(nullptr),
       m_errorView(nullptr), m_toggleProcessingAction(nullptr),
       m_selectAllAction(nullptr), m_processAction(nullptr),
-      m_reprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
-      m_holdAction(nullptr), m_archiveAction(nullptr), m_deleteAction(nullptr),
+      m_reprocessAction(nullptr), m_unprocessAction(nullptr), m_dismissAction(nullptr), m_queueAction(nullptr),
+      m_holdAction(nullptr), m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr), m_infoAction(nullptr),
       m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
       m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
@@ -241,6 +242,11 @@ void MainWindow::setupActionsAndMenus() {
   actionCollection()->addAction("process_item", m_processAction);
 
   m_reprocessAction = new QAction(tr("&Reprocess"), this);
+  m_unprocessAction = new QAction(tr("&Send back to Inbox"), this);
+  connect(m_unprocessAction, &QAction::triggered, this,
+          [this]() { onItemAction(ItemState::Unprocessed); });
+  actionCollection()->addAction("unprocess_item", m_unprocessAction);
+
   connect(m_reprocessAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Queued); });
   actionCollection()->addAction("reprocess_item", m_reprocessAction);
@@ -261,12 +267,56 @@ void MainWindow::setupActionsAndMenus() {
   actionCollection()->addAction("hold_item", m_holdAction);
 
   m_archiveAction = new QAction(tr("&Archive"), this);
+  m_archiveAllAction = new QAction(tr("Archive &All"), this);
+  connect(m_archiveAllAction, &QAction::triggered, this, [this]() {
+    QTableView *view = getCurrentView();
+    if (!view) return;
+    const ItemModel *model = getCurrentModel();
+    if (!model) return;
+
+    std::vector<Item> itemsToSave;
+    itemsToSave.reserve(model->rowCount());
+    for (int i = 0; i < model->rowCount(); ++i) {
+      Item item = model->getItem(i);
+      QString oldState = item.stateToString();
+      item.state = ItemState::Archived;
+      item.addHistory(QString("State changed from %1 to Archived via Bulk Archive.").arg(oldState));
+      itemsToSave.push_back(item);
+    }
+    if (!itemsToSave.empty()) {
+      m_storage->saveItems(itemsToSave);
+    }
+  });
+  actionCollection()->addAction("archive_all_items", m_archiveAllAction);
+
   connect(m_archiveAction, &QAction::triggered, this,
           [this]() { onItemAction(ItemState::Archived); });
   actionCollection()->addAction("archive_item", m_archiveAction);
 
   m_deleteAction =
       new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
+  m_infoAction = new QAction(QIcon::fromTheme("document-properties"), tr("&Get Info / History"), this);
+  connect(m_infoAction, &QAction::triggered, this, [this]() {
+    QTableView *view = getCurrentView();
+    if (!view) return;
+    const ItemModel *model = getCurrentModel();
+    if (!model) return;
+    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+    if (!proxy) return;
+    QModelIndexList selection = view->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
+    QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+    Item item = model->getItem(sourceIndex.row());
+    QString sourcePath = item.sourcePath;
+    if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
+      TorrentInfoDialog dialog(sourcePath, &item, this);
+      dialog.exec();
+    } else {
+      QMessageBox::information(this, "Item Information", QString("Source Path:\n%1").arg(sourcePath));
+    }
+  });
+  actionCollection()->addAction("info_item", m_infoAction);
+
   connect(m_deleteAction, &QAction::triggered, this,
           &MainWindow::onDeleteItems);
   actionCollection()->addAction("delete_items", m_deleteAction);
@@ -558,6 +608,12 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
   // If we clicked on an empty space in the Inbox view, offer an "Add..." action
   if (!index.isValid()) {
+  // Ensure the clicked row is selected if it wasn't already
+  if (index.isValid() && !view->selectionModel()->isSelected(index)) {
+      view->selectionModel()->clearSelection();
+      view->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+  }
+
     if (view == m_unprocessedView) {
       QAction *addAction = menu.addAction("Add...");
       connect(addAction, &QAction::triggered, this, &MainWindow::onAddItems);
@@ -566,7 +622,6 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     return;
   }
 
-  // If we are in the Inbox view, offer a "Process..." action
   if (view == m_unprocessedView) {
     menu.addAction(m_processAction);
     menu.addSeparator();
@@ -574,15 +629,31 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addAction(m_reprocessAction);
     menu.addAction(m_dismissAction);
     menu.addSeparator();
+  }
+
+  if (view != m_queueView) {
     menu.addAction(m_queueAction);
-    menu.addAction(m_holdAction);
   } else {
-    menu.addAction(m_queueAction);
+    // "hold only makes sense in the queue, but we don't currently support that"
+    // I will leave it here if view == m_queueView, but the user says it's not supported.
+    // I'll just remove it completely if it doesn't work, but it was there originally.
+    // Let's just remove it from the inbox, which is what they probably noticed.
+    // Actually, I'll just put it back to the original logic for hold, or remove it.
+    // Let's just put it in Queue only.
     menu.addAction(m_holdAction);
   }
 
+  if (view != m_unprocessedView) {
+    menu.addSeparator();
+    menu.addAction(m_unprocessAction);
+  }
+
   menu.addAction(m_archiveAction);
+  if (view == m_doneView || view == m_errorView) {
+    menu.addAction(m_archiveAllAction);
+  }
   menu.addSeparator();
+  menu.addAction(m_infoAction);
   menu.addAction(m_deleteAction);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
@@ -606,17 +677,25 @@ void MainWindow::onItemAction(ItemState newState) {
   if (selection.isEmpty())
     return;
 
-  QModelIndex sourceIndex = proxy->mapToSource(selection.first());
-  int row = sourceIndex.row();
-  Item item = model->getItem(row);
+  std::vector<Item> itemsToSave;
+  itemsToSave.reserve(selection.size());
 
-  qDebug() << "Changing item state for:" << item.id << "to" << (int)newState;
+  for (const QModelIndex &index : selection) {
+    QModelIndex sourceIndex = proxy->mapToSource(index);
+    int row = sourceIndex.row();
+    Item item = model->getItem(row);
 
-  item.state = newState;
-  if (m_storage->saveItem(item)) {
-    // Model refresh happens via itemUpdated signal
-  } else {
-    qWarning() << "Failed to save item state change";
+    qDebug() << "Changing item state for:" << item.id << "to" << (int)newState;
+
+    QString oldState = item.stateToString();
+    item.state = newState;
+    item.addHistory(QString("State changed from %1 to %2 by user action.").arg(oldState, item.stateToString()));
+
+    itemsToSave.push_back(item);
+  }
+
+  if (!itemsToSave.empty()) {
+    m_storage->saveItems(itemsToSave);
   }
 }
 
@@ -639,6 +718,11 @@ void MainWindow::onDeleteItems() {
   if (!model)
     return;
 
+  ItemFilterProxyModel *proxy =
+      qobject_cast<ItemFilterProxyModel *>(view->model());
+  if (!proxy)
+    return;
+
   QModelIndexList selection = view->selectionModel()->selectedRows();
   if (selection.isEmpty())
     return;
@@ -656,7 +740,8 @@ void MainWindow::onDeleteItems() {
     std::vector<QString> idsToDelete;
     idsToDelete.reserve(selection.size());
     for (const QModelIndex &index : selection) {
-      idsToDelete.push_back(model->getItem(index.row()).id);
+      QModelIndex sourceIndex = proxy->mapToSource(index);
+      idsToDelete.push_back(model->getItem(sourceIndex.row()).id);
     }
 
     qDebug() << "Deleting" << idsToDelete.size() << "items";
@@ -905,11 +990,14 @@ void MainWindow::updateActionsState() {
     if (m_selectAllAction) m_selectAllAction->setEnabled(false);
     if (m_processAction) m_processAction->setEnabled(false);
     if (m_reprocessAction) m_reprocessAction->setEnabled(false);
+    if (m_unprocessAction) m_unprocessAction->setEnabled(false);
     if (m_dismissAction) m_dismissAction->setEnabled(false);
     if (m_queueAction) m_queueAction->setEnabled(false);
     if (m_holdAction) m_holdAction->setEnabled(false);
     if (m_archiveAction) m_archiveAction->setEnabled(false);
+    if (m_archiveAllAction) m_archiveAllAction->setEnabled(false);
     if (m_deleteAction) m_deleteAction->setEnabled(false);
+    if (m_infoAction) m_infoAction->setEnabled(false);
     return;
   }
 
@@ -929,26 +1017,39 @@ void MainWindow::updateActionsState() {
     m_reprocessAction->setEnabled(hasSelection && view == m_errorView);
   }
 
+  if (m_unprocessAction) {
+    m_unprocessAction->setVisible(view != m_unprocessedView);
+    m_unprocessAction->setEnabled(hasSelection && view != m_unprocessedView);
+  }
+
   if (m_dismissAction) {
     m_dismissAction->setVisible(view == m_errorView);
     m_dismissAction->setEnabled(hasSelection && view == m_errorView);
   }
 
-  bool showQueueAndHold = (view != m_unprocessedView);
   if (m_queueAction) {
-    m_queueAction->setVisible(showQueueAndHold);
-    m_queueAction->setEnabled(hasSelection && showQueueAndHold);
+    m_queueAction->setVisible(true);
+    m_queueAction->setEnabled(hasSelection);
   }
 
   if (m_holdAction) {
-    m_holdAction->setVisible(showQueueAndHold);
-    m_holdAction->setEnabled(hasSelection && showQueueAndHold);
+    m_holdAction->setVisible(false); // Deprecated feature according to feedback
+    m_holdAction->setEnabled(false);
   }
 
   if (m_archiveAction)
     m_archiveAction->setEnabled(hasSelection);
+  if (m_archiveAllAction) {
+    const ItemModel *model = getCurrentModel();
+    m_archiveAllAction->setVisible(view == m_doneView || view == m_errorView);
+    m_archiveAllAction->setEnabled(model && model->rowCount() > 0 && (view == m_doneView || view == m_errorView));
+  }
   if (m_deleteAction)
     m_deleteAction->setEnabled(hasSelection);
+  if (m_infoAction) {
+    QModelIndexList selection = view->selectionModel()->selectedRows();
+    m_infoAction->setEnabled(hasSelection && selection.size() == 1);
+  }
 }
 
 void MainWindow::onToggleProcessing(bool checked) {

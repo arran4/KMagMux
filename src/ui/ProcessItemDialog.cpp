@@ -71,10 +71,16 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     }
     m_itemsTable->setItem(i, 1, deleteItem);
 
+
+    QTableWidgetItem *deleteWhenDoneItem = new QTableWidgetItem();
+    deleteWhenDoneItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+    deleteWhenDoneItem->setCheckState(Qt::Unchecked);
+    m_itemsTable->setItem(i, 2, deleteWhenDoneItem);
+
     QString displayName = m_items[i].getDisplayName();
     QTableWidgetItem *nameItem = new QTableWidgetItem(displayName);
     nameItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    m_itemsTable->setItem(i, 2, nameItem);
+    m_itemsTable->setItem(i, 3, nameItem);
 
     QLabel *linkLabel =
         new QLabel(QString("<a href=\"%1\">%1</a>").arg(m_items[i].sourcePath));
@@ -82,12 +88,12 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
         false); // We want to show it, not necessarily open a browser directly
     linkLabel->setTextFormat(Qt::RichText);
     linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    m_itemsTable->setCellWidget(i, 3, linkLabel);
+    m_itemsTable->setCellWidget(i, 4, linkLabel);
 
     // Keep the actual data in the item for easy retrieval
     QTableWidgetItem *linkItem = new QTableWidgetItem();
     linkItem->setData(Qt::UserRole, m_items[i].sourcePath);
-    m_itemsTable->setItem(i, 3, linkItem);
+    m_itemsTable->setItem(i, 4, linkItem);
   }
 
   // Check if any items are local files. If none are, hide the delete column.
@@ -101,10 +107,11 @@ void ProcessItemDialog::setupUi() {
 
   // Table
   m_itemsTable = new QTableWidget(this);
-  m_itemsTable->setColumnCount(4);
+  m_itemsTable->setColumnCount(5);
   m_itemsTable->setHorizontalHeaderLabels(
-      {"Enable", "Delete file", "Name", "Link"});
+      {"Enable", "Delete file", "Delete when done", "Name", "Link"});
   m_itemsTable->horizontalHeaderItem(1)->setToolTip("Delete file after import");
+  m_itemsTable->horizontalHeaderItem(2)->setToolTip("Delete item automatically after successful dispatch");
   m_itemsTable->setItemDelegate(new MaxWidthDelegate(m_itemsTable));
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       QHeaderView::ResizeToContents);
@@ -180,7 +187,9 @@ void ProcessItemDialog::onProcessClicked() {
     QTableWidgetItem *checkItem = m_itemsTable->item(i, 0);
     if (checkItem && checkItem->checkState() == Qt::Checked) {
       Item item = m_items[i];
+      QString oldState = item.stateToString();
       item.state = selectedState;
+      item.addHistory(QString("Processed and state set to %1").arg(item.stateToString()));
       item.connectorId = m_connectorCombo->currentText();
       if (selectedState == ItemState::Held) {
         item.scheduledTime = m_holdTimeEdit->dateTime();
@@ -193,6 +202,16 @@ void ProcessItemDialog::onProcessClicked() {
         if (deleteItem->checkState() == Qt::Checked) {
           QJsonObject meta = item.metadata;
           meta["delete_source_file"] = true;
+          item.metadata = meta;
+        }
+      }
+
+
+      QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
+      if (deleteWhenDoneItem && deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
+        if (deleteWhenDoneItem->checkState() == Qt::Checked) {
+          QJsonObject meta = item.metadata;
+          meta["delete_once_submitted"] = true;
           item.metadata = meta;
         }
       }
@@ -262,7 +281,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   connect(infoAction, &QAction::triggered, this, [this, row]() {
     QString sourcePath = m_items[row].sourcePath;
     if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
-      TorrentInfoDialog dialog(sourcePath, this);
+      TorrentInfoDialog dialog(sourcePath, &m_items[row], this);
       dialog.exec();
     } else {
       QMessageBox::information(this, "Item Information",
