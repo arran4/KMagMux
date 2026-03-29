@@ -616,7 +616,7 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     return;
   }
 
-  // If we are in the Inbox view, offer a "Process..." action
+  // Always offer manual lifecycle management
   if (view == m_unprocessedView) {
     menu.addAction(m_processAction);
     menu.addSeparator();
@@ -624,12 +624,10 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addAction(m_reprocessAction);
     menu.addAction(m_dismissAction);
     menu.addSeparator();
-    menu.addAction(m_queueAction);
-    menu.addAction(m_holdAction);
-  } else {
-    menu.addAction(m_queueAction);
-    menu.addAction(m_holdAction);
   }
+
+  menu.addAction(m_queueAction);
+  menu.addAction(m_holdAction);
   if (view != m_unprocessedView) {
     menu.addSeparator();
     menu.addAction(m_unprocessAction);
@@ -664,20 +662,25 @@ void MainWindow::onItemAction(ItemState newState) {
   if (selection.isEmpty())
     return;
 
-  QModelIndex sourceIndex = proxy->mapToSource(selection.first());
-  int row = sourceIndex.row();
-  Item item = model->getItem(row);
+  std::vector<Item> itemsToSave;
+  itemsToSave.reserve(selection.size());
 
-  qDebug() << "Changing item state for:" << item.id << "to" << (int)newState;
+  for (const QModelIndex &index : selection) {
+    QModelIndex sourceIndex = proxy->mapToSource(index);
+    int row = sourceIndex.row();
+    Item item = model->getItem(row);
 
-  QString oldState = item.stateToString();
-  item.state = newState;
-  item.addHistory(QString("State changed from %1 to %2 by user action.").arg(oldState, item.stateToString()));
+    qDebug() << "Changing item state for:" << item.id << "to" << (int)newState;
 
-  if (m_storage->saveItem(item)) {
-    // Model refresh happens via itemUpdated signal
-  } else {
-    qWarning() << "Failed to save item state change";
+    QString oldState = item.stateToString();
+    item.state = newState;
+    item.addHistory(QString("State changed from %1 to %2 by user action.").arg(oldState, item.stateToString()));
+
+    itemsToSave.push_back(item);
+  }
+
+  if (!itemsToSave.empty()) {
+    m_storage->saveItems(itemsToSave);
   }
 }
 
@@ -1003,15 +1006,14 @@ void MainWindow::updateActionsState() {
     m_dismissAction->setEnabled(hasSelection && view == m_errorView);
   }
 
-  bool showQueueAndHold = (view != m_unprocessedView);
   if (m_queueAction) {
-    m_queueAction->setVisible(showQueueAndHold);
-    m_queueAction->setEnabled(hasSelection && showQueueAndHold);
+    m_queueAction->setVisible(true);
+    m_queueAction->setEnabled(hasSelection);
   }
 
   if (m_holdAction) {
-    m_holdAction->setVisible(showQueueAndHold);
-    m_holdAction->setEnabled(hasSelection && showQueueAndHold);
+    m_holdAction->setVisible(true);
+    m_holdAction->setEnabled(hasSelection);
   }
 
   if (m_archiveAction)
