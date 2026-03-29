@@ -718,6 +718,11 @@ void MainWindow::onDeleteItems() {
   if (!model)
     return;
 
+  ItemFilterProxyModel *proxy =
+      qobject_cast<ItemFilterProxyModel *>(view->model());
+  if (!proxy)
+    return;
+
   QModelIndexList selection = view->selectionModel()->selectedRows();
   if (selection.isEmpty())
     return;
@@ -735,7 +740,8 @@ void MainWindow::onDeleteItems() {
     std::vector<QString> idsToDelete;
     idsToDelete.reserve(selection.size());
     for (const QModelIndex &index : selection) {
-      idsToDelete.push_back(model->getItem(index.row()).id);
+      QModelIndex sourceIndex = proxy->mapToSource(index);
+      idsToDelete.push_back(model->getItem(sourceIndex.row()).id);
     }
 
     qDebug() << "Deleting" << idsToDelete.size() << "items";
