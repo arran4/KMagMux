@@ -34,6 +34,11 @@ QString TorBoxConnector::getName() const { return "TorBox"; }
 bool TorBoxConnector::isEnabled() const { return m_enabled; }
 
 void TorBoxConnector::dispatch(const Item &item) {
+  if (m_apiToken.isEmpty()) {
+    emit dispatchFinished(item.id, false, "API Token is missing.");
+    return;
+  }
+
   // Simple stub for dispatch
   QUrl url("https://api.torbox.app/v1/api/torrents/createtorrent");
   QNetworkRequest request(url);
@@ -88,8 +93,15 @@ void TorBoxConnector::onAddTorrentReply() {
   if (reply->error() == QNetworkReply::NoError) {
     emit dispatchFinished(itemId, true, "Dispatched successfully.");
   } else {
-    emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString());
+    QString errorMessage = "Network error: " + reply->errorString();
+#ifndef QT_NO_DEBUG
+    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    QString body = QString::fromUtf8(reply->readAll()).left(500);
+    if (statusCode > 0 || !body.isEmpty()) {
+      errorMessage += QString(" (Status: %1, Body: %2)").arg(statusCode).arg(body);
+    }
+#endif
+    emit dispatchFinished(itemId, false, errorMessage);
   }
   if (reply) {
     reply->deleteLater();
