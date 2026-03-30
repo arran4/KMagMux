@@ -94,14 +94,40 @@ void TorBoxConnector::onAddTorrentReply() {
     emit dispatchFinished(itemId, true, "Dispatched successfully.");
   } else {
     QString errorMessage = "Network error: " + reply->errorString();
-#ifndef QT_NO_DEBUG
+
+    QJsonObject extraMeta;
+    QString rawHttp = "Request URL:\n" + reply->request().url().toString() + "\n\n";
+    rawHttp += "Request Headers:\n";
+    const auto reqHeaders = reply->request().rawHeaderList();
+    for (const QByteArray &headerName : reqHeaders) {
+      if (QString::fromUtf8(headerName).toLower() == "authorization") {
+        rawHttp += QString::fromUtf8(headerName) + ": [REDACTED]\n";
+      } else {
+        rawHttp += QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->request().rawHeader(headerName)) + "\n";
+      }
+    }
+
     int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    QString body = QString::fromUtf8(reply->readAll()).left(500);
-    if (statusCode > 0 || !body.isEmpty()) {
-      errorMessage += QString(" (Status: %1, Body: %2)").arg(statusCode).arg(body);
+    rawHttp += "\nResponse Status Code: " + QString::number(statusCode) + "\n\n";
+
+    rawHttp += "Response Headers:\n";
+    const auto resHeaders = reply->rawHeaderList();
+    for (const QByteArray &headerName : resHeaders) {
+      rawHttp += QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
+    }
+
+    QByteArray body = reply->readAll();
+    rawHttp += "\nResponse Body:\n" + QString::fromUtf8(body) + "\n";
+
+    extraMeta["raw_http"] = rawHttp;
+
+#ifndef QT_NO_DEBUG
+    QString shortBody = QString::fromUtf8(body).left(500);
+    if (statusCode > 0 || !shortBody.isEmpty()) {
+      errorMessage += QString(" (Status: %1, Body: %2)").arg(statusCode).arg(shortBody);
     }
 #endif
-    emit dispatchFinished(itemId, false, errorMessage);
+    emit dispatchFinished(itemId, false, errorMessage, extraMeta);
   }
   if (reply) {
     reply->deleteLater();

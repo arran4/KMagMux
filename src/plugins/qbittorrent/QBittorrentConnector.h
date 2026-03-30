@@ -55,7 +55,7 @@ private:
 
 signals:
   void dispatchFinished(const QString &itemId, bool success,
-                        const QString &message);
+                        const QString &message, const QJsonObject &metadata = QJsonObject());
 };
 
 #endif // QBITTORRENTCONNECTOR_H

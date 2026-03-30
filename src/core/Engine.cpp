@@ -143,6 +143,9 @@ Engine::Engine(StorageManager *storage, QObject *parent)
                    << "from" << info.filePath;
           m_connectors.insert(connector->getId(), connector);
           // Connect to its signals via QObject cast
+          connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString, QJsonObject)),
+                  this, SLOT(onDispatchFinished(QString, bool, QString, QJsonObject)));
+          // Keep backwards compatibility for older/unmodified connectors
           connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
                   this, SLOT(onDispatchFinished(QString, bool, QString)));
         } else {
@@ -288,7 +291,7 @@ void Engine::dispatchItem(Item &item) {
 }
 
 void Engine::onDispatchFinished(const QString &itemId, bool success,
-                                const QString &message) {
+                                const QString &message, const QJsonObject &metadata) {
   auto itemOpt = m_storage->loadItem(itemId);
   if (!itemOpt) {
     qWarning() << "Finished dispatch for unknown item:" << itemId;
@@ -301,6 +304,11 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
   QJsonObject meta = item.metadata;
   meta["lastDispatchTime"] = QDateTime::currentDateTime().toString(Qt::ISODate);
   meta["dispatchResult"] = message;
+
+  // Merge extra metadata provided by the connector
+  for (auto it = metadata.constBegin(); it != metadata.constEnd(); ++it) {
+    meta.insert(it.key(), it.value());
+  }
 
   if (success) {
     if (meta["delete_once_submitted"].toBool(false)) {
