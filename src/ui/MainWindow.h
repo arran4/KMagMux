@@ -90,6 +90,7 @@ private:
   // List View and Item Actions
   QAction *m_selectAllAction;
   QAction *m_processAction;
+  QAction *m_processAllAction;
   QAction *m_unprocessAction;
   QAction *m_dismissAction;
   QAction *m_archiveAction;

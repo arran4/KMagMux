@@ -22,6 +22,7 @@
             <Action name="select_all"/>
             <Separator/>
             <Action name="process_item"/>
+            <Action name="process_all_items"/>
             <Action name="reprocess_item"/>
             <Action name="dismiss_item"/>
             <Action name="queue_item"/>
@@ -43,6 +44,7 @@
         <Action name="toggle_processing"/>
         <Separator/>
         <Action name="add_items"/>
+        <Action name="process_all_items"/>
         <Separator/>
         <Action name="minimize_to_tray"/>
         <Action name="quit"/>
