@@ -47,9 +47,12 @@ void PremiumizeConnector::dispatch(const Item &item) {
     postData.addQueryItem("apikey", m_apiKey);
     postData.addQueryItem("src", item.sourcePath);
 
-    QNetworkReply *reply = m_networkManager->post(
-        request, postData.toString(QUrl::FullyEncoded).toUtf8());
+    QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
+    QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
+
+    QNetworkReply *reply = m_networkManager->post(request, body);
     reply->setProperty("itemId", item.id);
+    reply->setProperty("apiCallLog", apiCallLog);
     connect(reply, &QNetworkReply::finished, this,
             &PremiumizeConnector::onAddTorrentReply);
   } else {
@@ -90,9 +93,12 @@ void PremiumizeConnector::dispatch(const Item &item) {
     file->setParent(multiPart);
     multiPart->append(filePart);
 
+    QString apiCallLog = Connector::buildApiCallLog("POST", request); // multipart body omitted
+
     QNetworkReply *reply = m_networkManager->post(request, multiPart);
     multiPart->setParent(reply);
     reply->setProperty("itemId", item.id);
+    reply->setProperty("apiCallLog", apiCallLog);
     connect(reply, &QNetworkReply::finished, this,
             &PremiumizeConnector::onAddTorrentReply);
   }
@@ -104,11 +110,13 @@ void PremiumizeConnector::onAddTorrentReply() {
     return;
 
   QString itemId = reply->property("itemId").toString();
+  QString apiCallLog = reply->property("apiCallLog").toString();
+
   if (reply->error() == QNetworkReply::NoError) {
     emit dispatchFinished(itemId, true, "Dispatched successfully.");
   } else {
     emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString());
+                          "Network error: " + reply->errorString() + apiCallLog);
   }
   if (reply) {
     reply->deleteLater();
