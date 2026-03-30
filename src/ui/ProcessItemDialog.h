@@ -8,6 +8,7 @@
 #include <QDialog>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QStringList>
 #include <QTableWidget>
@@ -35,7 +36,7 @@ private:
   QTableWidget *m_itemsTable;
   QComboBox *m_stateCombo;
   QDateTimeEdit *m_holdTimeEdit;
-  QComboBox *m_connectorCombo;
+  QListWidget *m_connectorList;
 
   void setupUi();
 };
