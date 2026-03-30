@@ -70,8 +70,11 @@ void QBittorrentConnector::login() {
   postData.addQueryItem("username", m_username);
   postData.addQueryItem("password", m_password);
 
-  QNetworkReply *reply = m_networkManager->post(
-      request, postData.toString(QUrl::FullyEncoded).toUtf8());
+  QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
+  QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
+
+  QNetworkReply *reply = m_networkManager->post(request, body);
+  reply->setProperty("apiCallLog", apiCallLog);
   connect(reply, &QNetworkReply::finished, this,
           &QBittorrentConnector::onLoginReply);
 }
@@ -90,9 +93,10 @@ void QBittorrentConnector::onLoginReply() {
       QList<Item> itemsToFail = m_pendingItems;
       m_pendingItems.clear();
 
+      QString apiCallLog = reply->property("apiCallLog").toString();
       for (const Item &item : itemsToFail) {
         emit dispatchFinished(item.id, false,
-                              "Login failed: Invalid username or password.");
+                              "Login failed: Invalid username or password." + apiCallLog);
       }
     } else {
       // Login successful. The cookie jar in QNetworkAccessManager handles
@@ -109,9 +113,10 @@ void QBittorrentConnector::onLoginReply() {
     QList<Item> itemsToFail = m_pendingItems;
     m_pendingItems.clear();
 
+    QString apiCallLog = reply->property("apiCallLog").toString();
     for (const Item &item : itemsToFail) {
       emit dispatchFinished(item.id, false,
-                            "Login failed: " + reply->errorString());
+                            "Login failed: " + reply->errorString() + apiCallLog);
     }
   }
   if (reply) {
@@ -195,12 +200,15 @@ void QBittorrentConnector::performDispatch(const Item &item) {
   // 6. Paused (optional, maybe from metadata)
   // "paused" value="true"|"false"
 
+  QString apiCallLog = Connector::buildApiCallLog("POST", request); // Multipart body omitted
+
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply); // Delete multiPart with reply
 
   // Store the full item so we can re-dispatch if authentication fails
   reply->setProperty("item", QVariant::fromValue(item));
   reply->setProperty("itemId", item.id);
+  reply->setProperty("apiCallLog", apiCallLog);
 
   connect(reply, &QNetworkReply::finished, this,
           &QBittorrentConnector::onAddTorrentReply);
@@ -216,6 +224,8 @@ void QBittorrentConnector::onAddTorrentReply() {
   int statusCode =
       reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
+  QString apiCallLog = reply->property("apiCallLog").toString();
+
   if (statusCode == 401 || statusCode == 403) {
     // Authentication failed, queue the item and attempt to login
     m_pendingItems.append(item);
@@ -227,13 +237,13 @@ void QBittorrentConnector::onAddTorrentReply() {
     QString response = reply->readAll();
     if (response.toLower().contains("fail")) {
       emit dispatchFinished(itemId, false,
-                            "qBittorrent API returned failure: " + response);
+                            "qBittorrent API returned failure: " + response + apiCallLog);
     } else {
       emit dispatchFinished(itemId, true, "Dispatched successfully.");
     }
   } else {
     emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString());
+                          "Network error: " + reply->errorString() + apiCallLog);
   }
   if (reply) {
     reply->deleteLater();
