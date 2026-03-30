@@ -77,9 +77,12 @@ void TorBoxConnector::dispatch(const Item &item) {
     multiPart->append(filePart);
   }
 
+  QString apiCallLog = Connector::buildApiCallLog("POST", request);
+
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply);
   reply->setProperty("itemId", item.id);
+  reply->setProperty("apiCallLog", apiCallLog);
   connect(reply, &QNetworkReply::finished, this,
           &TorBoxConnector::onAddTorrentReply);
 }
@@ -90,6 +93,8 @@ void TorBoxConnector::onAddTorrentReply() {
     return;
 
   QString itemId = reply->property("itemId").toString();
+  QString apiCallLog = reply->property("apiCallLog").toString();
+
   if (reply->error() == QNetworkReply::NoError) {
     emit dispatchFinished(itemId, true, "Dispatched successfully.");
   } else {
@@ -127,7 +132,8 @@ void TorBoxConnector::onAddTorrentReply() {
       errorMessage += QString(" (Status: %1, Body: %2)").arg(statusCode).arg(shortBody);
     }
 #endif
-    emit dispatchFinished(itemId, false, errorMessage, extraMeta);
+    emit dispatchFinished(itemId, false,
+                          "Network error: " + reply->errorString() + apiCallLog);
   }
   if (reply) {
     reply->deleteLater();

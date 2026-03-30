@@ -75,9 +75,12 @@ void PutIoConnector::dispatch(const Item &item) {
     multiPart->append(filePart);
   }
 
+  QString apiCallLog = Connector::buildApiCallLog("POST", request);
+
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply);
   reply->setProperty("itemId", item.id);
+  reply->setProperty("apiCallLog", apiCallLog);
   connect(reply, &QNetworkReply::finished, this,
           &PutIoConnector::onAddTorrentReply);
 }
@@ -88,11 +91,13 @@ void PutIoConnector::onAddTorrentReply() {
     return;
 
   QString itemId = reply->property("itemId").toString();
+  QString apiCallLog = reply->property("apiCallLog").toString();
+
   if (reply->error() == QNetworkReply::NoError) {
     emit dispatchFinished(itemId, true, "Dispatched successfully.");
   } else {
     emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString());
+                          "Network error: " + reply->errorString() + apiCallLog);
   }
   if (reply) {
     reply->deleteLater();
