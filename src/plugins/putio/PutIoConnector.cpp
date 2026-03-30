@@ -34,6 +34,11 @@ QString PutIoConnector::getName() const { return "Put.io"; }
 bool PutIoConnector::isEnabled() const { return m_enabled; }
 
 void PutIoConnector::dispatch(const Item &item) {
+  if (m_oauthToken.isEmpty()) {
+    emit dispatchFinished(item.id, false, "OAuth Token is missing.");
+    return;
+  }
+
   QUrl url("https://api.put.io/v2/transfers/add");
   QNetworkRequest request(url);
   request.setRawHeader("Authorization", ("Bearer " + m_oauthToken).toUtf8());

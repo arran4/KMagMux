@@ -35,6 +35,11 @@ QString PremiumizeConnector::getName() const { return "Premiumize.me"; }
 bool PremiumizeConnector::isEnabled() const { return m_enabled; }
 
 void PremiumizeConnector::dispatch(const Item &item) {
+  if (m_apiKey.isEmpty()) {
+    emit dispatchFinished(item.id, false, "API Key is missing.");
+    return;
+  }
+
   QUrl url("https://www.premiumize.me/api/transfer/create");
 
   if (item.sourcePath.startsWith("magnet:")) {

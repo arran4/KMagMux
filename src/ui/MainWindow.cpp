@@ -634,6 +634,15 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   menu.addSeparator();
 
   if (view == m_errorView) {
+    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+    if (proxy && index.isValid()) {
+      QModelIndex sourceIndex = proxy->mapToSource(index);
+      Item item = m_errorModel->getItem(sourceIndex.row());
+      if (item.metadata.contains("raw_http")) {
+        QAction *rawHttpAction = menu.addAction(tr("View raw http"));
+        connect(rawHttpAction, &QAction::triggered, this, &MainWindow::onViewRawHttp);
+      }
+    }
     menu.addAction(m_dismissAction);
     menu.addSeparator();
   }
@@ -651,6 +660,28 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   menu.addAction(m_deleteAction);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::onViewRawHttp() {
+  QTableView *view = getCurrentView();
+  if (!view || view != m_errorView)
+    return;
+
+  ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+  if (!proxy)
+    return;
+
+  QModelIndexList selection = view->selectionModel()->selectedRows();
+  if (selection.isEmpty())
+    return;
+
+  QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+  Item item = m_errorModel->getItem(sourceIndex.row());
+
+  if (item.metadata.contains("raw_http")) {
+    QString rawHttp = item.metadata["raw_http"].toString();
+    QMessageBox::information(this, tr("Raw HTTP"), rawHttp);
+  }
 }
 
 void MainWindow::onItemAction(ItemState newState) {

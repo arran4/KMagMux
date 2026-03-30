@@ -43,6 +43,7 @@ private slots:
   void quitApplication();
 
   void onCustomContextMenuRequested(const QPoint &pos);
+  void onViewRawHttp();
   void onItemAction(ItemState newState);
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);

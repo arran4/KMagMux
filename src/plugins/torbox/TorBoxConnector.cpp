@@ -34,6 +34,11 @@ QString TorBoxConnector::getName() const { return "TorBox"; }
 bool TorBoxConnector::isEnabled() const { return m_enabled; }
 
 void TorBoxConnector::dispatch(const Item &item) {
+  if (m_apiToken.isEmpty()) {
+    emit dispatchFinished(item.id, false, "API Token is missing.");
+    return;
+  }
+
   // Simple stub for dispatch
   QUrl url("https://api.torbox.app/v1/api/torrents/createtorrent");
   QNetworkRequest request(url);
@@ -93,6 +98,40 @@ void TorBoxConnector::onAddTorrentReply() {
   if (reply->error() == QNetworkReply::NoError) {
     emit dispatchFinished(itemId, true, "Dispatched successfully.");
   } else {
+    QString errorMessage = "Network error: " + reply->errorString();
+
+    QJsonObject extraMeta;
+    QString rawHttp = "Request URL:\n" + reply->request().url().toString() + "\n\n";
+    rawHttp += "Request Headers:\n";
+    const auto reqHeaders = reply->request().rawHeaderList();
+    for (const QByteArray &headerName : reqHeaders) {
+      if (QString::fromUtf8(headerName).toLower() == "authorization") {
+        rawHttp += QString::fromUtf8(headerName) + ": [REDACTED]\n";
+      } else {
+        rawHttp += QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->request().rawHeader(headerName)) + "\n";
+      }
+    }
+
+    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    rawHttp += "\nResponse Status Code: " + QString::number(statusCode) + "\n\n";
+
+    rawHttp += "Response Headers:\n";
+    const auto resHeaders = reply->rawHeaderList();
+    for (const QByteArray &headerName : resHeaders) {
+      rawHttp += QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
+    }
+
+    QByteArray body = reply->readAll();
+    rawHttp += "\nResponse Body:\n" + QString::fromUtf8(body) + "\n";
+
+    extraMeta["raw_http"] = rawHttp;
+
+#ifndef QT_NO_DEBUG
+    QString shortBody = QString::fromUtf8(body).left(500);
+    if (statusCode > 0 || !shortBody.isEmpty()) {
+      errorMessage += QString(" (Status: %1, Body: %2)").arg(statusCode).arg(shortBody);
+    }
+#endif
     emit dispatchFinished(itemId, false,
                           "Network error: " + reply->errorString() + apiCallLog);
   }
