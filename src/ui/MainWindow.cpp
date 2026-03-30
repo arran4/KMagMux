@@ -359,7 +359,6 @@ void MainWindow::setupTabs() {
 
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
-    view->setModel(model);
     view->setItemDelegate(new MaxWidthDelegate(view));
     view->horizontalHeader()->setSectionResizeMode(
         QHeaderView::ResizeToContents);
