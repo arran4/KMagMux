@@ -43,7 +43,7 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_archiveProxy(nullptr), m_errorProxy(nullptr), m_unprocessedView(nullptr),
       m_queueView(nullptr), m_doneView(nullptr), m_archiveView(nullptr),
       m_errorView(nullptr), m_toggleProcessingAction(nullptr),
-      m_selectAllAction(nullptr), m_processAction(nullptr),
+      m_selectAllAction(nullptr), m_processAction(nullptr), m_processAllAction(nullptr),
       m_unprocessAction(nullptr), m_dismissAction(nullptr),
       m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr), m_infoAction(nullptr),
       m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
@@ -240,6 +240,16 @@ void MainWindow::setupActionsAndMenus() {
   connect(m_processAction, &QAction::triggered, this,
           &MainWindow::onProcessItem);
   actionCollection()->addAction("process_item", m_processAction);
+
+  m_processAllAction = new QAction(QIcon::fromTheme("media-playback-start"), tr("Process &All"), this);
+  connect(m_processAllAction, &QAction::triggered, this, [this]() {
+    QTableView *view = getCurrentView();
+    if (view) {
+      view->selectAll();
+      onProcessItem();
+    }
+  });
+  actionCollection()->addAction("process_all_items", m_processAllAction);
 
   m_unprocessAction = new QAction(tr("&Send back to Inbox"), this);
   connect(m_unprocessAction, &QAction::triggered, this,
@@ -614,7 +624,13 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
       view->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
   }
 
+  if (view == m_unprocessedView) {
+    menu.addAction(actionCollection()->action("add_items"));
+    menu.addSeparator();
+  }
+
   menu.addAction(m_processAction);
+  menu.addAction(m_processAllAction);
   menu.addSeparator();
 
   if (view == m_errorView) {
@@ -985,6 +1001,12 @@ void MainWindow::updateActionsState() {
   if (m_processAction) {
     m_processAction->setVisible(true);
     m_processAction->setEnabled(hasSelection);
+  }
+
+  if (m_processAllAction) {
+    const ItemModel *model = getCurrentModel();
+    m_processAllAction->setVisible(view == m_unprocessedView);
+    m_processAllAction->setEnabled(model && model->rowCount() > 0 && view == m_unprocessedView);
   }
 
   if (m_unprocessAction) {
