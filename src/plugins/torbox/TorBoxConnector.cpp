@@ -7,6 +7,7 @@
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
+#include <numeric>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSettings>
@@ -57,14 +58,8 @@ void TorBoxConnector::dispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      if (multiPart) {
-        multiPart->deleteLater();
-        multiPart = nullptr;
-      }
-      if (file) {
-        file->deleteLater();
-        file = nullptr;
-      }
+      multiPart->deleteLater();
+      file->deleteLater();
       return;
     }
     QHttpPart filePart;
@@ -124,10 +119,9 @@ void TorBoxConnector::onAddTorrentReply() {
 
     rawHttp += "Response Headers:\n";
     const auto resHeaders = reply->rawHeaderList();
-    for (const QByteArray &headerName : resHeaders) {
-      rawHttp += QString::fromUtf8(headerName) + ": " +
-                 QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
-    }
+    rawHttp = std::accumulate(resHeaders.begin(), resHeaders.end(), rawHttp, [reply](const QString& str, const QByteArray& headerName) {
+        return str + QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
+    });
 
     QByteArray body = reply->readAll();
     rawHttp += "\nResponse Body:\n" + QString::fromUtf8(body) + "\n";

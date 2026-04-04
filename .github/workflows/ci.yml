@@ -78,7 +78,7 @@ jobs:
 
       - name: Install clang-tidy and dependencies
         run: |
-          pacman -Syu --noconfirm clang cmake git qt6-base qt6-svg qt6-tools qtkeychain-qt6 kxmlgui kconfig kconfigwidgets kcoreaddons ki18n
+          pacman -Syu --noconfirm base-devel gcc clang cmake git qt6-base qt6-svg qt6-tools qtkeychain-qt6 kxmlgui kconfig kconfigwidgets kcoreaddons ki18n
 
       - name: Configure CMake for compile_commands.json
         run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

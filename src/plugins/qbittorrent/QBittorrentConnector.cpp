@@ -146,14 +146,8 @@ void QBittorrentConnector::performDispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      if (multiPart) {
-        multiPart->deleteLater();
-        multiPart = nullptr;
-      }
-      if (file) {
-        file->deleteLater();
-        file = nullptr;
-      }
+      multiPart->deleteLater();
+      file->deleteLater();
       return;
     }
 
@@ -343,14 +337,14 @@ bool QBittorrentConnector::hasDebugMenu() const { return true; }
 QList<HttpApiEndpoint> QBittorrentConnector::getHttpApiEndpoints() const {
   QList<HttpApiEndpoint> endpoints;
 
-  HttpApiEndpoint login;
-  login.name = "Login";
-  login.description = "Authenticate with qBittorrent";
-  login.method = "POST";
-  login.url = "${BASE_URL}/api/v2/auth/login";
-  login.headers.insert("Content-Type", "application/x-www-form-urlencoded");
-  login.body = "username=${USERNAME}&password=${PASSWORD}";
-  endpoints.append(login);
+  HttpApiEndpoint loginEp;
+  loginEp.name = "Login";
+  loginEp.description = "Authenticate with qBittorrent";
+  loginEp.method = "POST";
+  loginEp.url = "${BASE_URL}/api/v2/auth/login";
+  loginEp.headers.insert("Content-Type", "application/x-www-form-urlencoded");
+  loginEp.body = "username=${USERNAME}&password=${PASSWORD}";
+  endpoints.append(loginEp);
 
   HttpApiEndpoint getTorrents;
   getTorrents.name = "Get Torrents";

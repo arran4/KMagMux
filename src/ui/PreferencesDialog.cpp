@@ -233,7 +233,7 @@ void PreferencesDialog::createPluginsPage() {
               // We need to save settings when OK/Apply is clicked.
               // We can connect to the buttonBox accepted signal to call
               // saveSettings.
-              if (m_buttonBox && connector && settingsWidget) {
+              if (m_buttonBox) {
                 connect(m_buttonBox, &QDialogButtonBox::accepted, this,
                         [connector, settingsWidget]() {
                           connector->saveSettings(settingsWidget);

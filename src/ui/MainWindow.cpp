@@ -80,10 +80,8 @@ MainWindow::~MainWindow() {
   }
   if (m_engine) {
     m_engine->stop();
-    if (m_engine) {
-      m_engine->deleteLater();
-      m_engine = nullptr;
-    }
+    m_engine->deleteLater();
+    m_engine = nullptr;
   }
 }
 
@@ -156,9 +154,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
               }
               // Switch to Inbox tab
               m_tabWidget->setCurrentIndex(0);
-              if (watcher) {
-                watcher->deleteLater();
-              }
+              watcher->deleteLater();
             });
 
     QFuture<std::vector<Item>> future =
@@ -268,7 +264,7 @@ void MainWindow::setupActionsAndMenus() {
   m_archiveAction = new QAction(tr("&Archive"), this);
   m_archiveAllAction = new QAction(tr("Archive &All"), this);
   connect(m_archiveAllAction, &QAction::triggered, this, [this]() {
-    QTableView *view = getCurrentView();
+    const QTableView *view = getCurrentView();
     if (!view)
       return;
     const ItemModel *model = getCurrentModel();
@@ -349,11 +345,11 @@ void MainWindow::setupActionsAndMenus() {
   // .rc file
   QMenu *debugMenu = nullptr;
   QList<QMenu *> menus = menuBar()->findChildren<QMenu *>();
-  for (QMenu *menu : std::as_const(menus)) {
-    if (menu->objectName() == "debug_menu") {
-      debugMenu = menu;
-      break;
-    }
+  auto it = std::find_if(menus.begin(), menus.end(), [](QMenu *menu) {
+      return menu->objectName() == "debug_menu";
+  });
+  if (it != menus.end()) {
+      debugMenu = *it;
   }
 
   if (debugMenu) {
@@ -608,7 +604,7 @@ QTableView *MainWindow::getCurrentView() const {
 }
 
 ItemModel *MainWindow::getCurrentModel() const {
-  QTableView *view = getCurrentView();
+  const QTableView *view = getCurrentView();
   if (view) {
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
@@ -991,9 +987,7 @@ void MainWindow::processAddedLines(const QStringList &lines) {
             if (!items.empty()) {
               openAddItemsDialog(items);
             }
-            if (watcher) {
-              watcher->deleteLater();
-            }
+            watcher->deleteLater();
           });
 
   QFuture<std::vector<Item>> future = QtConcurrent::run(

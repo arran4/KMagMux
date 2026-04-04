@@ -64,10 +64,8 @@ void LinkExtractorDialog::onCancelClicked() {
   m_cancelled = true;
   if (m_currentReply) {
     m_currentReply->abort();
-    if (m_currentReply) {
-      m_currentReply->deleteLater();
-      m_currentReply = nullptr;
-    }
+    m_currentReply->deleteLater();
+    m_currentReply = nullptr;
   }
   appendLog(tr("Cancelled."));
   reject();
@@ -132,7 +130,7 @@ void LinkExtractorDialog::processNext() {
     return;
   }
 
-  if (!isLocalFile && url.isValid() &&
+  if (url.isValid() &&
       (url.scheme() == "http" || url.scheme() == "https")) {
     appendLog(tr("Downloading remote file: %1").arg(line));
     m_currentReply = m_networkManager->get(QNetworkRequest(url));

@@ -68,10 +68,8 @@ void TrackerClient::cancel() {
 
   if (m_currentReply) {
     m_currentReply->abort();
-    if (m_currentReply) {
-      m_currentReply->deleteLater();
-      m_currentReply = nullptr;
-    }
+    m_currentReply->deleteLater();
+    m_currentReply = nullptr;
   }
 }
 
@@ -245,19 +243,13 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply) {
 
   if (reply->error() != QNetworkReply::NoError) {
     stats.errorString = reply->errorString();
-    if (reply) {
-      reply->deleteLater();
-      reply = nullptr;
-    }
+    reply->deleteLater();
     emit scrapeFinished(stats);
     return;
   }
 
   QByteArray data = reply->readAll();
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+  reply->deleteLater();
 
   BencodeParser parser;
   if (!parser.parse(data)) {

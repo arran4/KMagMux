@@ -17,7 +17,7 @@ bool ItemFilterProxyModel::filterAcceptsRow(
   if (m_filterText.isEmpty())
     return true;
 
-  ItemModel *model = qobject_cast<ItemModel *>(sourceModel());
+  const ItemModel *model = qobject_cast<ItemModel *>(sourceModel());
   if (!model)
     return true;
 
@@ -38,10 +38,10 @@ bool ItemFilterProxyModel::filterAcceptsRow(
       }
     } else if (it.value().isArray()) {
       QJsonArray arr = it.value().toArray();
-      for (const QJsonValue &val : arr) {
-        if (val.isString() && val.toString().toLower().contains(textLower)) {
+      if (std::any_of(arr.begin(), arr.end(), [&textLower](const QJsonValue &val) {
+          return val.isString() && val.toString().toLower().contains(textLower);
+      })) {
           return true;
-        }
       }
     }
   }
