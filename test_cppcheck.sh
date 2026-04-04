@@ -1,1 +1,0 @@
-cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=unknownMacro --suppress=unmatchedSuppression -I src/ src/ -Dslots= -Dsignals=protected -DQ_SIGNALS=protected -DQ_SLOTS= -DQ_OBJECT= -DQ_DECLARE_METATYPE\(x\)= -Demit= -DQ_PLUGIN_METADATA\(x\)=
