@@ -48,10 +48,10 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_unprocessAction(nullptr), m_dismissAction(nullptr),
       m_archiveAction(nullptr), m_archiveAllAction(nullptr),
       m_deleteAction(nullptr), m_infoAction(nullptr),
-      m_rawResultsAction(nullptr), m_trayIcon(nullptr),
-      m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
-      m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
-      m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
+      m_rawResultsAction(nullptr), m_trayIcon(nullptr), m_trayIconMenu(nullptr),
+      m_minimizeAction(nullptr), m_showHideAction(nullptr),
+      m_quitAction(nullptr), m_closeToTray(false), m_minimizeToTray(false),
+      m_autoStart(false), m_forceQuit(false) {
   qApp->setQuitOnLastWindowClosed(false);
 
   applySettings();
@@ -347,10 +347,10 @@ void MainWindow::setupActionsAndMenus() {
   QMenu *debugMenu = nullptr;
   QList<QMenu *> menus = menuBar()->findChildren<QMenu *>();
   auto it = std::find_if(menus.begin(), menus.end(), [](QMenu *menu) {
-      return menu->objectName() == "debug_menu";
+    return menu->objectName() == "debug_menu";
   });
   if (it != menus.end()) {
-      debugMenu = *it;
+    debugMenu = *it;
   }
 
   if (debugMenu) {
