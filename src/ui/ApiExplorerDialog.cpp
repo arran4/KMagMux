@@ -433,9 +433,11 @@ void ApiExplorerDialog::onNetworkReplyFinished() {
   // Response Headers
   responseText += "--- Headers ---\n";
   const auto rawHeaders = reply->rawHeaderList();
-  responseText = std::accumulate(rawHeaders.begin(), rawHeaders.end(), responseText, [reply](const QString& str, const QByteArray& headerName) {
-      return str + headerName + ": " + reply->rawHeader(headerName) + "\n";
-  });
+  responseText = std::accumulate(
+      rawHeaders.begin(), rawHeaders.end(), responseText,
+      [reply](const QString &str, const QByteArray &headerName) {
+        return str + headerName + ": " + reply->rawHeader(headerName) + "\n";
+      });
   responseText += "\n--- Body ---\n";
 
   // Response Body

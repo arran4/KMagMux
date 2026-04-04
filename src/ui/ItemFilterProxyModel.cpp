@@ -38,10 +38,12 @@ bool ItemFilterProxyModel::filterAcceptsRow(
       }
     } else if (it.value().isArray()) {
       QJsonArray arr = it.value().toArray();
-      if (std::any_of(arr.begin(), arr.end(), [&textLower](const QJsonValue &val) {
-          return val.isString() && val.toString().toLower().contains(textLower);
-      })) {
-          return true;
+      if (std::any_of(arr.begin(), arr.end(),
+                      [&textLower](const QJsonValue &val) {
+                        return val.isString() &&
+                               val.toString().toLower().contains(textLower);
+                      })) {
+        return true;
       }
     }
   }

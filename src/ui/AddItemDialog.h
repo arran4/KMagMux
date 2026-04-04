@@ -21,7 +21,7 @@ public:
                          const QStringList &connectors,
                          QWidget *parent = nullptr);
 
-  const std::vector<Item>& getItems() const;
+  const std::vector<Item> &getItems() const;
 
 private slots:
   void onProcessClicked();
