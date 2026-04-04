@@ -59,6 +59,7 @@ add_subdirectory(src/plugins/qbittorrent)
 add_subdirectory(src/plugins/torbox)
 add_subdirectory(src/plugins/putio)
 add_subdirectory(src/plugins/premiumize)
+add_subdirectory(src/plugins/localprogram)
 
 include(CTest)
 if(BUILD_TESTING)

@@ -43,6 +43,9 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   pluginPaths << QDir::cleanPath(appDir + "/plugins/premiumize");
   pluginPaths << QDir::cleanPath(appDir + "/src/plugins/premiumize");
   pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/premiumize");
+  pluginPaths << QDir::cleanPath(appDir + "/plugins/localprogram");
+  pluginPaths << QDir::cleanPath(appDir + "/src/plugins/localprogram");
+  pluginPaths << QDir::cleanPath(appDir + "/../src/plugins/localprogram");
 
   // Explicit IDE binary output path
   pluginPaths << QDir::cleanPath(appDir + "/../../cmake-build-debug/plugins");
