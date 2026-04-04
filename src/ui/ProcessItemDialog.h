@@ -14,31 +14,30 @@
 #include <QTableWidget>
 #include <vector>
 
-class ProcessItemDialog : public QDialog {
-  Q_OBJECT
+class ProcessItemDialog : public QDialog
+{
+    Q_OBJECT
 
 public:
-  explicit ProcessItemDialog(const std::vector<Item> &items,
-                             const QStringList &connectors,
-                             QWidget *parent = nullptr);
+    explicit ProcessItemDialog(const std::vector<Item> &items, const QStringList &connectors, QWidget *parent = nullptr);
 
-  std::vector<Item> getItems() const;
+    const std::vector<Item>& getItems() const;
 
 private slots:
-  void onProcessClicked();
-  void onCustomContextMenuRequested(const QPoint &pos);
-  void onStateChanged(int index);
+    void onProcessClicked();
+    void onCustomContextMenuRequested(const QPoint &pos);
+    void onStateChanged(int index);
 
 private:
-  std::vector<Item> m_items;
-  QStringList m_connectors;
+    std::vector<Item> m_items;
+    QStringList m_connectors;
 
-  QTableWidget *m_itemsTable;
-  QComboBox *m_stateCombo;
-  QDateTimeEdit *m_holdTimeEdit;
-  QListWidget *m_connectorList;
+    QTableWidget *m_itemsTable;
+    QComboBox *m_stateCombo;
+    QDateTimeEdit *m_holdTimeEdit;
+    QListWidget *m_connectorList;
 
-  void setupUi();
+    void setupUi();
 };
 
 #endif // PROCESSITEMDIALOG_H

@@ -13,26 +13,25 @@
 #include <QTableWidget>
 #include <vector>
 
-class AddItemDialog : public QDialog {
-  Q_OBJECT
+class AddItemDialog : public QDialog
+{
+    Q_OBJECT
 
 public:
-  explicit AddItemDialog(const std::vector<Item> &items,
-                         const QStringList &connectors,
-                         QWidget *parent = nullptr);
+    explicit AddItemDialog(const std::vector<Item> &items, const QStringList &connectors, QWidget *parent = nullptr);
 
-  std::vector<Item> getItems() const;
+    const std::vector<Item>& getItems() const;
 
 private slots:
-  void onProcessClicked();
-  void onCustomContextMenuRequested(const QPoint &pos);
+    void onProcessClicked();
+    void onCustomContextMenuRequested(const QPoint &pos);
 
 private:
-  std::vector<Item> m_items;
+    std::vector<Item> m_items;
 
-  QTableWidget *m_itemsTable;
+    QTableWidget *m_itemsTable;
 
-  void setupUi();
+    void setupUi();
 };
 
 #endif // ADDITEMDIALOG_H

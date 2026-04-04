@@ -7,39 +7,38 @@
 #include <QObject>
 #include <QtPlugin>
 
-class PutIoConnector : public QObject, public Connector {
-  Q_OBJECT
-  Q_INTERFACES(Connector)
-  Q_PLUGIN_METADATA(IID "com.kmagmux.Connector/1.0" FILE "putio.json")
+class PutIoConnector : public QObject, public Connector
+{
+    Q_OBJECT
+    Q_INTERFACES(Connector)
+    Q_PLUGIN_METADATA(IID "com.kmagmux.Connector/1.0" FILE "putio.json")
 
 public:
-  PutIoConnector();
-  explicit PutIoConnector(QObject *parent);
-  QString getId() const override;
-  QString getName() const override;
-  void dispatch(const Item &item) override;
-  bool isEnabled() const override;
+    PutIoConnector();
+    explicit PutIoConnector(QObject *parent);
+    QString getId() const override;
+    QString getName() const override;
+    void dispatch(const Item &item) override;
+    bool isEnabled() const override;
 
-  bool hasSettings() const override;
-  QWidget *createSettingsWidget(QWidget *parent) override;
-  void saveSettings(QWidget *settingsWidget) override;
+    bool hasSettings() const override;
+    QWidget *createSettingsWidget(QWidget *parent) override;
+    void saveSettings(QWidget *settingsWidget) override;
 
-  bool hasDebugMenu() const override;
-  QList<HttpApiEndpoint> getHttpApiEndpoints() const override;
-  QMap<QString, QString> getApiSubstitutions() const override;
+    bool hasDebugMenu() const override;
+    QList<HttpApiEndpoint> getHttpApiEndpoints() const override;
+    QMap<QString, QString> getApiSubstitutions() const override;
 
 private slots:
-  void onAddTorrentReply();
+    void onAddTorrentReply();
 
 private:
-  QNetworkAccessManager *m_networkManager;
-  QString m_oauthToken;
-  bool m_enabled;
+    QNetworkAccessManager *m_networkManager;
+    QString m_oauthToken;
+    bool m_enabled;
 
 signals:
-  void dispatchFinished(const QString &itemId, bool success,
-                        const QString &message,
-                        const QJsonObject &metadata = QJsonObject());
+    void dispatchFinished(const QString &itemId, bool success, const QString &message, const QJsonObject &metadata = QJsonObject());
 };
 
 #endif // PUTIOCONNECTOR_H

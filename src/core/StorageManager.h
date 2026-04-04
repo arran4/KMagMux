@@ -10,67 +10,67 @@
 #include <optional>
 #include <vector>
 
-class StorageManager : public QObject {
-  Q_OBJECT
+class StorageManager : public QObject
+{
+    Q_OBJECT
 
 public:
-  explicit StorageManager(QObject *parent = nullptr);
-  bool init();
+    explicit StorageManager(QObject *parent = nullptr);
+    bool init();
 
-  // Directory paths
-  QString getBaseDir() const;
-  QString getInboxDir() const;
-  QString getQueueDir() const;
-  QString getDataDir() const;
-  QString
-  getManagedDir() const; // New: Directory for managed torrent/magnet files
+    // Directory paths
+    QString getBaseDir() const;
+    QString getInboxDir() const;
+    QString getQueueDir() const;
+    QString getDataDir() const;
+    QString getManagedDir() const; // New: Directory for managed torrent/magnet files
 
-  // Persistence
-  bool saveItem(const Item &item);
-  void saveItems(const std::vector<Item> &items);
-  std::optional<Item> loadItem(const QString &id);
-  std::vector<Item> loadAllItems();
-  std::vector<Item> loadItemsByStates(const QList<ItemState> &states);
-  bool deleteItem(const QString &id);
-  void deleteItems(const std::vector<QString> &ids);
+    // Persistence
+    bool saveItem(const Item &item);
+    void saveItems(const std::vector<Item> &items);
+    std::optional<Item> loadItem(const QString &id);
+    std::vector<Item> loadAllItems();
+    std::vector<Item> loadItemsByStates(const QList<ItemState> &states);
+    bool deleteItem(const QString &id);
+    void deleteItems(const std::vector<QString> &ids);
 
-  // Scanning
-  QStringList scanInbox() const;
+    // Scanning
+    QStringList scanInbox() const;
 
-  // File Management
-  bool moveToManaged(Item &item, bool deleteOriginal, bool skipSave = false);
+    // File Management
+    bool moveToManaged(Item &item, bool deleteOriginal, bool skipSave = false);
 
 signals:
-  void itemAdded(const Item &item);
-  void itemUpdated(const Item &item);
-  void itemsUpdated();
-  void itemDeleted(const QString &id);
-  void itemsDeleted(const std::vector<QString> &ids);
+    void itemAdded(const Item &item);
+    void itemUpdated(const Item &item);
+    void itemsUpdated();
+    void itemDeleted(const QString &id);
+    void itemsDeleted(const std::vector<QString> &ids);
 
 private slots:
-  void onDirectoryChanged(const QString &path);
+    void onDirectoryChanged(const QString &path);
 
 private:
-  QString m_baseDir;
-  QString m_inboxDir;
-  QString m_queueDir;
-  QString m_scheduledDir;
-  QString m_holdDir;
-  QString m_archiveDir;
-  QString m_dataDir;
-  QString m_logsDir;
-  QString m_managedDir; // New
+    QString m_baseDir;
+    QString m_inboxDir;
+    QString m_queueDir;
+    QString m_scheduledDir;
+    QString m_holdDir;
+    QString m_archiveDir;
+    QString m_dataDir;
+    QString m_logsDir;
+    QString m_managedDir; // New
 
-  QFileSystemWatcher *m_watcher;
-  QSet<QString> m_knownFiles; // To track new files vs existing
+    QFileSystemWatcher *m_watcher;
+    QSet<QString> m_knownFiles; // To track new files vs existing
 
-  QMap<QString, Item> m_cache;
-  QMap<ItemState, QSet<QString>> m_stateIndex;
-  bool m_cacheInitialized = false;
+    QMap<QString, Item> m_cache;
+    QMap<ItemState, QSet<QString>> m_stateIndex;
+    bool m_cacheInitialized = false;
 
-  bool createDirIfNotExists(const QString &path);
-  QString getItemPath(const QString &id) const;
-  void processNewFile(const QString &filePath);
+    bool createDirIfNotExists(const QString &path);
+    QString getItemPath(const QString &id) const;
+    void processNewFile(const QString &filePath);
 };
 
 #endif // STORAGEMANAGER_H

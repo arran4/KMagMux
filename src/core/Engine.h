@@ -8,32 +8,31 @@
 #include <QStringList>
 #include <QTimer>
 
-class Engine : public QObject {
-  Q_OBJECT
+class Engine : public QObject
+{
+    Q_OBJECT
 
 public:
-  explicit Engine(StorageManager *storage, QObject *parent = nullptr);
-  void start();
-  void stop();
-  void setPaused(bool paused);
-  bool isPaused() const;
-  QStringList getAvailableConnectors() const;
-  QStringList getAllConnectors() const;
-  Connector *getConnector(const QString &id) const;
+    explicit Engine(StorageManager *storage, QObject *parent = nullptr);
+    void start();
+    void stop();
+    void setPaused(bool paused);
+    bool isPaused() const;
+    QStringList getAvailableConnectors() const;
+    QStringList getAllConnectors() const;
+    Connector *getConnector(const QString &id) const;
 
 private slots:
-  void processQueue();
-  void onDispatchFinished(const QString &itemId, bool success,
-                          const QString &message,
-                          const QJsonObject &metadata = QJsonObject());
+    void processQueue();
+    void onDispatchFinished(const QString &itemId, bool success, const QString &message, const QJsonObject &metadata = QJsonObject());
 
 private:
-  StorageManager *m_storage;
-  QTimer *m_timer;
-  bool m_paused;
-  QMap<QString, Connector *> m_connectors;
+    StorageManager *m_storage;
+    QTimer *m_timer;
+    bool m_paused;
+    QMap<QString, Connector *> m_connectors;
 
-  void dispatchItem(Item &item);
+    void dispatchItem(Item &item);
 };
 
 #endif // ENGINE_H

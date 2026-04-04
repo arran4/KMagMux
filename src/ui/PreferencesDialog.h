@@ -13,34 +13,35 @@ class QDialogButtonBox;
 
 class Engine;
 
-class PreferencesDialog : public QDialog {
-  Q_OBJECT
+class PreferencesDialog : public QDialog
+{
+    Q_OBJECT
 
 public:
-  explicit PreferencesDialog(Engine *engine, QWidget *parent = nullptr);
-  ~PreferencesDialog();
+    explicit PreferencesDialog(Engine *engine, QWidget *parent = nullptr);
+    ~PreferencesDialog();
 
 private slots:
-  void changePage(QListWidgetItem *current, QListWidgetItem *previous);
+    void changePage(QListWidgetItem *current, QListWidgetItem *previous);
 
 private:
-  void createGeneralPage();
-  void createShortcutsPage();
-  void createPluginsPage();
+    void createGeneralPage();
+    void createShortcutsPage();
+    void createPluginsPage();
 
-  Engine *m_engine;
+    Engine *m_engine;
 
-  QListWidget *m_categoriesList;
-  QStackedWidget *m_pagesWidget;
-  QDialogButtonBox *m_buttonBox;
+    QListWidget *m_categoriesList;
+    QStackedWidget *m_pagesWidget;
+    QDialogButtonBox *m_buttonBox;
 
-  QCheckBox *m_closeToTrayCb;
-  QCheckBox *m_minimizeToTrayCb;
-  QCheckBox *m_autoStartCb;
-  QCheckBox *m_autoMoveInboxCb;
-  QComboBox *m_autoMoveInboxCombo;
-  QSpinBox *m_autoArchiveDays;
-  QCheckBox *m_allowPlaintextStorageCb;
+    QCheckBox *m_closeToTrayCb;
+    QCheckBox *m_minimizeToTrayCb;
+    QCheckBox *m_autoStartCb;
+    QCheckBox *m_autoMoveInboxCb;
+    QComboBox *m_autoMoveInboxCombo;
+    QSpinBox *m_autoArchiveDays;
+    QCheckBox *m_allowPlaintextStorageCb;
 };
 
 #endif // PREFERENCESDIALOG_H
