@@ -124,7 +124,7 @@ void AddItemDialog::setupUi() {
   mainLayout->addLayout(btnLayout);
 }
 
-std::vector<Item> AddItemDialog::getItems() const { return m_items; }
+const std::vector<Item> &AddItemDialog::getItems() const { return m_items; }
 
 void AddItemDialog::onProcessClicked() {
   std::vector<Item> processedItems;
