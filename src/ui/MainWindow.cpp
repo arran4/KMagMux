@@ -291,6 +291,9 @@ void MainWindow::setupActionsAndMenus() {
   m_deleteAction =
       new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
   m_infoAction = new QAction(QIcon::fromTheme("document-properties"), tr("&Get Info / History"), this);
+  m_rawResultsAction = new QAction(tr("View raw processing results"), this);
+  connect(m_rawResultsAction, &QAction::triggered, this, &MainWindow::onViewRawProcessingResults);
+  actionCollection()->addAction("raw_results_item", m_rawResultsAction);
   connect(m_infoAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
     if (!view) return;
@@ -657,9 +660,72 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   }
   menu.addSeparator();
   menu.addAction(m_infoAction);
+
+  if (index.isValid()) {
+    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+    if (proxy) {
+      QModelIndex sourceIndex = proxy->mapToSource(index);
+      const ItemModel *model = getCurrentModel();
+      if (model) {
+        Item item = model->getItem(sourceIndex.row());
+        if (item.metadata.contains("raw_response")) {
+          menu.addAction(m_rawResultsAction);
+        }
+      }
+    }
+  }
+
   menu.addAction(m_deleteAction);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::onViewRawProcessingResults() {
+  QTableView *view = getCurrentView();
+  if (!view)
+    return;
+
+  ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+  if (!proxy)
+    return;
+
+  QModelIndexList selection = view->selectionModel()->selectedRows();
+  if (selection.isEmpty())
+    return;
+
+  QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+  const ItemModel *model = getCurrentModel();
+  if (!model)
+    return;
+
+  Item item = model->getItem(sourceIndex.row());
+
+  if (item.metadata.contains("raw_response")) {
+    QString rawResponse = item.metadata["raw_response"].toString();
+
+    // Try to parse it as JSON to format it
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(rawResponse.toUtf8(), &parseError);
+    if (parseError.error == QJsonParseError::NoError) {
+      rawResponse = doc.toJson(QJsonDocument::Indented);
+    }
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(tr("Raw Processing Results"));
+    dialog.resize(600, 400);
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+
+    QPlainTextEdit *textEdit = new QPlainTextEdit(&dialog);
+    textEdit->setReadOnly(true);
+    textEdit->setPlainText(rawResponse);
+    layout->addWidget(textEdit);
+
+    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttonBox);
+
+    dialog.exec();
+  }
 }
 
 void MainWindow::onViewRawHttp() {
@@ -1020,6 +1086,7 @@ void MainWindow::updateActionsState() {
     if (m_archiveAllAction) m_archiveAllAction->setEnabled(false);
     if (m_deleteAction) m_deleteAction->setEnabled(false);
     if (m_infoAction) m_infoAction->setEnabled(false);
+    if (m_rawResultsAction) m_rawResultsAction->setEnabled(false);
     return;
   }
 
@@ -1062,6 +1129,24 @@ void MainWindow::updateActionsState() {
   if (m_infoAction) {
     QModelIndexList selection = view->selectionModel()->selectedRows();
     m_infoAction->setEnabled(hasSelection && selection.size() == 1);
+  }
+  if (m_rawResultsAction) {
+    QModelIndexList selection = view->selectionModel()->selectedRows();
+    bool rawEnabled = false;
+    if (hasSelection && selection.size() == 1) {
+      ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+      if (proxy) {
+        QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+        const ItemModel *model = getCurrentModel();
+        if (model) {
+          Item item = model->getItem(sourceIndex.row());
+          if (item.metadata.contains("raw_response")) {
+            rawEnabled = true;
+          }
+        }
+      }
+    }
+    m_rawResultsAction->setEnabled(rawEnabled);
   }
 }
 

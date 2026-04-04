@@ -239,7 +239,9 @@ void QBittorrentConnector::onAddTorrentReply() {
       emit dispatchFinished(itemId, false,
                             "qBittorrent API returned failure: " + response + apiCallLog);
     } else {
-      emit dispatchFinished(itemId, true, "Dispatched successfully.");
+      QJsonObject extraMeta;
+      extraMeta["raw_response"] = response;
+      emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
     }
   } else {
     emit dispatchFinished(itemId, false,

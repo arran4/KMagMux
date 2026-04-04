@@ -96,7 +96,9 @@ void TorBoxConnector::onAddTorrentReply() {
   QString apiCallLog = reply->property("apiCallLog").toString();
 
   if (reply->error() == QNetworkReply::NoError) {
-    emit dispatchFinished(itemId, true, "Dispatched successfully.");
+    QJsonObject extraMeta;
+    extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
+    emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
   } else {
     QString errorMessage = "Network error: " + reply->errorString();
 

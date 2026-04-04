@@ -44,6 +44,7 @@ private slots:
 
   void onCustomContextMenuRequested(const QPoint &pos);
   void onViewRawHttp();
+  void onViewRawProcessingResults();
   void onItemAction(ItemState newState);
   void onItemAdded(const Item &item);
   void onItemUpdated(const Item &item);
@@ -98,6 +99,7 @@ private:
   QAction *m_archiveAllAction;
   QAction *m_deleteAction;
   QAction *m_infoAction;
+  QAction *m_rawResultsAction;
 
   void setupUi();
   void setupActionsAndMenus();
