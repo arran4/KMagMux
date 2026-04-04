@@ -1,0 +1,4 @@
+---
+Checks:          'clang-diagnostic-*,clang-analyzer-*,-*,readability-*,bugprone-*,performance-*,misc-*,-misc-non-private-member-variables-in-classes'
+WarningsAsErrors: ''
+...
