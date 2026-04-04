@@ -1,10 +1,10 @@
 #ifndef TORRENTINFODIALOG_H
 #define TORRENTINFODIALOG_H
 
+#include "../core/Item.h"
 #include "../core/TorrentParser.h"
 #include "../core/TrackerClient.h"
 #include <QDialog>
-#include "../core/Item.h"
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -13,7 +13,8 @@ class TorrentInfoDialog : public QDialog {
   Q_OBJECT
 
 public:
-  explicit TorrentInfoDialog(const QString &sourcePath, const Item *item = nullptr,
+  explicit TorrentInfoDialog(const QString &sourcePath,
+                             const Item *item = nullptr,
                              QWidget *parent = nullptr);
   ~TorrentInfoDialog();
 

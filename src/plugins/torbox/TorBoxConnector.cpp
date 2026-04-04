@@ -103,24 +103,30 @@ void TorBoxConnector::onAddTorrentReply() {
     QString errorMessage = "Network error: " + reply->errorString();
 
     QJsonObject extraMeta;
-    QString rawHttp = "Request URL:\n" + reply->request().url().toString() + "\n\n";
+    QString rawHttp =
+        "Request URL:\n" + reply->request().url().toString() + "\n\n";
     rawHttp += "Request Headers:\n";
     const auto reqHeaders = reply->request().rawHeaderList();
     for (const QByteArray &headerName : reqHeaders) {
       if (QString::fromUtf8(headerName).toLower() == "authorization") {
         rawHttp += QString::fromUtf8(headerName) + ": [REDACTED]\n";
       } else {
-        rawHttp += QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->request().rawHeader(headerName)) + "\n";
+        rawHttp += QString::fromUtf8(headerName) + ": " +
+                   QString::fromUtf8(reply->request().rawHeader(headerName)) +
+                   "\n";
       }
     }
 
-    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    rawHttp += "\nResponse Status Code: " + QString::number(statusCode) + "\n\n";
+    int statusCode =
+        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    rawHttp +=
+        "\nResponse Status Code: " + QString::number(statusCode) + "\n\n";
 
     rawHttp += "Response Headers:\n";
     const auto resHeaders = reply->rawHeaderList();
     for (const QByteArray &headerName : resHeaders) {
-      rawHttp += QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
+      rawHttp += QString::fromUtf8(headerName) + ": " +
+                 QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
     }
 
     QByteArray body = reply->readAll();
@@ -131,16 +137,15 @@ void TorBoxConnector::onAddTorrentReply() {
 #ifndef QT_NO_DEBUG
     QString shortBody = QString::fromUtf8(body).left(500);
     if (statusCode > 0 || !shortBody.isEmpty()) {
-      errorMessage += QString(" (Status: %1, Body: %2)").arg(statusCode).arg(shortBody);
+      errorMessage +=
+          QString(" (Status: %1, Body: %2)").arg(statusCode).arg(shortBody);
     }
 #endif
-    emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString() + apiCallLog);
+    emit dispatchFinished(
+        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 bool TorBoxConnector::hasSettings() const { return true; }

@@ -24,7 +24,8 @@ public:
 private slots:
   void processQueue();
   void onDispatchFinished(const QString &itemId, bool success,
-                          const QString &message, const QJsonObject &metadata = QJsonObject());
+                          const QString &message,
+                          const QJsonObject &metadata = QJsonObject());
 
 private:
   StorageManager *m_storage;

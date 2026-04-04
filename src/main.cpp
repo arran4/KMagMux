@@ -9,8 +9,8 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QMessageBox>
-#include <QUrl>
 #include <QPointer>
+#include <QUrl>
 
 static bool isValidInput(const QString &arg) {
   if (arg.startsWith("magnet:?")) {

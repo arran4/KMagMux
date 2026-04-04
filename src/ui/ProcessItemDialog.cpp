@@ -72,7 +72,6 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     }
     m_itemsTable->setItem(i, 1, deleteItem);
 
-
     QTableWidgetItem *deleteWhenDoneItem = new QTableWidgetItem();
     deleteWhenDoneItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     deleteWhenDoneItem->setCheckState(Qt::Unchecked);
@@ -112,7 +111,8 @@ void ProcessItemDialog::setupUi() {
   m_itemsTable->setHorizontalHeaderLabels(
       {"Enable", "Delete file", "Delete when done", "Name", "Link"});
   m_itemsTable->horizontalHeaderItem(1)->setToolTip("Delete file after import");
-  m_itemsTable->horizontalHeaderItem(2)->setToolTip("Delete item automatically after successful dispatch");
+  m_itemsTable->horizontalHeaderItem(2)->setToolTip(
+      "Delete item automatically after successful dispatch");
   m_itemsTable->setItemDelegate(new MaxWidthDelegate(m_itemsTable));
   m_itemsTable->horizontalHeader()->setSectionResizeMode(
       QHeaderView::ResizeToContents);
@@ -154,7 +154,8 @@ void ProcessItemDialog::setupUi() {
     }
   }
 
-  // If Default is not in the list or nothing is checked, check the first one if available
+  // If Default is not in the list or nothing is checked, check the first one if
+  // available
   bool anythingChecked = false;
   for (int i = 0; i < m_connectorList->count(); ++i) {
     if (m_connectorList->item(i)->checkState() == Qt::Checked) {
@@ -210,7 +211,8 @@ void ProcessItemDialog::onProcessClicked() {
   }
 
   if (selectedConnectors.isEmpty()) {
-    QMessageBox::warning(this, "No Connector Selected", "Please select at least one destination connector.");
+    QMessageBox::warning(this, "No Connector Selected",
+                         "Please select at least one destination connector.");
     return;
   }
 
@@ -221,22 +223,26 @@ void ProcessItemDialog::onProcessClicked() {
 
       for (const QString &connectorId : selectedConnectors) {
         Item item = originalItem; // Duplicate the item for each connector
-        // For multiple connectors we need to generate unique IDs if it's more than one
-        // If it's more than one connector, we should really assign a new ID to the duplicates
-        // but since they all share the same source file, they might conflict if deleted source file is requested.
-        // Actually, let's keep the original item ID for the first one, and generate a new ID for the others
+        // For multiple connectors we need to generate unique IDs if it's more
+        // than one If it's more than one connector, we should really assign a
+        // new ID to the duplicates but since they all share the same source
+        // file, they might conflict if deleted source file is requested.
+        // Actually, let's keep the original item ID for the first one, and
+        // generate a new ID for the others
         if (connectorId != selectedConnectors.first()) {
-           item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+          item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         }
 
         QString oldState = item.stateToString();
         item.state = selectedState;
-        item.addHistory(QString("Processed and state set to %1").arg(item.stateToString()));
+        item.addHistory(
+            QString("Processed and state set to %1").arg(item.stateToString()));
         item.connectorId = connectorId;
         if (selectedState == ItemState::Held) {
           item.scheduledTime = m_holdTimeEdit->dateTime();
         } else {
-          item.scheduledTime = QDateTime(); // Clear scheduled time if not holding
+          item.scheduledTime =
+              QDateTime(); // Clear scheduled time if not holding
         }
 
         QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
@@ -248,9 +254,9 @@ void ProcessItemDialog::onProcessClicked() {
           }
         }
 
-
         QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
-        if (deleteWhenDoneItem && deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
+        if (deleteWhenDoneItem &&
+            deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
           if (deleteWhenDoneItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_once_submitted"] = true;

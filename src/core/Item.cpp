@@ -119,7 +119,6 @@ ItemState Item::stringToState(const QString &s) {
   return ItemState::Unprocessed;
 }
 
-
 #include <QJsonArray>
 
 void Item::addHistory(const QString &message) {

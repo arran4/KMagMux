@@ -9,8 +9,8 @@
 #include <QJsonObject>
 #include <QSettings>
 #include <QStandardPaths>
-#include <QtConcurrent>
 #include <QThreadPool>
+#include <QtConcurrent>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
@@ -71,11 +71,12 @@ bool StorageManager::init() {
       QStringList initialFiles = scanInbox();
       m_knownFiles = QSet<QString>(initialFiles.begin(), initialFiles.end());
       if (!m_knownFiles.isEmpty()) {
-        QThreadPool::globalInstance()->start([this, knownFiles = m_knownFiles]() {
-          for (const QString &file : std::as_const(knownFiles)) {
-            processNewFile(m_inboxDir + "/" + file);
-          }
-        });
+        QThreadPool::globalInstance()->start(
+            [this, knownFiles = m_knownFiles]() {
+              for (const QString &file : std::as_const(knownFiles)) {
+                processNewFile(m_inboxDir + "/" + file);
+              }
+            });
       }
     } else {
       qWarning() << "Failed to watch inbox:" << m_inboxDir;

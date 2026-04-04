@@ -98,13 +98,11 @@ void PutIoConnector::onAddTorrentReply() {
     extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
     emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
   } else {
-    emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString() + apiCallLog);
+    emit dispatchFinished(
+        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 bool PutIoConnector::hasSettings() const { return true; }

@@ -96,7 +96,8 @@ void QBittorrentConnector::onLoginReply() {
       QString apiCallLog = reply->property("apiCallLog").toString();
       for (const Item &item : itemsToFail) {
         emit dispatchFinished(item.id, false,
-                              "Login failed: Invalid username or password." + apiCallLog);
+                              "Login failed: Invalid username or password." +
+                                  apiCallLog);
       }
     } else {
       // Login successful. The cookie jar in QNetworkAccessManager handles
@@ -115,14 +116,12 @@ void QBittorrentConnector::onLoginReply() {
 
     QString apiCallLog = reply->property("apiCallLog").toString();
     for (const Item &item : itemsToFail) {
-      emit dispatchFinished(item.id, false,
-                            "Login failed: " + reply->errorString() + apiCallLog);
+      emit dispatchFinished(
+          item.id, false, "Login failed: " + reply->errorString() + apiCallLog);
     }
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 void QBittorrentConnector::performDispatch(const Item &item) {
@@ -200,7 +199,8 @@ void QBittorrentConnector::performDispatch(const Item &item) {
   // 6. Paused (optional, maybe from metadata)
   // "paused" value="true"|"false"
 
-  QString apiCallLog = Connector::buildApiCallLog("POST", request); // Multipart body omitted
+  QString apiCallLog =
+      Connector::buildApiCallLog("POST", request); // Multipart body omitted
 
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply); // Delete multiPart with reply
@@ -237,20 +237,20 @@ void QBittorrentConnector::onAddTorrentReply() {
     QString response = reply->readAll();
     if (response.toLower().contains("fail")) {
       emit dispatchFinished(itemId, false,
-                            "qBittorrent API returned failure: " + response + apiCallLog);
+                            "qBittorrent API returned failure: " + response +
+                                apiCallLog);
     } else {
       QJsonObject extraMeta;
       extraMeta["raw_response"] = response;
-      emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
+      emit dispatchFinished(itemId, true, "Dispatched successfully.",
+                            extraMeta);
     }
   } else {
-    emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString() + apiCallLog);
+    emit dispatchFinished(
+        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 bool QBittorrentConnector::hasSettings() const { return true; }

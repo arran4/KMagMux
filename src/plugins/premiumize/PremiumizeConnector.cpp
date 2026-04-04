@@ -98,7 +98,8 @@ void PremiumizeConnector::dispatch(const Item &item) {
     file->setParent(multiPart);
     multiPart->append(filePart);
 
-    QString apiCallLog = Connector::buildApiCallLog("POST", request); // multipart body omitted
+    QString apiCallLog =
+        Connector::buildApiCallLog("POST", request); // multipart body omitted
 
     QNetworkReply *reply = m_networkManager->post(request, multiPart);
     multiPart->setParent(reply);
@@ -122,13 +123,11 @@ void PremiumizeConnector::onAddTorrentReply() {
     extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
     emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
   } else {
-    emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString() + apiCallLog);
+    emit dispatchFinished(
+        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 bool PremiumizeConnector::hasSettings() const { return true; }
