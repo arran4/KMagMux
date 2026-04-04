@@ -5,8 +5,8 @@
 #include "LinkExtractorDialog.h"
 #include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
-#include "TorrentInfoDialog.h"
 #include "ProcessItemDialog.h"
+#include "TorrentInfoDialog.h"
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDateTime>
@@ -40,13 +40,16 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_tabWidget(nullptr), m_unprocessedModel(nullptr), m_queueModel(nullptr),
       m_doneModel(nullptr), m_archiveModel(nullptr), m_errorModel(nullptr),
       m_unprocessedProxy(nullptr), m_queueProxy(nullptr), m_doneProxy(nullptr),
-      m_archiveProxy(nullptr), m_errorProxy(nullptr), m_unprocessedView(nullptr),
-      m_queueView(nullptr), m_doneView(nullptr), m_archiveView(nullptr),
-      m_errorView(nullptr), m_toggleProcessingAction(nullptr),
-      m_selectAllAction(nullptr), m_processAction(nullptr), m_processAllAction(nullptr),
+      m_archiveProxy(nullptr), m_errorProxy(nullptr),
+      m_unprocessedView(nullptr), m_queueView(nullptr), m_doneView(nullptr),
+      m_archiveView(nullptr), m_errorView(nullptr),
+      m_toggleProcessingAction(nullptr), m_selectAllAction(nullptr),
+      m_processAction(nullptr), m_processAllAction(nullptr),
       m_unprocessAction(nullptr), m_dismissAction(nullptr),
-      m_archiveAction(nullptr), m_archiveAllAction(nullptr), m_deleteAction(nullptr), m_infoAction(nullptr),
-      m_trayIcon(nullptr), m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
+      m_archiveAction(nullptr), m_archiveAllAction(nullptr),
+      m_deleteAction(nullptr), m_infoAction(nullptr),
+      m_rawResultsAction(nullptr), m_trayIcon(nullptr),
+      m_trayIconMenu(nullptr), m_minimizeAction(nullptr),
       m_showHideAction(nullptr), m_quitAction(nullptr), m_closeToTray(false),
       m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
   qApp->setQuitOnLastWindowClosed(false);
@@ -78,10 +81,8 @@ MainWindow::~MainWindow() {
   }
   if (m_engine) {
     m_engine->stop();
-    if (m_engine) {
-      m_engine->deleteLater();
-      m_engine = nullptr;
-    }
+    m_engine->deleteLater();
+    m_engine = nullptr;
   }
 }
 
@@ -154,10 +155,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
               }
               // Switch to Inbox tab
               m_tabWidget->setCurrentIndex(0);
-              if (watcher) {
-                watcher->deleteLater();
-
-              }
+              watcher->deleteLater();
             });
 
     QFuture<std::vector<Item>> future =
@@ -200,7 +198,8 @@ void MainWindow::setupUi() {
 void MainWindow::setupActionsAndMenus() {
   QAction *addItemsAction =
       new QAction(QIcon::fromTheme("document-open"), tr("&Add..."), this);
-  actionCollection()->setDefaultShortcut(addItemsAction, QKeySequence("Ctrl+O"));
+  actionCollection()->setDefaultShortcut(addItemsAction,
+                                         QKeySequence("Ctrl+O"));
   connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
   actionCollection()->addAction("add_items", addItemsAction);
 
@@ -227,7 +226,8 @@ void MainWindow::setupActionsAndMenus() {
   KStandardAction::preferences(this, SLOT(onPreferences()), actionCollection());
 
   m_selectAllAction = new QAction(tr("Select &All"), this);
-  actionCollection()->setDefaultShortcut(m_selectAllAction, QKeySequence::SelectAll);
+  actionCollection()->setDefaultShortcut(m_selectAllAction,
+                                         QKeySequence::SelectAll);
   connect(m_selectAllAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
     if (view) {
@@ -241,7 +241,8 @@ void MainWindow::setupActionsAndMenus() {
           &MainWindow::onProcessItem);
   actionCollection()->addAction("process_item", m_processAction);
 
-  m_processAllAction = new QAction(QIcon::fromTheme("media-playback-start"), tr("Process &All"), this);
+  m_processAllAction = new QAction(QIcon::fromTheme("media-playback-start"),
+                                   tr("Process &All"), this);
   connect(m_processAllAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
     if (view) {
@@ -264,10 +265,12 @@ void MainWindow::setupActionsAndMenus() {
   m_archiveAction = new QAction(tr("&Archive"), this);
   m_archiveAllAction = new QAction(tr("Archive &All"), this);
   connect(m_archiveAllAction, &QAction::triggered, this, [this]() {
-    QTableView *view = getCurrentView();
-    if (!view) return;
+    const QTableView *view = getCurrentView();
+    if (!view)
+      return;
     const ItemModel *model = getCurrentModel();
-    if (!model) return;
+    if (!model)
+      return;
 
     std::vector<Item> itemsToSave;
     itemsToSave.reserve(model->rowCount());
@@ -275,7 +278,9 @@ void MainWindow::setupActionsAndMenus() {
       Item item = model->getItem(i);
       QString oldState = item.stateToString();
       item.state = ItemState::Archived;
-      item.addHistory(QString("State changed from %1 to Archived via Bulk Archive.").arg(oldState));
+      item.addHistory(
+          QString("State changed from %1 to Archived via Bulk Archive.")
+              .arg(oldState));
       itemsToSave.push_back(item);
     }
     if (!itemsToSave.empty()) {
@@ -290,16 +295,26 @@ void MainWindow::setupActionsAndMenus() {
 
   m_deleteAction =
       new QAction(QIcon::fromTheme("edit-delete"), tr("&Delete"), this);
-  m_infoAction = new QAction(QIcon::fromTheme("document-properties"), tr("&Get Info / History"), this);
+  m_infoAction = new QAction(QIcon::fromTheme("document-properties"),
+                             tr("&Get Info / History"), this);
+  m_rawResultsAction = new QAction(tr("View raw processing results"), this);
+  connect(m_rawResultsAction, &QAction::triggered, this,
+          &MainWindow::onViewRawProcessingResults);
+  actionCollection()->addAction("raw_results_item", m_rawResultsAction);
   connect(m_infoAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
-    if (!view) return;
+    if (!view)
+      return;
     const ItemModel *model = getCurrentModel();
-    if (!model) return;
-    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
-    if (!proxy) return;
+    if (!model)
+      return;
+    ItemFilterProxyModel *proxy =
+        qobject_cast<ItemFilterProxyModel *>(view->model());
+    if (!proxy)
+      return;
     QModelIndexList selection = view->selectionModel()->selectedRows();
-    if (selection.isEmpty()) return;
+    if (selection.isEmpty())
+      return;
     QModelIndex sourceIndex = proxy->mapToSource(selection.first());
     Item item = model->getItem(sourceIndex.row());
     QString sourcePath = item.sourcePath;
@@ -307,7 +322,8 @@ void MainWindow::setupActionsAndMenus() {
       TorrentInfoDialog dialog(sourcePath, &item, this);
       dialog.exec();
     } else {
-      QMessageBox::information(this, "Item Information", QString("Source Path:\n%1").arg(sourcePath));
+      QMessageBox::information(this, "Item Information",
+                               QString("Source Path:\n%1").arg(sourcePath));
     }
   });
   actionCollection()->addAction("info_item", m_infoAction);
@@ -330,11 +346,11 @@ void MainWindow::setupActionsAndMenus() {
   // .rc file
   QMenu *debugMenu = nullptr;
   QList<QMenu *> menus = menuBar()->findChildren<QMenu *>();
-  for (QMenu *menu : std::as_const(menus)) {
-    if (menu->objectName() == "debug_menu") {
-      debugMenu = menu;
-      break;
-    }
+  auto it = std::find_if(menus.begin(), menus.end(), [](QMenu *menu) {
+      return menu->objectName() == "debug_menu";
+  });
+  if (it != menus.end()) {
+      debugMenu = *it;
   }
 
   if (debugMenu) {
@@ -589,7 +605,7 @@ QTableView *MainWindow::getCurrentView() const {
 }
 
 ItemModel *MainWindow::getCurrentModel() const {
-  QTableView *view = getCurrentView();
+  const QTableView *view = getCurrentView();
   if (view) {
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
@@ -620,8 +636,9 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
   // Ensure the clicked row is selected if it wasn't already
   if (index.isValid() && !view->selectionModel()->isSelected(index)) {
-      view->selectionModel()->clearSelection();
-      view->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    view->selectionModel()->clearSelection();
+    view->selectionModel()->select(index, QItemSelectionModel::Select |
+                                              QItemSelectionModel::Rows);
   }
 
   if (view == m_unprocessedView) {
@@ -634,13 +651,15 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   menu.addSeparator();
 
   if (view == m_errorView) {
-    ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+    ItemFilterProxyModel *proxy =
+        qobject_cast<ItemFilterProxyModel *>(view->model());
     if (proxy && index.isValid()) {
       QModelIndex sourceIndex = proxy->mapToSource(index);
       Item item = m_errorModel->getItem(sourceIndex.row());
       if (item.metadata.contains("raw_http")) {
         QAction *rawHttpAction = menu.addAction(tr("View raw http"));
-        connect(rawHttpAction, &QAction::triggered, this, &MainWindow::onViewRawHttp);
+        connect(rawHttpAction, &QAction::triggered, this,
+                &MainWindow::onViewRawHttp);
       }
     }
     menu.addAction(m_dismissAction);
@@ -657,9 +676,76 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   }
   menu.addSeparator();
   menu.addAction(m_infoAction);
+
+  if (index.isValid()) {
+    ItemFilterProxyModel *proxy =
+        qobject_cast<ItemFilterProxyModel *>(view->model());
+    if (proxy) {
+      QModelIndex sourceIndex = proxy->mapToSource(index);
+      const ItemModel *model = getCurrentModel();
+      if (model) {
+        Item item = model->getItem(sourceIndex.row());
+        if (item.metadata.contains("raw_response")) {
+          menu.addAction(m_rawResultsAction);
+        }
+      }
+    }
+  }
+
   menu.addAction(m_deleteAction);
 
   menu.exec(view->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::onViewRawProcessingResults() {
+  QTableView *view = getCurrentView();
+  if (!view)
+    return;
+
+  ItemFilterProxyModel *proxy =
+      qobject_cast<ItemFilterProxyModel *>(view->model());
+  if (!proxy)
+    return;
+
+  QModelIndexList selection = view->selectionModel()->selectedRows();
+  if (selection.isEmpty())
+    return;
+
+  QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+  const ItemModel *model = getCurrentModel();
+  if (!model)
+    return;
+
+  Item item = model->getItem(sourceIndex.row());
+
+  if (item.metadata.contains("raw_response")) {
+    QString rawResponse = item.metadata["raw_response"].toString();
+
+    // Try to parse it as JSON to format it
+    QJsonParseError parseError;
+    QJsonDocument doc =
+        QJsonDocument::fromJson(rawResponse.toUtf8(), &parseError);
+    if (parseError.error == QJsonParseError::NoError) {
+      rawResponse = doc.toJson(QJsonDocument::Indented);
+    }
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(tr("Raw Processing Results"));
+    dialog.resize(600, 400);
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+
+    QPlainTextEdit *textEdit = new QPlainTextEdit(&dialog);
+    textEdit->setReadOnly(true);
+    textEdit->setPlainText(rawResponse);
+    layout->addWidget(textEdit);
+
+    QDialogButtonBox *buttonBox =
+        new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttonBox);
+
+    dialog.exec();
+  }
 }
 
 void MainWindow::onViewRawHttp() {
@@ -667,7 +753,8 @@ void MainWindow::onViewRawHttp() {
   if (!view || view != m_errorView)
     return;
 
-  ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
+  ItemFilterProxyModel *proxy =
+      qobject_cast<ItemFilterProxyModel *>(view->model());
   if (!proxy)
     return;
 
@@ -714,7 +801,8 @@ void MainWindow::onItemAction(ItemState newState) {
 
     QString oldState = item.stateToString();
     item.state = newState;
-    item.addHistory(QString("State changed from %1 to %2 by user action.").arg(oldState, item.stateToString()));
+    item.addHistory(QString("State changed from %1 to %2 by user action.")
+                        .arg(oldState, item.stateToString()));
 
     itemsToSave.push_back(item);
   }
@@ -900,10 +988,7 @@ void MainWindow::processAddedLines(const QStringList &lines) {
             if (!items.empty()) {
               openAddItemsDialog(items);
             }
-            if (watcher) {
-              watcher->deleteLater();
-
-            }
+            watcher->deleteLater();
           });
 
   QFuture<std::vector<Item>> future = QtConcurrent::run(
@@ -1012,14 +1097,24 @@ void MainWindow::onAbout() {
 void MainWindow::updateActionsState() {
   QTableView *view = getCurrentView();
   if (!view) {
-    if (m_selectAllAction) m_selectAllAction->setEnabled(false);
-    if (m_processAction) m_processAction->setEnabled(false);
-    if (m_unprocessAction) m_unprocessAction->setEnabled(false);
-    if (m_dismissAction) m_dismissAction->setEnabled(false);
-    if (m_archiveAction) m_archiveAction->setEnabled(false);
-    if (m_archiveAllAction) m_archiveAllAction->setEnabled(false);
-    if (m_deleteAction) m_deleteAction->setEnabled(false);
-    if (m_infoAction) m_infoAction->setEnabled(false);
+    if (m_selectAllAction)
+      m_selectAllAction->setEnabled(false);
+    if (m_processAction)
+      m_processAction->setEnabled(false);
+    if (m_unprocessAction)
+      m_unprocessAction->setEnabled(false);
+    if (m_dismissAction)
+      m_dismissAction->setEnabled(false);
+    if (m_archiveAction)
+      m_archiveAction->setEnabled(false);
+    if (m_archiveAllAction)
+      m_archiveAllAction->setEnabled(false);
+    if (m_deleteAction)
+      m_deleteAction->setEnabled(false);
+    if (m_infoAction)
+      m_infoAction->setEnabled(false);
+    if (m_rawResultsAction)
+      m_rawResultsAction->setEnabled(false);
     return;
   }
 
@@ -1037,7 +1132,8 @@ void MainWindow::updateActionsState() {
   if (m_processAllAction) {
     const ItemModel *model = getCurrentModel();
     m_processAllAction->setVisible(view == m_unprocessedView);
-    m_processAllAction->setEnabled(model && model->rowCount() > 0 && view == m_unprocessedView);
+    m_processAllAction->setEnabled(model && model->rowCount() > 0 &&
+                                   view == m_unprocessedView);
   }
 
   if (m_unprocessAction) {
@@ -1055,13 +1151,33 @@ void MainWindow::updateActionsState() {
   if (m_archiveAllAction) {
     const ItemModel *model = getCurrentModel();
     m_archiveAllAction->setVisible(view == m_doneView || view == m_errorView);
-    m_archiveAllAction->setEnabled(model && model->rowCount() > 0 && (view == m_doneView || view == m_errorView));
+    m_archiveAllAction->setEnabled(model && model->rowCount() > 0 &&
+                                   (view == m_doneView || view == m_errorView));
   }
   if (m_deleteAction)
     m_deleteAction->setEnabled(hasSelection);
   if (m_infoAction) {
     QModelIndexList selection = view->selectionModel()->selectedRows();
     m_infoAction->setEnabled(hasSelection && selection.size() == 1);
+  }
+  if (m_rawResultsAction) {
+    QModelIndexList selection = view->selectionModel()->selectedRows();
+    bool rawEnabled = false;
+    if (hasSelection && selection.size() == 1) {
+      ItemFilterProxyModel *proxy =
+          qobject_cast<ItemFilterProxyModel *>(view->model());
+      if (proxy) {
+        QModelIndex sourceIndex = proxy->mapToSource(selection.first());
+        const ItemModel *model = getCurrentModel();
+        if (model) {
+          Item item = model->getItem(sourceIndex.row());
+          if (item.metadata.contains("raw_response")) {
+            rawEnabled = true;
+          }
+        }
+      }
+    }
+    m_rawResultsAction->setEnabled(rawEnabled);
   }
 }
 

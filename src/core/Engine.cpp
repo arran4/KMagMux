@@ -1,14 +1,14 @@
 #include "Engine.h"
-#include <QSettings>
 #include "Constants.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QJsonObject>
 #include <QLibrary>
 #include <QPluginLoader>
-#include <QSet>
-#include <QJsonObject>
 #include <QRegularExpression>
+#include <QSet>
+#include <QSettings>
 #include <QVersionNumber>
 
 Engine::Engine(StorageManager *storage, QObject *parent)
@@ -56,9 +56,9 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 #endif
 
   struct PluginInfo {
-      QString filePath;
-      QVersionNumber version;
-      bool isDevelopment;
+    QString filePath;
+    QVersionNumber version;
+    bool isDevelopment;
   };
 
   QMap<QString, PluginInfo> bestPlugins;
@@ -85,12 +85,12 @@ Engine::Engine(StorageManager *storage, QObject *parent)
       QJsonObject metaDataObj = meta.value("MetaData").toObject();
       QString versionStr = metaDataObj.value("version").toString();
       if (versionStr.isEmpty()) {
-          versionStr = meta.value("version").toString();
+        versionStr = meta.value("version").toString();
       }
 
       QString name = metaDataObj.value("name").toString();
       if (name.isEmpty()) {
-          name = fileName;
+        name = fileName;
       }
 
       bool isDev = versionStr.contains("development", Qt::CaseInsensitive) ||
@@ -103,22 +103,22 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 
       auto it = bestPlugins.find(name);
       if (it == bestPlugins.end()) {
-          bestPlugins.insert(name, {filePath, version, isDev});
+        bestPlugins.insert(name, {filePath, version, isDev});
       } else {
-          PluginInfo existing = it.value();
-          bool shouldReplace = false;
+        PluginInfo existing = it.value();
+        bool shouldReplace = false;
 
-          if (version > existing.version) {
-              shouldReplace = true;
-          } else if (version == existing.version) {
-              if (isDev && !existing.isDevelopment) {
-                  shouldReplace = true;
-              }
+        if (version > existing.version) {
+          shouldReplace = true;
+        } else if (version == existing.version) {
+          if (isDev && !existing.isDevelopment) {
+            shouldReplace = true;
           }
+        }
 
-          if (shouldReplace) {
-              it.value() = {filePath, version, isDev};
-          }
+        if (shouldReplace) {
+          it.value() = {filePath, version, isDev};
+        }
       }
     }
   }
@@ -127,7 +127,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 
   for (const auto &info : bestPlugins) {
     if (loadedFiles.contains(info.filePath)) {
-        continue;
+      continue;
     }
     loadedFiles.insert(info.filePath);
 
@@ -143,8 +143,11 @@ Engine::Engine(StorageManager *storage, QObject *parent)
                    << "from" << info.filePath;
           m_connectors.insert(connector->getId(), connector);
           // Connect to its signals via QObject cast
-          connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString, QJsonObject)),
-                  this, SLOT(onDispatchFinished(QString, bool, QString, QJsonObject)));
+          connect(
+              plugin,
+              SIGNAL(dispatchFinished(QString, bool, QString, QJsonObject)),
+              this,
+              SLOT(onDispatchFinished(QString, bool, QString, QJsonObject)));
           // Keep backwards compatibility for older/unmodified connectors
           connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
                   this, SLOT(onDispatchFinished(QString, bool, QString)));
@@ -227,14 +230,17 @@ void Engine::processQueue() {
   if (autoArchiveDays > 0) {
     auto doneItems = m_storage->loadItemsByStates({ItemState::Done});
     std::vector<Item> itemsToArchive;
-    QDateTime threshold = QDateTime::currentDateTime().addDays(-autoArchiveDays);
+    QDateTime threshold =
+        QDateTime::currentDateTime().addDays(-autoArchiveDays);
 
     for (auto &item : doneItems) {
       if (!item.metadata["lastDispatchTime"].toString().isEmpty()) {
-        QDateTime lastDispatch = QDateTime::fromString(item.metadata["lastDispatchTime"].toString(), Qt::ISODate);
+        QDateTime lastDispatch = QDateTime::fromString(
+            item.metadata["lastDispatchTime"].toString(), Qt::ISODate);
         if (lastDispatch.isValid() && lastDispatch < threshold) {
           item.state = ItemState::Archived;
-          item.addHistory(QString("Auto-archived after %1 days in Done state.").arg(autoArchiveDays));
+          item.addHistory(QString("Auto-archived after %1 days in Done state.")
+                              .arg(autoArchiveDays));
           itemsToArchive.push_back(item);
         }
       }
@@ -291,7 +297,8 @@ void Engine::dispatchItem(Item &item) {
 }
 
 void Engine::onDispatchFinished(const QString &itemId, bool success,
-                                const QString &message, const QJsonObject &metadata) {
+                                const QString &message,
+                                const QJsonObject &metadata) {
   auto itemOpt = m_storage->loadItem(itemId);
   if (!itemOpt) {
     qWarning() << "Finished dispatch for unknown item:" << itemId;
@@ -312,8 +319,12 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
 
   if (success) {
     if (meta["delete_once_submitted"].toBool(false)) {
-      item.addHistory(QString("Item dispatched successfully to %1 and deleted as requested.").arg(item.connectorId));
-      qDebug() << "Item dispatched successfully and deleted as requested:" << itemId;
+      item.addHistory(
+          QString(
+              "Item dispatched successfully to %1 and deleted as requested.")
+              .arg(item.connectorId));
+      qDebug() << "Item dispatched successfully and deleted as requested:"
+               << itemId;
       m_storage->deleteItem(item.id);
       return;
     } else {

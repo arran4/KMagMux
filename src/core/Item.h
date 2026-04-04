@@ -19,17 +19,12 @@ enum class ItemState {
 };
 
 struct Item {
-  Item() = default;
-  Item(const Item &other) {
-    id = other.id;
-    state = other.state;
-    sourcePath = other.sourcePath;
-    destinationPath = other.destinationPath;
-    connectorId = other.connectorId;
-    createdTime = other.createdTime;
-    scheduledTime = other.scheduledTime;
-    metadata = other.metadata;
-
+  Item() : state(ItemState::Unprocessed) {}
+  Item(const Item &other)
+      : id(other.id), state(other.state), sourcePath(other.sourcePath),
+        destinationPath(other.destinationPath), connectorId(other.connectorId),
+        createdTime(other.createdTime), scheduledTime(other.scheduledTime),
+        metadata(other.metadata) {
     QMutexLocker locker(&other.m_cacheMutex);
     m_cachedDisplayName = other.m_cachedDisplayName;
     m_cachedSourcePath = other.m_cachedSourcePath;

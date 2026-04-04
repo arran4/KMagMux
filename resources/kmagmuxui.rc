@@ -29,6 +29,9 @@
             <Action name="hold_item"/>
             <Action name="archive_item"/>
             <Separator/>
+            <Action name="info_item"/>
+            <Action name="raw_results_item"/>
+            <Separator/>
             <Action name="delete_items"/>
         </Menu>
         <Menu name="help"><text>&amp;Help</text>

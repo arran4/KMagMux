@@ -36,10 +36,8 @@ ApiExplorerDialog::ApiExplorerDialog(Connector *connector, QWidget *parent)
 ApiExplorerDialog::~ApiExplorerDialog() {
   if (m_currentReply) {
     m_currentReply->abort();
-    if (m_currentReply) {
-      m_currentReply->deleteLater();
-      m_currentReply = nullptr;
-    }
+    m_currentReply->deleteLater();
+    m_currentReply = nullptr;
   }
 }
 
@@ -297,10 +295,8 @@ void ApiExplorerDialog::onBrowseMultipartFile() {
 void ApiExplorerDialog::onSendRequest() {
   if (m_currentReply) {
     m_currentReply->abort();
-    if (m_currentReply) {
-      m_currentReply->deleteLater();
-      m_currentReply = nullptr;
-    }
+    m_currentReply->deleteLater();
+    m_currentReply = nullptr;
   }
 
   QString urlString = applySubstitutions(m_urlEdit->text());
@@ -369,14 +365,8 @@ void ApiExplorerDialog::onSendRequest() {
           } else {
             QMessageBox::warning(this, "File Error",
                                  "Failed to open file: " + filePath);
-            if (file) {
-              file->deleteLater();
-              file = nullptr;
-            }
-            if (multiPart) {
-              multiPart->deleteLater();
-              multiPart = nullptr;
-            }
+            file->deleteLater();
+            multiPart->deleteLater();
             return;
           }
         } else {
@@ -443,9 +433,9 @@ void ApiExplorerDialog::onNetworkReplyFinished() {
   // Response Headers
   responseText += "--- Headers ---\n";
   const auto rawHeaders = reply->rawHeaderList();
-  for (const QByteArray &headerName : rawHeaders) {
-    responseText += headerName + ": " + reply->rawHeader(headerName) + "\n";
-  }
+  responseText = std::accumulate(rawHeaders.begin(), rawHeaders.end(), responseText, [reply](const QString& str, const QByteArray& headerName) {
+      return str + headerName + ": " + reply->rawHeader(headerName) + "\n";
+  });
   responseText += "\n--- Body ---\n";
 
   // Response Body
@@ -453,10 +443,7 @@ void ApiExplorerDialog::onNetworkReplyFinished() {
 
   m_responseEdit->setPlainText(responseText);
 
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+  reply->deleteLater();
 }
 
 void ApiExplorerDialog::onSslErrors(QNetworkReply *reply,

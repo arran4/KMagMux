@@ -96,7 +96,8 @@ void QBittorrentConnector::onLoginReply() {
       QString apiCallLog = reply->property("apiCallLog").toString();
       for (const Item &item : itemsToFail) {
         emit dispatchFinished(item.id, false,
-                              "Login failed: Invalid username or password." + apiCallLog);
+                              "Login failed: Invalid username or password." +
+                                  apiCallLog);
       }
     } else {
       // Login successful. The cookie jar in QNetworkAccessManager handles
@@ -115,14 +116,12 @@ void QBittorrentConnector::onLoginReply() {
 
     QString apiCallLog = reply->property("apiCallLog").toString();
     for (const Item &item : itemsToFail) {
-      emit dispatchFinished(item.id, false,
-                            "Login failed: " + reply->errorString() + apiCallLog);
+      emit dispatchFinished(
+          item.id, false, "Login failed: " + reply->errorString() + apiCallLog);
     }
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 void QBittorrentConnector::performDispatch(const Item &item) {
@@ -147,14 +146,8 @@ void QBittorrentConnector::performDispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      if (multiPart) {
-        multiPart->deleteLater();
-        multiPart = nullptr;
-      }
-      if (file) {
-        file->deleteLater();
-        file = nullptr;
-      }
+      multiPart->deleteLater();
+      file->deleteLater();
       return;
     }
 
@@ -200,7 +193,8 @@ void QBittorrentConnector::performDispatch(const Item &item) {
   // 6. Paused (optional, maybe from metadata)
   // "paused" value="true"|"false"
 
-  QString apiCallLog = Connector::buildApiCallLog("POST", request); // Multipart body omitted
+  QString apiCallLog =
+      Connector::buildApiCallLog("POST", request); // Multipart body omitted
 
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply); // Delete multiPart with reply
@@ -237,18 +231,20 @@ void QBittorrentConnector::onAddTorrentReply() {
     QString response = reply->readAll();
     if (response.toLower().contains("fail")) {
       emit dispatchFinished(itemId, false,
-                            "qBittorrent API returned failure: " + response + apiCallLog);
+                            "qBittorrent API returned failure: " + response +
+                                apiCallLog);
     } else {
-      emit dispatchFinished(itemId, true, "Dispatched successfully.");
+      QJsonObject extraMeta;
+      extraMeta["raw_response"] = response;
+      emit dispatchFinished(itemId, true, "Dispatched successfully.",
+                            extraMeta);
     }
   } else {
-    emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString() + apiCallLog);
+    emit dispatchFinished(
+        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 bool QBittorrentConnector::hasSettings() const { return true; }
@@ -341,14 +337,14 @@ bool QBittorrentConnector::hasDebugMenu() const { return true; }
 QList<HttpApiEndpoint> QBittorrentConnector::getHttpApiEndpoints() const {
   QList<HttpApiEndpoint> endpoints;
 
-  HttpApiEndpoint login;
-  login.name = "Login";
-  login.description = "Authenticate with qBittorrent";
-  login.method = "POST";
-  login.url = "${BASE_URL}/api/v2/auth/login";
-  login.headers.insert("Content-Type", "application/x-www-form-urlencoded");
-  login.body = "username=${USERNAME}&password=${PASSWORD}";
-  endpoints.append(login);
+  HttpApiEndpoint loginEp;
+  loginEp.name = "Login";
+  loginEp.description = "Authenticate with qBittorrent";
+  loginEp.method = "POST";
+  loginEp.url = "${BASE_URL}/api/v2/auth/login";
+  loginEp.headers.insert("Content-Type", "application/x-www-form-urlencoded");
+  loginEp.body = "username=${USERNAME}&password=${PASSWORD}";
+  endpoints.append(loginEp);
 
   HttpApiEndpoint getTorrents;
   getTorrents.name = "Get Torrents";

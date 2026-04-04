@@ -67,7 +67,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
     settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
     settings.setValue("autoStart", m_autoStartCb->isChecked());
-            settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
+    settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
     settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
     settings.setValue("allowPlaintextStorage",
                       m_allowPlaintextStorageCb->isChecked());
@@ -112,7 +112,8 @@ void PreferencesDialog::createGeneralPage() {
   m_autoStartCb->setChecked(settings.value("autoStart", false).toBool());
 
   QHBoxLayout *autoArchiveLayout = new QHBoxLayout();
-  QLabel *autoArchiveLabel = new QLabel(tr("Auto Archive 'Done' items after (days):"), page);
+  QLabel *autoArchiveLabel =
+      new QLabel(tr("Auto Archive 'Done' items after (days):"), page);
   m_autoArchiveDays = new QSpinBox(page);
   m_autoArchiveDays->setRange(0, 3650);
   m_autoArchiveDays->setSpecialValueText(tr("Disabled"));
@@ -232,7 +233,7 @@ void PreferencesDialog::createPluginsPage() {
               // We need to save settings when OK/Apply is clicked.
               // We can connect to the buttonBox accepted signal to call
               // saveSettings.
-              if (m_buttonBox && connector && settingsWidget) {
+              if (m_buttonBox) {
                 connect(m_buttonBox, &QDialogButtonBox::accepted, this,
                         [connector, settingsWidget]() {
                           connector->saveSettings(settingsWidget);

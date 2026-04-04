@@ -55,14 +55,8 @@ void PutIoConnector::dispatch(const Item &item) {
     if (!file->open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      if (multiPart) {
-        multiPart->deleteLater();
-        multiPart = nullptr;
-      }
-      if (file) {
-        file->deleteLater();
-        file = nullptr;
-      }
+      multiPart->deleteLater();
+      file->deleteLater();
       return;
     }
     QHttpPart filePart;
@@ -94,15 +88,15 @@ void PutIoConnector::onAddTorrentReply() {
   QString apiCallLog = reply->property("apiCallLog").toString();
 
   if (reply->error() == QNetworkReply::NoError) {
-    emit dispatchFinished(itemId, true, "Dispatched successfully.");
+    QJsonObject extraMeta;
+    extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
+    emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
   } else {
-    emit dispatchFinished(itemId, false,
-                          "Network error: " + reply->errorString() + apiCallLog);
+    emit dispatchFinished(
+        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
   }
-  if (reply) {
-    reply->deleteLater();
-    reply = nullptr;
-  }
+
+  reply->deleteLater();
 }
 
 bool PutIoConnector::hasSettings() const { return true; }
