@@ -223,8 +223,8 @@ void QBittorrentConnector::onAddTorrentReply() {
   const QString apiCallLog = reply->property("apiCallLog").toString();
 
   const int httpUnauth = 401;
-    const int httpForbidden = 403;
-    if (statusCode == httpUnauth || statusCode == httpForbidden) {
+  const int httpForbidden = 403;
+  if (statusCode == httpUnauth || statusCode == httpForbidden) {
     // Authentication failed, queue the item and attempt to login
     m_pendingItems.append(item);
     if (!m_isLoggingIn) {
@@ -260,7 +260,8 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
-  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable qBittorrent"), widget);
+  QCheckBox *const enabledCheck =
+      new QCheckBox(tr("Enable qBittorrent"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -312,8 +313,10 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
   QLineEdit *const urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
-  QLineEdit *const userEdit = settingsWidget->findChild<QLineEdit *>("userEdit");
-  QLineEdit *const passEdit = settingsWidget->findChild<QLineEdit *>("passEdit");
+  QLineEdit *const userEdit =
+      settingsWidget->findChild<QLineEdit *>("userEdit");
+  QLineEdit *const passEdit =
+      settingsWidget->findChild<QLineEdit *>("passEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
