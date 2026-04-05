@@ -26,6 +26,11 @@ public:
 private:
   bool m_enabled;
   QString m_programPath;
+  bool m_useTerminal;
+
+public:
+  QStringList discoverClients() const;
+  QString findExecutable(const QString &name) const;
 
 signals:
   void dispatchFinished(const QString &itemId, bool success,
