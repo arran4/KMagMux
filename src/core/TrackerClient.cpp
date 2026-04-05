@@ -64,8 +64,8 @@ void TrackerClient::cancel()
 {
     m_isActive = false;
     if (m_timer) {
-    m_timer->stop();
-}
+        m_timer->stop();
+    }
 
     if (m_udpSocket->state() != QAbstractSocket::UnconnectedState) {
         m_udpSocket->abort();
@@ -125,8 +125,8 @@ void TrackerClient::sendUdpScrape()
 void TrackerClient::onUdpReadyRead()
 {
     if (!m_isActive) {
-    return;
-}
+        return;
+    }
 
     while (m_udpSocket->hasPendingDatagrams()) {
         QByteArray datagram;
@@ -145,8 +145,8 @@ void TrackerClient::onUdpReadyRead()
         stream >> action >> transactionId;
 
         if (transactionId != m_transactionId) {
-    continue;
-} // ignore mismatched transaction ID
+            continue;
+        } // ignore mismatched transaction ID
 
         if (action == UDP_ACTION_CONNECT) {
             if (datagram.size() < 16)
@@ -172,8 +172,8 @@ void TrackerClient::onUdpReadyRead()
 
             m_isActive = false;
             if (m_timer) {
-    m_timer->stop();
-}
+                m_timer->stop();
+            }
             emit scrapeFinished(stats);
         } else if (action == UDP_ACTION_ERROR) {
             QString errorStr = QString::fromLatin1(datagram.mid(8));
@@ -183,8 +183,8 @@ void TrackerClient::onUdpReadyRead()
 
             m_isActive = false;
             if (m_timer) {
-    m_timer->stop();
-}
+                m_timer->stop();
+            }
             emit scrapeFinished(stats);
         }
     }
@@ -193,8 +193,8 @@ void TrackerClient::onUdpReadyRead()
 void TrackerClient::onUdpError(QAbstractSocket::SocketError error)
 {
     if (!m_isActive) {
-    return;
-}
+        return;
+    }
 
     TrackerStats stats;
     stats.trackerUrl = m_currentTrackerUrl;
@@ -202,8 +202,8 @@ void TrackerClient::onUdpError(QAbstractSocket::SocketError error)
 
     m_isActive = false;
     if (m_timer) {
-    m_timer->stop();
-}
+        m_timer->stop();
+    }
     emit scrapeFinished(stats);
 }
 
@@ -251,8 +251,8 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply)
 
     m_isActive = false;
     if (m_timer) {
-    m_timer->stop();
-}
+        m_timer->stop();
+    }
     m_currentReply = nullptr;
 
     TrackerStats stats;
@@ -320,8 +320,8 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply)
 void TrackerClient::onTimeout()
 {
     if (!m_isActive) {
-    return;
-}
+        return;
+    }
 
     TrackerStats stats;
     stats.trackerUrl = m_currentTrackerUrl;

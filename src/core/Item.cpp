@@ -26,8 +26,8 @@ QString Item::getDisplayName() const
             if (xtIdx != -1) {
                 int endIdx = fullQuery.indexOf('&', xtIdx);
                 if (endIdx == -1) {
-    endIdx = fullQuery.length();
-}
+                    endIdx = fullQuery.length();
+                }
                 result = fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
             } else {
                 result = "Magnet Link";
@@ -107,26 +107,26 @@ QString Item::stateToString() const
 ItemState Item::stringToState(const QString &s)
 {
     if (s == "Unprocessed") {
-    return ItemState::Unprocessed;
-}
+        return ItemState::Unprocessed;
+    }
     if (s == "Queued") {
-    return ItemState::Queued;
-}
+        return ItemState::Queued;
+    }
     if (s == "Scheduled") {
-    return ItemState::Scheduled;
-}
+        return ItemState::Scheduled;
+    }
     if (s == "Held") {
-    return ItemState::Held;
-}
+        return ItemState::Held;
+    }
     if (s == "Done" || s == "Dispatched") {
-    return ItemState::Done;
-}
+        return ItemState::Done;
+    }
     if (s == "Failed") {
-    return ItemState::Failed;
-}
+        return ItemState::Failed;
+    }
     if (s == "Archived") {
-    return ItemState::Archived;
-}
+        return ItemState::Archived;
+    }
     return ItemState::Unprocessed;
 }
 

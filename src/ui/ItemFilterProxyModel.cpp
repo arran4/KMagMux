@@ -22,8 +22,8 @@ bool ItemFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex &s
 
     const ItemModel *model = qobject_cast<ItemModel *>(sourceModel());
     if (!model) {
-    return true;
-}
+        return true;
+    }
 
     const Item &item = model->getItem(source_row);
     QString textLower = m_filterText.toLower();

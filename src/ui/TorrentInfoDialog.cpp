@@ -224,8 +224,8 @@ void TorrentInfoDialog::onCancelQuery()
 void TorrentInfoDialog::processNextTracker()
 {
     if (!m_isQuerying) {
-    return;
-}
+        return;
+    }
 
     while (m_currentTrackerIndex < m_trackerTable->rowCount() && m_trackerTable->item(m_currentTrackerIndex, 0)->checkState() != Qt::Checked) {
         m_currentTrackerIndex++;
@@ -249,8 +249,8 @@ void TorrentInfoDialog::processNextTracker()
 void TorrentInfoDialog::onScrapeFinished(const TrackerStats &stats)
 {
     if (!m_isQuerying) {
-    return;
-}
+        return;
+    }
 
     // Find the row for this tracker (should be m_currentTrackerIndex)
     if (m_currentTrackerIndex < m_trackerTable->rowCount()) {

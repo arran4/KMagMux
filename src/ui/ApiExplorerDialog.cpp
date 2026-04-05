@@ -170,9 +170,8 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint)
     // Set method
     int methodIndex = m_methodCombo->findText(endpoint.method, Qt::MatchExactly | Qt::MatchCaseSensitive);
     if (methodIndex != -1) {
-    m_methodCombo->setCurrentIndex(methodIndex);
-}
-    else
+        m_methodCombo->setCurrentIndex(methodIndex);
+    } else
         m_methodCombo->setEditText(endpoint.method);
 
     // Set URL
@@ -405,8 +404,8 @@ void ApiExplorerDialog::onNetworkReplyFinished()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (!reply) {
-    return;
-}
+        return;
+    }
 
     m_urlEdit->setEnabled(true);
     m_methodCombo->setEnabled(true);

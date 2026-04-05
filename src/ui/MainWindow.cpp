@@ -282,12 +282,12 @@ void MainWindow::setupActionsAndMenus()
     connect(m_archiveAllAction, &QAction::triggered, this, [this]() {
         const QTableView *view = getCurrentView();
         if (!view) {
-    return;
-}
+            return;
+        }
         const ItemModel *model = getCurrentModel();
         if (!model) {
-    return;
-}
+            return;
+        }
 
         std::vector<Item> itemsToSave;
         itemsToSave.reserve(model->rowCount());
@@ -317,16 +317,16 @@ void MainWindow::setupActionsAndMenus()
     connect(m_infoAction, &QAction::triggered, this, [this]() {
         QTableView *view = getCurrentView();
         if (!view) {
-    return;
-}
+            return;
+        }
         const ItemModel *model = getCurrentModel();
         if (!model) {
-    return;
-}
+            return;
+        }
         ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
         if (!proxy) {
-    return;
-}
+            return;
+        }
         QModelIndexList selection = view->selectionModel()->selectedRows();
         if (selection.isEmpty())
             return;
@@ -623,8 +623,8 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos)
 {
     QTableView *view = getCurrentView();
     if (!view) {
-    return;
-}
+        return;
+    }
 
     QModelIndex index = view->indexAt(pos);
     QMenu menu(this);
@@ -702,13 +702,13 @@ void MainWindow::onViewRawProcessingResults()
 {
     QTableView *view = getCurrentView();
     if (!view) {
-    return;
-}
+        return;
+    }
 
     ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
     if (!proxy) {
-    return;
-}
+        return;
+    }
 
     QModelIndexList selection = view->selectionModel()->selectedRows();
     if (selection.isEmpty())
@@ -717,8 +717,8 @@ void MainWindow::onViewRawProcessingResults()
     QModelIndex sourceIndex = proxy->mapToSource(selection.first());
     const ItemModel *model = getCurrentModel();
     if (!model) {
-    return;
-}
+        return;
+    }
 
     Item item = model->getItem(sourceIndex.row());
 
@@ -754,13 +754,13 @@ void MainWindow::onViewRawHttp()
 {
     QTableView *view = getCurrentView();
     if (!view || view != m_errorView) {
-    return;
-}
+        return;
+    }
 
     ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
     if (!proxy) {
-    return;
-}
+        return;
+    }
 
     QModelIndexList selection = view->selectionModel()->selectedRows();
     if (selection.isEmpty())
@@ -779,18 +779,18 @@ void MainWindow::onItemAction(ItemState newState)
 {
     QTableView *view = getCurrentView();
     if (!view) {
-    return;
-}
+        return;
+    }
 
     const ItemModel *model = getCurrentModel();
     if (!model) {
-    return;
-}
+        return;
+    }
 
     ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
     if (!proxy) {
-    return;
-}
+        return;
+    }
 
     QModelIndexList selection = view->selectionModel()->selectedRows();
     if (selection.isEmpty())
@@ -847,18 +847,18 @@ void MainWindow::onDeleteItems()
 {
     QTableView *view = getCurrentView();
     if (!view) {
-    return;
-}
+        return;
+    }
 
     const ItemModel *model = getCurrentModel();
     if (!model) {
-    return;
-}
+        return;
+    }
 
     ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
     if (!proxy) {
-    return;
-}
+        return;
+    }
 
     QModelIndexList selection = view->selectionModel()->selectedRows();
     if (selection.isEmpty())
@@ -1012,13 +1012,13 @@ void MainWindow::onProcessItem()
 {
     QTableView *view = getCurrentView();
     if (!view) {
-    return;
-}
+        return;
+    }
 
     const ItemModel *model = getCurrentModel();
     if (!model) {
-    return;
-}
+        return;
+    }
 
     QModelIndexList selection = view->selectionModel()->selectedRows();
     if (selection.isEmpty())
@@ -1026,8 +1026,8 @@ void MainWindow::onProcessItem()
 
     ItemFilterProxyModel *proxy = qobject_cast<ItemFilterProxyModel *>(view->model());
     if (!proxy) {
-    return;
-}
+        return;
+    }
 
     std::vector<Item> selectedItems;
     selectedItems.reserve(selection.size());
@@ -1111,40 +1111,40 @@ void MainWindow::updateActionsState()
     QTableView *view = getCurrentView();
     if (!view) {
         if (m_selectAllAction) {
-    m_selectAllAction->setEnabled(false);
-}
+            m_selectAllAction->setEnabled(false);
+        }
         if (m_processAction) {
-    m_processAction->setEnabled(false);
-}
+            m_processAction->setEnabled(false);
+        }
         if (m_unprocessAction) {
-    m_unprocessAction->setEnabled(false);
-}
+            m_unprocessAction->setEnabled(false);
+        }
         if (m_dismissAction) {
-    m_dismissAction->setEnabled(false);
-}
+            m_dismissAction->setEnabled(false);
+        }
         if (m_archiveAction) {
-    m_archiveAction->setEnabled(false);
-}
+            m_archiveAction->setEnabled(false);
+        }
         if (m_archiveAllAction) {
-    m_archiveAllAction->setEnabled(false);
-}
+            m_archiveAllAction->setEnabled(false);
+        }
         if (m_deleteAction) {
-    m_deleteAction->setEnabled(false);
-}
+            m_deleteAction->setEnabled(false);
+        }
         if (m_infoAction) {
-    m_infoAction->setEnabled(false);
-}
+            m_infoAction->setEnabled(false);
+        }
         if (m_rawResultsAction) {
-    m_rawResultsAction->setEnabled(false);
-}
+            m_rawResultsAction->setEnabled(false);
+        }
         return;
     }
 
     bool hasSelection = view->selectionModel() && view->selectionModel()->hasSelection();
 
     if (m_selectAllAction) {
-    m_selectAllAction->setEnabled(true);
-}
+        m_selectAllAction->setEnabled(true);
+    }
 
     if (m_processAction) {
         m_processAction->setVisible(true);
@@ -1168,16 +1168,16 @@ void MainWindow::updateActionsState()
     }
 
     if (m_archiveAction) {
-    m_archiveAction->setEnabled(hasSelection);
-}
+        m_archiveAction->setEnabled(hasSelection);
+    }
     if (m_archiveAllAction) {
         const ItemModel *model = getCurrentModel();
         m_archiveAllAction->setVisible(view == m_doneView || view == m_errorView);
         m_archiveAllAction->setEnabled(model && model->rowCount() > 0 && (view == m_doneView || view == m_errorView));
     }
     if (m_deleteAction) {
-    m_deleteAction->setEnabled(hasSelection);
-}
+        m_deleteAction->setEnabled(hasSelection);
+    }
     if (m_infoAction) {
         QModelIndexList selection = view->selectionModel()->selectedRows();
         m_infoAction->setEnabled(hasSelection && selection.size() == 1);
@@ -1221,8 +1221,8 @@ void MainWindow::onOpenCacheDirectory()
 void MainWindow::setupPluginMenus(QMenu *helpMenu)
 {
     if (!m_engine) {
-    return;
-}
+        return;
+    }
 
     for (const QString &connectorId : m_engine->getAvailableConnectors()) {
         Connector *connector = m_engine->getConnector(connectorId);
@@ -1243,8 +1243,8 @@ void MainWindow::setupPluginMenus(QMenu *helpMenu)
 void MainWindow::onOpenApiExplorer(Connector *connector)
 {
     if (!connector) {
-    return;
-}
+        return;
+    }
 
     ApiExplorerDialog dialog(connector, this);
     dialog.exec();

@@ -94,8 +94,8 @@ void PutIoConnector::onAddTorrentReply()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (!reply) {
-    return;
-}
+        return;
+    }
 
     QString itemId = reply->property("itemId").toString();
     QString apiCallLog = reply->property("apiCallLog").toString();
@@ -157,8 +157,8 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent)
 void PutIoConnector::saveSettings(QWidget *settingsWidget)
 {
     if (!settingsWidget) {
-    return;
-}
+        return;
+    }
 
     QCheckBox *enabledCheck = settingsWidget->findChild<QCheckBox *>("enabledCheck");
     QLineEdit *tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");

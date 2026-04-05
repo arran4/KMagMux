@@ -78,8 +78,8 @@ void LinkExtractorDialog::onCancelClicked()
 void LinkExtractorDialog::processNext()
 {
     if (m_cancelled) {
-    return;
-}
+        return;
+    }
 
     if (m_currentIndex >= m_inputLines.size()) {
         appendLog(tr("Finished processing."));
@@ -149,8 +149,8 @@ void LinkExtractorDialog::processNext()
 void LinkExtractorDialog::onReplyFinished()
 {
     if (m_cancelled) {
-    return;
-}
+        return;
+    }
 
     if (!m_currentReply) {
         QMetaObject::invokeMethod(this, "processNext", Qt::QueuedConnection);

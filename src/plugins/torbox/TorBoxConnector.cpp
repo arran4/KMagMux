@@ -97,8 +97,8 @@ void TorBoxConnector::onAddTorrentReply()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (!reply) {
-    return;
-}
+        return;
+    }
 
     QString itemId = reply->property("itemId").toString();
     QString apiCallLog = reply->property("apiCallLog").toString();
@@ -194,8 +194,8 @@ QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent)
 void TorBoxConnector::saveSettings(QWidget *settingsWidget)
 {
     if (!settingsWidget) {
-    return;
-}
+        return;
+    }
 
     QCheckBox *enabledCheck = settingsWidget->findChild<QCheckBox *>("enabledCheck");
     QLineEdit *tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");

@@ -21,7 +21,7 @@ class ProcessItemDialog : public QDialog
 public:
     explicit ProcessItemDialog(const std::vector<Item> &items, const QStringList &connectors, QWidget *parent = nullptr);
 
-    const std::vector<Item>& getItems() const;
+    const std::vector<Item> &getItems() const;
 
 private slots:
     void onProcessClicked();

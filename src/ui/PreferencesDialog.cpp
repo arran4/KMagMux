@@ -81,8 +81,8 @@ PreferencesDialog::~PreferencesDialog()
 void PreferencesDialog::changePage(QListWidgetItem *current, QListWidgetItem *previous)
 {
     if (!current) {
-    current = previous;
-}
+        current = previous;
+    }
 
     m_pagesWidget->setCurrentIndex(m_categoriesList->row(current));
 }

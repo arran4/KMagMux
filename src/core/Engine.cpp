@@ -228,8 +228,8 @@ bool Engine::isPaused() const
 void Engine::processQueue()
 {
     if (m_paused) {
-    return;
-}
+        return;
+    }
 
     auto items = m_storage->loadItemsByStates({ItemState::Queued, ItemState::Scheduled});
 

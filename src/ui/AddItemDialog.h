@@ -20,7 +20,7 @@ class AddItemDialog : public QDialog
 public:
     explicit AddItemDialog(const std::vector<Item> &items, const QStringList &connectors, QWidget *parent = nullptr);
 
-    const std::vector<Item>& getItems() const;
+    const std::vector<Item> &getItems() const;
 
 private slots:
     void onProcessClicked();

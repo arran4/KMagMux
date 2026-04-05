@@ -119,7 +119,7 @@ void AddItemDialog::setupUi()
     mainLayout->addLayout(btnLayout);
 }
 
-std::vector<Item> AddItemDialog::getItems() const
+const std::vector<Item> &AddItemDialog::getItems() const
 {
     return m_items;
 }
@@ -155,8 +155,8 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos)
 {
     QTableWidgetItem *item = m_itemsTable->itemAt(pos);
     if (!item) {
-    return;
-}
+        return;
+    }
 
     int row = item->row();
     int col = item->column();

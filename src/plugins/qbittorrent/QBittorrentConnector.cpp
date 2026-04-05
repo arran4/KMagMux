@@ -101,8 +101,8 @@ void QBittorrentConnector::onLoginReply()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (!reply) {
-    return;
-}
+        return;
+    }
 
     m_isLoggingIn = false;
 
@@ -220,8 +220,8 @@ void QBittorrentConnector::onAddTorrentReply()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (!reply) {
-    return;
-}
+        return;
+    }
 
     Item item = reply->property("item").value<Item>();
     QString itemId = reply->property("itemId").toString();
@@ -308,8 +308,8 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent)
 void QBittorrentConnector::saveSettings(QWidget *settingsWidget)
 {
     if (!settingsWidget) {
-    return;
-}
+        return;
+    }
 
     QCheckBox *enabledCheck = settingsWidget->findChild<QCheckBox *>("enabledCheck");
     QLineEdit *urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
