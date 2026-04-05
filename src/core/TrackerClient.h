@@ -52,7 +52,7 @@ private:
   QTimer *m_timer;
 
   // UDP protocol state
-  enum class UdpState { Idle, Connecting, Scraping };
+  enum class UdpState : std::uint8_t { Idle, Connecting, Scraping };
   UdpState m_udpState;
   uint32_t m_transactionId;
   uint64_t m_connectionId;

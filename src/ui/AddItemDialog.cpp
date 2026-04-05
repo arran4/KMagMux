@@ -124,19 +124,19 @@ void AddItemDialog::setupUi() {
   mainLayout->addLayout(btnLayout);
 }
 
-std::vector<Item> AddItemDialog::getItems() const { return m_items; }
+const std::vector<Item> &AddItemDialog::getItems() const { return m_items; }
 
 void AddItemDialog::onProcessClicked() {
   std::vector<Item> processedItems;
 
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-    QTableWidgetItem *checkItem = m_itemsTable->item(i, 0);
-    if (checkItem && checkItem->checkState() == Qt::Checked) {
+    QTableWidgetItem *const checkItem = m_itemsTable->item(i, 0);
+    if (checkItem != nullptr && checkItem->checkState() == Qt::Checked) {
       Item item = m_items[i];
       item.state = ItemState::Unprocessed;
 
-      QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
-      if (deleteItem && deleteItem->flags() & Qt::ItemIsUserCheckable) {
+      QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
+      if (deleteItem != nullptr && (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
         if (deleteItem->checkState() == Qt::Checked) {
           QJsonObject meta = item.metadata;
           meta["delete_source_file"] = true;
@@ -153,31 +153,33 @@ void AddItemDialog::onProcessClicked() {
 }
 
 void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
-  QTableWidgetItem *item = m_itemsTable->itemAt(pos);
-  if (!item)
+  QTableWidgetItem *const item = m_itemsTable->itemAt(pos);
+  if (item == nullptr) {
     return;
+  }
 
-  int row = item->row();
-  int col = item->column();
-  if (row < 0 || static_cast<size_t>(row) >= m_items.size())
+  const const int row = item->row();
+  const const int col = item->column();
+  if (row < 0 || static_cast<size_t>(row) >= m_items.size()) {
     return;
+  }
 
   QMenu menu(this);
 
   if (col == 1) {
-    QAction *selectAllAction = menu.addAction("Select All");
+    QAction *const selectAllAction = menu.addAction("Select All");
     connect(selectAllAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
+        QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
         if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
           deleteItem->setCheckState(Qt::Checked);
         }
       }
     });
-    QAction *selectNoneAction = menu.addAction("Select None");
+    QAction *const selectNoneAction = menu.addAction("Select None");
     connect(selectNoneAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-        QTableWidgetItem *deleteItem = m_itemsTable->item(i, 1);
+        QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
         if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
           deleteItem->setCheckState(Qt::Unchecked);
         }
@@ -186,7 +188,7 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addSeparator();
   }
 
-  QAction *copyAction = menu.addAction("Copy cell");
+  QAction *const copyAction = menu.addAction("Copy cell");
   connect(copyAction, &QAction::triggered, this, [this, item, row, col]() {
     QString text;
     if (col == 3) {
@@ -200,9 +202,9 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     QGuiApplication::clipboard()->setText(text);
   });
 
-  QAction *infoAction = menu.addAction("Get Info");
+  QAction *const infoAction = menu.addAction("Get Info");
   connect(infoAction, &QAction::triggered, this, [this, row]() {
-    QString sourcePath = m_items[row].sourcePath;
+    const const QString sourcePath = m_items[row].sourcePath;
     if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
       TorrentInfoDialog dialog(sourcePath, &m_items[row], this);
       dialog.exec();

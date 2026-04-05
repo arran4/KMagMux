@@ -3,20 +3,23 @@
 ItemModel::ItemModel(QObject *parent) : QAbstractTableModel(parent) {}
 
 int ItemModel::rowCount(const QModelIndex &parent) const {
-  if (parent.isValid())
+  if (parent.isValid()) {
     return 0;
+  }
   return static_cast<int>(m_items.size());
 }
 
 int ItemModel::columnCount(const QModelIndex &parent) const {
-  if (parent.isValid())
+  if (parent.isValid()) {
     return 0;
+  }
   return ColumnCount;
 }
 
 QVariant ItemModel::data(const QModelIndex &index, int role) const {
-  if (!index.isValid() || index.row() >= static_cast<int>(m_items.size()))
+  if (!index.isValid() || index.row() >= static_cast<int>(m_items.size())) {
     return QVariant();
+  }
 
   const Item &item = m_items[index.row()];
 
@@ -45,8 +48,9 @@ QVariant ItemModel::data(const QModelIndex &index, int role) const {
 
 QVariant ItemModel::headerData(int section, Qt::Orientation orientation,
                                int role) const {
-  if (role != Qt::DisplayRole || orientation != Qt::Horizontal)
+  if (role != Qt::DisplayRole || orientation != Qt::Horizontal) {
     return QVariant();
+  }
 
   switch (section) {
   case ColId:

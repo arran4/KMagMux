@@ -12,14 +12,17 @@
 #include <QPointer>
 #include <QUrl>
 
-static bool isValidInput(const QString &arg) {
+namespace {
+
+bool isValidInput(const QString &arg) {
   if (arg.startsWith("magnet:?")) {
     return true;
   }
-  if (arg.startsWith("magnet:") && arg.length() > 7) {
+  const int magnetPrefixLen = 7;
+  if (arg.startsWith("magnet:") && arg.length() > magnetPrefixLen) {
     return true;
   }
-  QUrl url(arg);
+  const QUrl url(arg);
   if (url.isValid() && (url.scheme() == "http" || url.scheme() == "https")) {
     return true;
   }
@@ -28,16 +31,16 @@ static bool isValidInput(const QString &arg) {
   if (arg.startsWith("file://")) {
     pathToCheck = QUrl(arg).toLocalFile();
   }
-  QFileInfo fi(pathToCheck);
-  return fi.exists() && fi.isFile();
+  const QFileInfo fileInfo(pathToCheck);
+  return fileInfo.exists() && fi.isFile();
 }
 
-static QString setupApplication(QApplication &app) {
-  app.setApplicationName("KMagMux");
-  app.setOrganizationName("KMagMux");
-  app.setWindowIcon(QIcon(":/icons/kmagmux.svg"));
+QString setupApplication(QApplication &app) {
+  QApplication::setApplicationName("KMagMux");
+  QApplication::setOrganizationName("KMagMux");
+  QApplication::setWindowIcon(QIcon(":/icons/kmagmux.svg"));
 
-  QString appName = "kmagmux";
+  const QString appName = "kmagmux";
 #ifdef QT_DEBUG
   appName = "kmagmux-dev1";
 #endif
@@ -47,11 +50,12 @@ static QString setupApplication(QApplication &app) {
   return appName + "_SingleInstance";
 }
 
-static bool sendArgsToExistingInstance(const QString &serverName,
+bool sendArgsToExistingInstance(const QString &serverName,
                                        const QStringList &args) {
   QLocalSocket socket;
   socket.connectToServer(serverName);
-  if (socket.waitForConnected(500)) {
+  const int connectTimeoutMs = 500;
+  if (socket.waitForConnected(connectTimeoutMs)) {
     qDebug() << "Sending arguments to existing instance...";
     QByteArray block;
     QDataStream out(&block, QIODevice::WriteOnly);
@@ -62,13 +66,14 @@ static bool sendArgsToExistingInstance(const QString &serverName,
     }
     out << passedArgs;
     socket.write(block);
-    socket.waitForBytesWritten(1000);
+    const int writeTimeoutMs = 1000;
+    socket.waitForBytesWritten(writeTimeoutMs);
     return true; // Exit since the existing instance will handle it
   }
   return false;
 }
 
-static void setupLocalServer(QLocalServer &server, const QString &serverName) {
+void setupLocalServer(QLocalServer &server, const QString &serverName) {
   // Not running, clean up any stale socket
   QLocalServer::removeServer(serverName);
   server.setSocketOptions(QLocalServer::UserAccessOption);
@@ -78,25 +83,25 @@ static void setupLocalServer(QLocalServer &server, const QString &serverName) {
   }
 }
 
-static void setupIpcHandler(QLocalServer &server, StorageManager &storage,
+void setupIpcHandler(QLocalServer &server, StorageManager &storage,
                             MainWindow *window) {
   // Handle incoming connections from new instances
-  QPointer<MainWindow> windowPtr(window);
+  const QPointer<MainWindow> windowPtr(window);
   QObject::connect(
       &server, &QLocalServer::newConnection, [&storage, &server, windowPtr]() {
         QLocalSocket *client = server.nextPendingConnection();
         QObject::connect(
             client, &QLocalSocket::readyRead, [&storage, client, windowPtr]() {
-              QDataStream in(client);
-              in.startTransaction();
+              QDataStream dataStream(client);
+              dataStream.startTransaction();
               QStringList passedArgs;
-              in >> passedArgs;
-              if (!in.commitTransaction()) {
+              dataStream >> passedArgs;
+              if (!dataStream.commitTransaction()) {
                 return; // Wait for more data
               }
 
               for (int i = 0; i < passedArgs.size(); ++i) {
-                QString arg = passedArgs[i];
+                const QString &arg = passedArgs[i];
                 if (!isValidInput(arg)) {
                   qWarning()
                       << "Invalid input received from IPC, ignoring:" << arg;
@@ -131,10 +136,10 @@ static void setupIpcHandler(QLocalServer &server, StorageManager &storage,
       });
 }
 
-static void processCliArgs(const QStringList &args, StorageManager &storage) {
+void processCliArgs(const QStringList &args, StorageManager &storage) {
   // Handle CLI arguments (Files/URLs) from the FIRST instance
   for (int i = 1; i < args.size(); ++i) {
-    QString arg = args[i];
+    const QString &arg = args[i];
 
     if (!isValidInput(arg)) {
       qWarning() << "Invalid input received from CLI, ignoring:" << arg;
@@ -156,15 +161,18 @@ static void processCliArgs(const QStringList &args, StorageManager &storage) {
   }
 }
 
+
+} // namespace
+
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
 
   KLocalizedString::setApplicationDomain("kmagmux");
-  KAboutData aboutData("kmagmux", i18n("KMagMux"), "0.1");
+  const KAboutData aboutData("kmagmux", i18n("KMagMux"), "0.1");
   KAboutData::setApplicationData(aboutData);
 
   const QString serverName = setupApplication(app);
-  QStringList args = app.arguments();
+  const QStringList args = QApplication::arguments();
 
   if (sendArgsToExistingInstance(serverName, args)) {
     return 0;
@@ -188,5 +196,5 @@ int main(int argc, char *argv[]) {
 
   window->show();
 
-  return app.exec();
+  return QApplication::exec();
 }
