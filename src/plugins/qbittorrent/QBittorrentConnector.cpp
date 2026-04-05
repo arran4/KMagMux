@@ -62,7 +62,7 @@ void QBittorrentConnector::dispatch(const Item &item) {
 
 void QBittorrentConnector::login() {
   const QUrl url(m_baseUrl + "/api/v2/auth/login");
-  const const QNetworkRequest request(url);
+  const QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader,
                     "application/x-www-form-urlencoded");
 
@@ -127,7 +127,7 @@ void QBittorrentConnector::onLoginReply() {
 
 void QBittorrentConnector::performDispatch(const Item &item) {
   const QUrl url(m_baseUrl + "/api/v2/torrents/add");
-  const const QNetworkRequest request(url);
+  const QNetworkRequest request(url);
 
   // We use QHttpMultiPart for both files and magnets because qBittorrent API
   // accepts multipart/form-data
@@ -223,8 +223,8 @@ void QBittorrentConnector::onAddTorrentReply() {
   const QString apiCallLog = reply->property("apiCallLog").toString();
 
   const int httpUnauth = 401;
-    const int httpForbidden = 403;
-    if (statusCode == httpUnauth || statusCode == httpForbidden) {
+  const int httpForbidden = 403;
+  if (statusCode == httpUnauth || statusCode == httpForbidden) {
     // Authentication failed, queue the item and attempt to login
     m_pendingItems.append(item);
     if (!m_isLoggingIn) {
@@ -260,7 +260,8 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
-  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable qBittorrent"), widget);
+  QCheckBox *const enabledCheck =
+      new QCheckBox(tr("Enable qBittorrent"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -312,8 +313,10 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
   QLineEdit *const urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
-  QLineEdit *const userEdit = settingsWidget->findChild<QLineEdit *>("userEdit");
-  QLineEdit *const passEdit = settingsWidget->findChild<QLineEdit *>("passEdit");
+  QLineEdit *const userEdit =
+      settingsWidget->findChild<QLineEdit *>("userEdit");
+  QLineEdit *const passEdit =
+      settingsWidget->findChild<QLineEdit *>("passEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");

@@ -43,7 +43,8 @@ TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
         }
       }
     } else if (item.first == "tr") {
-      const QString trackerUrl = QUrl::fromPercentEncoding(item.second.toUtf8());
+      const QString trackerUrl =
+          QUrl::fromPercentEncoding(item.second.toUtf8());
       if (!info.trackers.contains(trackerUrl)) {
         info.trackers.append(trackerUrl);
       }
@@ -104,7 +105,8 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
         const QVariantList tier = tierVar.toList();
         for (const QVariant &trackerVar : tier) {
           if (trackerVar.typeId() == QMetaType::QByteArray) {
-            const QString trackerUrl = QString::fromUtf8(trackerVar.toByteArray());
+            const QString trackerUrl =
+                QString::fromUtf8(trackerVar.toByteArray());
             if (!info.trackers.contains(trackerUrl)) {
               info.trackers.append(trackerUrl);
             }

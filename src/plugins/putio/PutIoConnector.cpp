@@ -40,7 +40,7 @@ void PutIoConnector::dispatch(const Item &item) {
   }
 
   const QUrl url("https://api.put.io/v2/transfers/add");
-  const const QNetworkRequest request(url);
+  const QNetworkRequest request(url);
   request.setRawHeader("Authorization", ("Bearer " + m_oauthToken).toUtf8());
 
   QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
@@ -149,7 +149,8 @@ void PutIoConnector::saveSettings(QWidget *settingsWidget) {
 
   QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *const tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
+  QLineEdit *const tokenEdit =
+      settingsWidget->findChild<QLineEdit *>("tokenEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/PutIO");
