@@ -4,8 +4,10 @@
 #include "../core/Item.h"
 #include "../core/TorrentParser.h"
 #include "../core/TrackerClient.h"
+#include <QDateTime>
 #include <QDialog>
 #include <QPushButton>
+#include <QString>
 #include <QTableWidget>
 #include <QTextEdit>
 

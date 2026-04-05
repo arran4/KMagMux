@@ -1,4 +1,7 @@
 #include "TorrentInfoDialog.h"
+#include "../core/Item.h"
+#include "../core/TorrentParser.h"
+#include "../core/TrackerClient.h"
 #include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>

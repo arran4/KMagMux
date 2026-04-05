@@ -13,10 +13,18 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
+#include "../core/Item.h"
 #include "TorrentInfoDialog.h"
+#include <QAction>
 #include <QClipboard>
+#include <QComboBox>
+#include <QDateTimeEdit>
 #include <QGuiApplication>
+#include <QJsonObject>
 #include <QLabel>
+#include <QListWidget>
+#include <QPushButton>
+#include <QTableWidgetItem>
 #include <QUuid>
 
 ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
