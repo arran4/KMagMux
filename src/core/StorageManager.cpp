@@ -1,4 +1,5 @@
 #include "StorageManager.h"
+#include <numeric>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -11,7 +12,6 @@
 #include <QStandardPaths>
 #include <QThreadPool>
 #include <QtConcurrent>
-#include <numeric>
 #include <utility>
 
 StorageManager::StorageManager(QObject *parent)
@@ -350,9 +350,8 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
   }
 
   int totalSize = std::accumulate(
-      states.begin(), states.end(), 0, [this](int sum, ItemState state) {
-        return sum + m_stateIndex.value(state).size();
-      });
+      states.begin(), states.end(), 0,
+      [this](int sum, ItemState state) { return sum + m_stateIndex.value(state).size(); });
   items.reserve(totalSize);
 
   for (const ItemState &state : states) {

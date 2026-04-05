@@ -63,6 +63,13 @@ QStringList LocalProgramConnector::discoverClients() const {
                               "aria2c"};
 
   QStringList discovered;
+
+  // Add system default option
+  QString xdgOpenPath = findExecutable("xdg-open");
+  if (!xdgOpenPath.isEmpty()) {
+    discovered.append(xdgOpenPath);
+  }
+
   for (const QString &client : knownClients) {
     QString path = findExecutable(client);
     if (!path.isEmpty()) {
