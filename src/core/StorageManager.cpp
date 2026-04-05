@@ -371,7 +371,7 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
 }
 
 QStringList StorageManager::scanInbox() const {
-  const const QDir dir(m_inboxDir);
+  const QDir dir(m_inboxDir);
   return dir.entryList(QDir::Files | QDir::NoDotAndDotDot);
 }
 

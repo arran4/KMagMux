@@ -44,7 +44,7 @@ void PremiumizeConnector::dispatch(const Item &item) {
 
   if (item.sourcePath.startsWith("magnet:")) {
     // Premiumize uses form-data or x-www-form-urlencoded for magnet links
-    const const QNetworkRequest request(url);
+    const QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                       "application/x-www-form-urlencoded");
 
@@ -63,7 +63,7 @@ void PremiumizeConnector::dispatch(const Item &item) {
             &PremiumizeConnector::onAddTorrentReply);
   } else {
     // For files we need multipart
-    const const QNetworkRequest request(url);
+    const QNetworkRequest request(url);
     // Note: Do not set content-type for multipart, QNetworkAccessManager
     // handles the boundary automatically
 

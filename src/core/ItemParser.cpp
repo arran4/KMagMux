@@ -6,7 +6,7 @@
 
 std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
   std::vector<Item> parsedItems;
-  const const qint64 now = QDateTime::currentMSecsSinceEpoch();
+  const qint64 now = QDateTime::currentMSecsSinceEpoch();
   int idx = 0;
 
   auto processLine = [&](QString line) {
