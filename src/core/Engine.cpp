@@ -119,7 +119,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         }
 
         if (shouldReplace) {
-          it.value() = {filePath, version, isDev};
+          iter.value() = {filePath, version, isDev};
         }
       }
     }
@@ -175,7 +175,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 }
 
 Connector *Engine::getConnector(const QString &identifier) const {
-  return m_connectors.value(id, nullptr);
+  return m_connectors.value(identifier, nullptr);
 }
 
 QStringList Engine::getAvailableConnectors() const {

@@ -108,7 +108,7 @@ QString StorageManager::getManagedDir() const { return m_managedDir; }
 
 QString StorageManager::getItemPath(const QString &identifier) const {
   // Basic sanitization
-  QString safeId = id;
+  QString safeId = identifier;
   safeId.replace("/", "_").replace("\\", "_");
   return m_dataDir + "/" + safeId + ".json";
 }
@@ -183,8 +183,8 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
 }
 
 std::optional<Item> StorageManager::loadItem(const QString &identifier) {
-  if (m_cacheInitialized && m_cache.contains(id)) {
-    return m_cache[id];
+  if (m_cacheInitialized && m_cache.contains(identifier)) {
+    return m_cache[identifier];
   }
 
   const QString path = getItemPath(identifier);
@@ -208,7 +208,7 @@ std::optional<Item> StorageManager::loadItem(const QString &identifier) {
 }
 
 bool StorageManager::deleteItem(const QString &identifier) {
-  std::optional<Item> optItem = loadItem(id);
+  std::optional<Item> optItem = loadItem(identifier);
   if (!optItem.has_value()) {
     return false;
   }
@@ -271,7 +271,7 @@ void StorageManager::deleteItems(const std::vector<QString> &ids) {
   actuallyDeletedIds.reserve(ids.size());
 
   for (const QString &identifier : ids) {
-    std::optional<Item> optItem = loadItem(id);
+    std::optional<Item> optItem = loadItem(identifier);
     if (!optItem.has_value()) {
       continue;
     }
@@ -360,8 +360,8 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
       const QSet<QString> &ids = m_stateIndex.value(state);
       for (const QString &identifier : ids) {
         auto iter = m_cache.constFind(identifier);
-        if (it != m_cache.constEnd()) {
-          items.push_back(it.value());
+        if (iter != m_cache.constEnd()) {
+          items.push_back(iter.value());
         }
       }
     }
@@ -408,9 +408,10 @@ void StorageManager::processNewFile(const QString &filePath) {
 
   qDebug() << "Processing new file in inbox:" << filePath;
 
+  QFileInfo fileInfo(filePath);
   Item newItem;
   newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
-               info.fileName();
+               fileInfo.fileName();
   newItem.state = ItemState::Unprocessed;
   newItem.sourcePath = filePath;
   newItem.createdTime = QDateTime::currentDateTime();
