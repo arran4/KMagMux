@@ -246,7 +246,8 @@ void ProcessItemDialog::onProcessClicked() {
         }
 
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem != nullptr && (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+        if (deleteItem != nullptr &&
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
           if (deleteItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_source_file"] = true;

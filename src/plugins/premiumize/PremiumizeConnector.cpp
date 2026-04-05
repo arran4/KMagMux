@@ -53,7 +53,8 @@ void PremiumizeConnector::dispatch(const Item &item) {
     postData.addQueryItem("src", item.sourcePath);
 
     const QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
-    const QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
+    const QString apiCallLog =
+        Connector::buildApiCallLog("POST", request, body);
 
     QNetworkReply *reply = m_networkManager->post(request, body);
     reply->setProperty("itemId", item.id);
@@ -134,7 +135,8 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
 
-  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable Premiumize.me"), widget);
+  QCheckBox *const enabledCheck =
+      new QCheckBox(tr("Enable Premiumize.me"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -174,7 +176,8 @@ void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
 
   QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *const tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
+  QLineEdit *const tokenEdit =
+      settingsWidget->findChild<QLineEdit *>("tokenEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
