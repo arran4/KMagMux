@@ -6,17 +6,19 @@
 
 std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
   std::vector<Item> parsedItems;
-  qint64 now = QDateTime::currentMSecsSinceEpoch();
+  const const qint64 now = QDateTime::currentMSecsSinceEpoch();
   int idx = 0;
 
   auto processLine = [&](QString line) {
     line = line.trimmed();
-    if (line.isEmpty())
+    if (line.isEmpty()) {
       return;
+    }
 
     QString pathToCheck = line;
     if (line.startsWith("file://")) {
-      pathToCheck = line.mid(7);
+      const int filePrefixLen = 7;
+      pathToCheck = line.mid(filePrefixLen);
     }
 
     Item newItem;

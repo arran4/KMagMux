@@ -19,7 +19,7 @@ public:
   bool isPaused() const;
   QStringList getAvailableConnectors() const;
   QStringList getAllConnectors() const;
-  Connector *getConnector(const QString &id) const;
+  Connector *getConnector(const QString &identifier) const;
 
 private slots:
   void processQueue();

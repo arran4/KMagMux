@@ -61,8 +61,8 @@ void QBittorrentConnector::dispatch(const Item &item) {
 }
 
 void QBittorrentConnector::login() {
-  QUrl url(m_baseUrl + "/api/v2/auth/login");
-  QNetworkRequest request(url);
+  const QUrl url(m_baseUrl + "/api/v2/auth/login");
+  const const QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader,
                     "application/x-www-form-urlencoded");
 
@@ -70,8 +70,8 @@ void QBittorrentConnector::login() {
   postData.addQueryItem("username", m_username);
   postData.addQueryItem("password", m_password);
 
-  QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
-  QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
+  const QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
+  const QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
 
   QNetworkReply *reply = m_networkManager->post(request, body);
   reply->setProperty("apiCallLog", apiCallLog);
@@ -81,19 +81,20 @@ void QBittorrentConnector::login() {
 
 void QBittorrentConnector::onLoginReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  if (!reply)
+  if (reply == nullptr) {
     return;
+  }
 
   m_isLoggingIn = false;
 
   if (reply->error() == QNetworkReply::NoError) {
-    QString response = reply->readAll();
+    const QString response = reply->readAll();
     if (response.trimmed() == "Fails.") {
       qWarning() << "qBittorrent Login failed: Invalid username or password.";
-      QList<Item> itemsToFail = m_pendingItems;
+      const QList<Item> itemsToFail = m_pendingItems;
       m_pendingItems.clear();
 
-      QString apiCallLog = reply->property("apiCallLog").toString();
+      const QString apiCallLog = reply->property("apiCallLog").toString();
       for (const Item &item : itemsToFail) {
         emit dispatchFinished(item.id, false,
                               "Login failed: Invalid username or password." +
@@ -102,7 +103,7 @@ void QBittorrentConnector::onLoginReply() {
     } else {
       // Login successful. The cookie jar in QNetworkAccessManager handles
       // the session cookie automatically. Proceed to dispatch pending items.
-      QList<Item> itemsToDispatch = m_pendingItems;
+      const QList<Item> itemsToDispatch = m_pendingItems;
       m_pendingItems.clear();
 
       for (const Item &item : itemsToDispatch) {
@@ -111,10 +112,10 @@ void QBittorrentConnector::onLoginReply() {
     }
   } else {
     qWarning() << "qBittorrent Login failed:" << reply->errorString();
-    QList<Item> itemsToFail = m_pendingItems;
+    const QList<Item> itemsToFail = m_pendingItems;
     m_pendingItems.clear();
 
-    QString apiCallLog = reply->property("apiCallLog").toString();
+    const QString apiCallLog = reply->property("apiCallLog").toString();
     for (const Item &item : itemsToFail) {
       emit dispatchFinished(
           item.id, false, "Login failed: " + reply->errorString() + apiCallLog);
@@ -125,8 +126,8 @@ void QBittorrentConnector::onLoginReply() {
 }
 
 void QBittorrentConnector::performDispatch(const Item &item) {
-  QUrl url(m_baseUrl + "/api/v2/torrents/add");
-  QNetworkRequest request(url);
+  const QUrl url(m_baseUrl + "/api/v2/torrents/add");
+  const const QNetworkRequest request(url);
 
   // We use QHttpMultiPart for both files and magnets because qBittorrent API
   // accepts multipart/form-data
@@ -153,7 +154,7 @@ void QBittorrentConnector::performDispatch(const Item &item) {
 
     QHttpPart filePart;
     // qBittorrent requires the filename in content-disposition
-    QString filename = QFileInfo(item.sourcePath).fileName();
+    const QString filename = QFileInfo(item.sourcePath).fileName();
     filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
                        QVariant("form-data; name=\"torrents\"; filename=\"" +
                                 filename + "\""));
@@ -210,17 +211,20 @@ void QBittorrentConnector::performDispatch(const Item &item) {
 
 void QBittorrentConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  if (!reply)
+  if (reply == nullptr) {
     return;
+  }
 
-  Item item = reply->property("item").value<Item>();
-  QString itemId = reply->property("itemId").toString();
-  int statusCode =
+  const Item item = reply->property("item").value<Item>();
+  const QString itemId = reply->property("itemId").toString();
+  const int statusCode =
       reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
-  QString apiCallLog = reply->property("apiCallLog").toString();
+  const QString apiCallLog = reply->property("apiCallLog").toString();
 
-  if (statusCode == 401 || statusCode == 403) {
+  const int httpUnauth = 401;
+    const int httpForbidden = 403;
+    if (statusCode == httpUnauth || statusCode == httpForbidden) {
     // Authentication failed, queue the item and attempt to login
     m_pendingItems.append(item);
     if (!m_isLoggingIn) {
@@ -228,7 +232,7 @@ void QBittorrentConnector::onAddTorrentReply() {
       login();
     }
   } else if (reply->error() == QNetworkReply::NoError) {
-    QString response = reply->readAll();
+    const QString response = reply->readAll();
     if (response.toLower().contains("fail")) {
       emit dispatchFinished(itemId, false,
                             "qBittorrent API returned failure: " + response +
@@ -256,7 +260,7 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
-  QCheckBox *enabledCheck = new QCheckBox(tr("Enable qBittorrent"), widget);
+  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable qBittorrent"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -264,25 +268,25 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QWidget *configWidget = new QWidget(widget);
   QFormLayout *configLayout = new QFormLayout(configWidget);
 
-  QLineEdit *urlEdit = new QLineEdit(configWidget);
+  QLineEdit *const urlEdit = new QLineEdit(configWidget);
   urlEdit->setObjectName("urlEdit");
   urlEdit->setText(
       settings.value("baseUrl", "http://localhost:8080").toString());
   configLayout->addRow(tr("Base URL:"), urlEdit);
 
-  QLineEdit *userEdit = new QLineEdit(configWidget);
+  QLineEdit *const userEdit = new QLineEdit(configWidget);
   userEdit->setObjectName("userEdit");
   userEdit->setText(settings.value("username", "").toString());
   configLayout->addRow(tr("Username:"), userEdit);
 
-  QLineEdit *passEdit = new QLineEdit(configWidget);
+  QLineEdit *const passEdit = new QLineEdit(configWidget);
   passEdit->setObjectName("passEdit");
   passEdit->setEchoMode(QLineEdit::Password);
   passEdit->setText(
       SecureStorage::readPassword("Plugins/qBittorrent", "password"));
   configLayout->addRow(tr("Password:"), passEdit);
 
-  QSettings mainSettings;
+  const QSettings mainSettings;
   if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
     QLabel *warningLabel = new QLabel(
         tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
@@ -301,28 +305,29 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
 }
 
 void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
-  if (!settingsWidget)
+  if (settingsWidget == nullptr) {
     return;
+  }
 
-  QCheckBox *enabledCheck =
+  QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
-  QLineEdit *userEdit = settingsWidget->findChild<QLineEdit *>("userEdit");
-  QLineEdit *passEdit = settingsWidget->findChild<QLineEdit *>("passEdit");
+  QLineEdit *const urlEdit = settingsWidget->findChild<QLineEdit *>("urlEdit");
+  QLineEdit *const userEdit = settingsWidget->findChild<QLineEdit *>("userEdit");
+  QLineEdit *const passEdit = settingsWidget->findChild<QLineEdit *>("passEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/qBittorrent");
 
-  if (enabledCheck) {
+  if (enabledCheck != nullptr) {
     bool en = enabledCheck->isChecked();
     settings.setValue("enabled", en);
     m_enabled = en;
   }
-  if (urlEdit) {
+  if (urlEdit != nullptr) {
     settings.setValue("baseUrl", urlEdit->text());
     setBaseUrl(urlEdit->text());
   }
-  if (userEdit && passEdit) {
+  if (userEdit != nullptr && passEdit != nullptr) {
     settings.setValue("username", userEdit->text());
     SecureStorage::writePassword("Plugins/qBittorrent", "password",
                                  passEdit->text());

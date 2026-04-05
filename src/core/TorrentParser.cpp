@@ -8,20 +8,19 @@
 TorrentInfo TorrentParser::parse(const QString &sourcePath) {
   if (sourcePath.startsWith("magnet:?")) {
     return parseMagnet(sourcePath);
-  } else {
-    return parseTorrentFile(sourcePath);
   }
+  return parseTorrentFile(sourcePath);
 }
 
 TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
   TorrentInfo info;
-  QUrl url(magnetUri);
+  const QUrl url(magnetUri);
   if (!url.isValid() || url.scheme() != "magnet") {
     info.errorString = "Invalid magnet URI";
     return info;
   }
 
-  QUrlQuery query(url);
+  const QUrlQuery query(url);
 
   if (query.hasQueryItem("dn")) {
     info.name = QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
@@ -29,12 +28,13 @@ TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
 
   // Find info hash
   // xt=urn:btih:<hash>
-  QList<QPair<QString, QString>> items = query.queryItems();
+  const QList<QPair<QString, QString>> items = query.queryItems();
   for (const auto &item : items) {
     if (item.first == "xt") {
-      QString val = item.second;
+      const QString val = item.second;
       if (val.startsWith("urn:btih:")) {
-        QString hashHex = val.mid(9);
+        const int hashHexPrefixLen = 9;
+        const QString hashHex = val.mid(hashHexPrefixLen);
         if (hashHex.length() == 40) {
           info.infoHash = QByteArray::fromHex(hashHex.toUtf8());
         } else if (hashHex.length() == 32) {
@@ -43,7 +43,7 @@ TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
         }
       }
     } else if (item.first == "tr") {
-      QString trackerUrl = QUrl::fromPercentEncoding(item.second.toUtf8());
+      const QString trackerUrl = QUrl::fromPercentEncoding(item.second.toUtf8());
       if (!info.trackers.contains(trackerUrl)) {
         info.trackers.append(trackerUrl);
       }
@@ -77,7 +77,7 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
     return info;
   }
 
-  QByteArray data = file.readAll();
+  const QByteArray data = file.readAll();
   file.close();
 
   BencodeParser parser;
@@ -90,7 +90,7 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   // Extract announce
   if (dict.contains("announce")) {
-    QString announce = QString::fromUtf8(dict["announce"].toByteArray());
+    const QString announce = QString::fromUtf8(dict["announce"].toByteArray());
     if (!info.trackers.contains(announce)) {
       info.trackers.append(announce);
     }
@@ -98,13 +98,13 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   // Extract announce-list
   if (dict.contains("announce-list")) {
-    QVariantList announceList = dict["announce-list"].toList();
+    const QVariantList announceList = dict["announce-list"].toList();
     for (const QVariant &tierVar : announceList) {
       if (tierVar.typeId() == QMetaType::QVariantList) {
-        QVariantList tier = tierVar.toList();
+        const QVariantList tier = tierVar.toList();
         for (const QVariant &trackerVar : tier) {
           if (trackerVar.typeId() == QMetaType::QByteArray) {
-            QString trackerUrl = QString::fromUtf8(trackerVar.toByteArray());
+            const QString trackerUrl = QString::fromUtf8(trackerVar.toByteArray());
             if (!info.trackers.contains(trackerUrl)) {
               info.trackers.append(trackerUrl);
             }
@@ -123,15 +123,15 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
   }
 
   if (dict.contains("creation date")) {
-    qint64 ts = dict["creation date"].toLongLong();
-    if (ts > 0) {
-      info.creationDate = QDateTime::fromSecsSinceEpoch(ts);
+    const qint64 creationTs = dict["creation date"].toLongLong();
+    if (creationTs > 0) {
+      info.creationDate = QDateTime::fromSecsSinceEpoch(creationTs);
     }
   }
 
   // Extract info dictionary values
   if (dict.contains("info")) {
-    QVariant infoVar = dict["info"];
+    const QVariant infoVar = dict["info"];
     if (infoVar.typeId() == QMetaType::QVariantMap) {
       QVariantMap infoDict = infoVar.toMap();
       if (infoDict.contains("name")) {
@@ -147,7 +147,7 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
         info.totalSize += fileInfo.length;
       } else if (infoDict.contains("files")) {
         // Multiple files mode
-        QVariantList filesList = infoDict["files"].toList();
+        const QVariantList filesList = infoDict["files"].toList();
         for (const QVariant &fileVar : filesList) {
           if (fileVar.typeId() == QMetaType::QVariantMap) {
             QVariantMap fileDict = fileVar.toMap();
@@ -155,7 +155,7 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
             fileInfo.length = fileDict["length"].toLongLong();
 
             if (fileDict.contains("path")) {
-              QVariantList pathList = fileDict["path"].toList();
+              const QVariantList pathList = fileDict["path"].toList();
               QStringList pathParts;
               for (const QVariant &part : pathList) {
                 QString partStr = QString::fromUtf8(part.toByteArray());

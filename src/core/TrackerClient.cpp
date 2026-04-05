@@ -33,16 +33,17 @@ TrackerClient::TrackerClient(QObject *parent)
 TrackerClient::~TrackerClient() { cancel(); }
 
 void TrackerClient::scrape(const QString &trackerUrl,
-                           const QByteArray &infoHash) {
+                           const QByteArray & /*infoHash*/) {
   cancel(); // stop any ongoing request
 
   m_isActive = true;
   m_currentTrackerUrl = trackerUrl;
   m_currentInfoHash = infoHash;
 
-  m_timer->start(10000); // 10s timeout
+  const int timeoutMs = 10000;
+  m_timer->start(timeoutMs);
 
-  QUrl url(trackerUrl);
+  const QUrl url(trackerUrl);
   if (url.scheme() == "udp") {
     startUdpScrape(trackerUrl, infoHash);
   } else if (url.scheme() == "http" || url.scheme() == "https") {
@@ -58,15 +59,16 @@ void TrackerClient::scrape(const QString &trackerUrl,
 
 void TrackerClient::cancel() {
   m_isActive = false;
-  if (m_timer)
+  if (m_timer != nullptr) {
     m_timer->stop();
+  }
 
   if (m_udpSocket->state() != QAbstractSocket::UnconnectedState) {
     m_udpSocket->abort();
   }
   m_udpState = UdpState::Idle;
 
-  if (m_currentReply) {
+  if (m_currentReply != nullptr) {
     m_currentReply->abort();
     m_currentReply->deleteLater();
     m_currentReply = nullptr;
@@ -74,10 +76,11 @@ void TrackerClient::cancel() {
 }
 
 void TrackerClient::startUdpScrape(const QString &urlStr,
-                                   const QByteArray &infoHash) {
-  QUrl url(urlStr);
+                                   const QByteArray & /*infoHash*/) {
+  const QUrl url(urlStr);
 
-  m_udpSocket->connectToHost(url.host(), url.port(80));
+  const int defaultPort = 80;
+  m_udpSocket->connectToHost(url.host(), url.port(defaultPort));
   m_udpState = UdpState::Connecting;
 
   sendUdpConnect();
@@ -115,8 +118,9 @@ void TrackerClient::sendUdpScrape() {
 }
 
 void TrackerClient::onUdpReadyRead() {
-  if (!m_isActive)
+  if (!m_isActive) {
     return;
+  }
 
   while (m_udpSocket->hasPendingDatagrams()) {
     QByteArray datagram;
@@ -129,78 +133,94 @@ void TrackerClient::onUdpReadyRead() {
     uint32_t action;
     uint32_t transactionId;
 
-    if (datagram.size() < 8)
-      continue; // too small
+    const int minResponseLen = 8;
+    if (datagram.size() < minResponseLen) {
+      continue;
+    } // too small
 
     stream >> action >> transactionId;
 
-    if (transactionId != m_transactionId)
-      continue; // ignore mismatched transaction ID
+    if (transactionId != m_transactionId) {
+      continue;
+    } // ignore mismatched transaction ID
 
     if (action == UDP_ACTION_CONNECT) {
-      if (datagram.size() < 16)
+      const int minConnectLen = 16;
+      if (datagram.size() < minConnectLen) {
         continue;
+      }
       qint64 connId;
       stream >> connId;
       m_connectionId = static_cast<uint64_t>(connId);
       m_udpState = UdpState::Scraping;
       sendUdpScrape();
     } else if (action == UDP_ACTION_SCRAPE) {
-      if (datagram.size() < 20)
+      const int minScrapeLen = 20;
+      if (datagram.size() < minScrapeLen) {
         continue;
+      }
 
-      uint32_t seeders, completed, leechers;
+      uint32_t seeders = 0;
+      uint32_t completed = 0;
+      uint32_t leechers = 0;
       stream >> seeders >> completed >> leechers;
 
       TrackerStats stats;
       stats.trackerUrl = m_currentTrackerUrl;
       stats.success = true;
-      stats.seeders = seeders;
-      stats.downloaded = completed;
-      stats.leechers = leechers;
+      stats.seeders = static_cast<int>(seeders);
+      stats.downloaded = static_cast<int>(completed);
+      stats.leechers = static_cast<int>(leechers);
 
       m_isActive = false;
-      if (m_timer)
+      if (m_timer != nullptr) {
         m_timer->stop();
+      }
       emit scrapeFinished(stats);
     } else if (action == UDP_ACTION_ERROR) {
-      QString errorStr = QString::fromLatin1(datagram.mid(8));
+      const int errorStrOffset = 8;
+      const QString errorStr = QString::fromLatin1(datagram.mid(errorStrOffset));
       TrackerStats stats;
       stats.trackerUrl = m_currentTrackerUrl;
       stats.errorString = errorStr;
 
       m_isActive = false;
-      if (m_timer)
+      if (m_timer != nullptr) {
         m_timer->stop();
+      }
       emit scrapeFinished(stats);
     }
   }
 }
 
-void TrackerClient::onUdpError(QAbstractSocket::SocketError error) {
-  if (!m_isActive)
+void TrackerClient::onUdpError(QAbstractSocket::SocketError /*error*/) {
+  if (!m_isActive) {
     return;
+  }
 
   TrackerStats stats;
   stats.trackerUrl = m_currentTrackerUrl;
   stats.errorString = m_udpSocket->errorString();
 
   m_isActive = false;
-  if (m_timer)
+  if (m_timer != nullptr) {
     m_timer->stop();
+  }
   emit scrapeFinished(stats);
 }
 
 void TrackerClient::startHttpScrape(const QString &urlStr,
-                                    const QByteArray &infoHash) {
-  QUrl url(urlStr);
+                                    const QByteArray & /*infoHash*/) {
+  const QUrl url(urlStr);
 
   // Replace /announce with /scrape
   QString path = url.path();
   if (path.endsWith("announce")) {
-    path.replace(path.length() - 8, 8, "scrape");
+    const int announceLen = 8;
+    path.replace(path.length() - announceLen, announceLen, "scrape");
   } else if (path.endsWith("announce.php")) {
-    path.replace(path.length() - 12, 12, "scrape.php");
+    const int announcePhpLen = 12;
+    path.replace(path.length() - announcePhpLen, announcePhpLen, "scrape.php");
   }
   url.setPath(path);
 
@@ -208,11 +228,12 @@ void TrackerClient::startHttpScrape(const QString &urlStr,
   // But QUrlQuery's addQueryItem will double encode or miss encoding binary
   // data. We need to encode the raw hash properly.
 
-  QByteArray encodedHash = infoHash.toPercentEncoding();
+  const QByteArray encodedHash = infoHash.toPercentEncoding();
 
   QString queryStr = url.query(QUrl::FullyEncoded);
-  if (!queryStr.isEmpty())
+  if (!queryStr.isEmpty()) {
     queryStr += "&";
+  }
   queryStr += "info_hash=" + encodedHash;
 
   url.setQuery(queryStr, QUrl::StrictMode);
@@ -226,7 +247,7 @@ void TrackerClient::startHttpScrape(const QString &urlStr,
 
 void TrackerClient::onHttpFinished(QNetworkReply *reply) {
   if (reply != m_currentReply || !m_isActive) {
-    if (reply) {
+    if (reply != nullptr) {
       reply->deleteLater();
       reply = nullptr;
     }
@@ -234,8 +255,9 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply) {
   }
 
   m_isActive = false;
-  if (m_timer)
+  if (m_timer != nullptr) {
     m_timer->stop();
+  }
   m_currentReply = nullptr;
 
   TrackerStats stats;
@@ -248,7 +270,7 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply) {
     return;
   }
 
-  QByteArray data = reply->readAll();
+  const QByteArray data = reply->readAll();
   reply->deleteLater();
 
   BencodeParser parser;
@@ -266,14 +288,14 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply) {
   }
 
   if (dict.contains("files")) {
-    QVariant filesVar = dict["files"];
+    const QVariant filesVar = dict["files"];
     if (filesVar.typeId() == QMetaType::QVariantMap) {
       QVariantMap filesDict = filesVar.toMap();
       // filesDict keys are the info_hashes. Find ours, or just take the first
       // one since we only asked for one.
 
       // We asked for m_currentInfoHash. The key in dictionary is raw bytes.
-      QString hashKey = QString::fromUtf8(m_currentInfoHash);
+      const QString hashKey = QString::fromUtf8(m_currentInfoHash);
       QVariantMap targetFile;
 
       if (filesDict.contains(hashKey)) {
@@ -301,8 +323,9 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply) {
 }
 
 void TrackerClient::onTimeout() {
-  if (!m_isActive)
+  if (!m_isActive) {
     return;
+  }
 
   TrackerStats stats;
   stats.trackerUrl = m_currentTrackerUrl;

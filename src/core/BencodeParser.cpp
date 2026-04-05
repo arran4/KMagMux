@@ -11,7 +11,7 @@ bool BencodeParser::parse(const QByteArray &data) {
   m_dataPtr = &data;
 
   int pos = 0;
-  QVariant root = parseElement(data, pos);
+  const QVariant root = parseElement(data, pos);
 
   if (pos != data.size() && m_errorString.isEmpty()) {
     // Allow trailing garbage? Often best not to, but sometimes exists.
@@ -43,14 +43,14 @@ QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
     return QVariant();
   }
 
-  char c = data[pos];
+  const char chr = data[pos];
   if (c == 'i') {
     return parseInteger(data, pos);
-  } else if (c == 'l') {
+  } else if (chr == 'l') {
     return parseList(data, pos);
-  } else if (c == 'd') {
+  } else if (chr == 'd') {
     return parseDictionary(data, pos);
-  } else if (c >= '0' && c <= '9') {
+  } else if (chr >= '0' && chr <= '9') {
     return parseByteString(data, pos);
   } else {
     m_errorString = "Invalid character at start of element";
@@ -60,18 +60,18 @@ QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
 
 QVariant BencodeParser::parseInteger(const QByteArray &data, int &pos) {
   pos++; // skip 'i'
-  int endPos = data.indexOf('e', pos);
+  const int endPos = static_cast<int>(data.indexOf('e', pos));
   if (endPos == -1) {
     m_errorString = "Unterminated integer";
     return QVariant();
   }
 
-  QByteArray intBytes = data.mid(pos, endPos - pos);
+  const QByteArray intBytes = data.mid(pos, endPos - pos);
   pos = endPos + 1;
 
-  bool ok;
-  qint64 val = intBytes.toLongLong(&ok);
-  if (!ok) {
+  bool isOk;
+  const qint64 val = intBytes.toLongLong(&isOk);
+  if (!isOk) {
     m_errorString = "Invalid integer format";
     return QVariant();
   }
@@ -79,16 +79,16 @@ QVariant BencodeParser::parseInteger(const QByteArray &data, int &pos) {
 }
 
 QByteArray BencodeParser::parseByteString(const QByteArray &data, int &pos) {
-  int colonPos = data.indexOf(':', pos);
+  const int colonPos = static_cast<int>(data.indexOf(':', pos));
   if (colonPos == -1) {
     m_errorString = "Unterminated string length";
     return QByteArray();
   }
 
-  QByteArray lenBytes = data.mid(pos, colonPos - pos);
-  bool ok;
-  int len = lenBytes.toInt(&ok);
-  if (!ok || len < 0) {
+  const QByteArray lenBytes = data.mid(pos, colonPos - pos);
+  bool isOk;
+  const int len = lenBytes.toInt(&isOk);
+  if (!isOk || len < 0) {
     m_errorString = "Invalid string length";
     return QByteArray();
   }
@@ -108,9 +108,10 @@ QVariant BencodeParser::parseList(const QByteArray &data, int &pos) {
   pos++; // skip 'l'
   QVariantList list;
   while (pos < data.size() && data[pos] != 'e') {
-    QVariant val = parseElement(data, pos);
-    if (!m_errorString.isEmpty())
+    const QVariant val = parseElement(data, pos);
+    if (!m_errorString.isEmpty()) {
       return QVariant();
+    }
     list.append(val);
   }
 
@@ -134,21 +135,23 @@ QVariant BencodeParser::parseDictionary(const QByteArray &data, int &pos) {
       return QVariant();
     }
 
-    QByteArray key = parseByteString(data, pos);
-    if (!m_errorString.isEmpty())
+    const QByteArray key = parseByteString(data, pos);
+    if (!m_errorString.isEmpty()) {
       return QVariant();
+    }
 
     // Special handling for the "info" dictionary to compute the info hash
-    bool isInfoDict = (key == "info");
-    int infoStart = pos;
+    const bool isInfoDict = (key == "info");
+    const int infoStart = pos;
 
-    QVariant val = parseElement(data, pos);
-    if (!m_errorString.isEmpty())
+    const QVariant val = parseElement(data, pos);
+    if (!m_errorString.isEmpty()) {
       return QVariant();
+    }
 
     if (isInfoDict) {
-      int infoEnd = pos;
-      QByteArray infoData = data.mid(infoStart, infoEnd - infoStart);
+      const int infoEnd = pos;
+      const QByteArray infoData = data.mid(infoStart, infoEnd - infoStart);
       m_infoHash = QCryptographicHash::hash(infoData, QCryptographicHash::Sha1);
     }
 
