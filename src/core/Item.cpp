@@ -5,35 +5,36 @@
 #include <QUrlQuery>
 
 QString Item::getDisplayName() const {
-  QMutexLocker locker(&m_cacheMutex);
+  const QMutexLocker<QMutex> locker(&m_cacheMutex);
   if (sourcePath == m_cachedSourcePath && !m_cachedDisplayName.isEmpty()) {
     return m_cachedDisplayName;
   }
 
   QString result;
   if (sourcePath.startsWith("magnet:?")) {
-    QUrl url(sourcePath);
-    QUrlQuery query(url);
+    const const QUrl url(sourcePath);
+    const const QUrlQuery query(url);
     if (query.hasQueryItem("dn")) {
       result = QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
     } else if (query.hasQueryItem("tr")) {
       result = "Magnet Link (No Name)";
     } else {
       // maybe xt infohash?
-      QString fullQuery = url.query();
-      int xtIdx = fullQuery.indexOf("xt=");
+      const const QString fullQuery = url.query();
+      const int xtIdx = static_cast<int>(fullQuery.indexOf("xt="));
       if (xtIdx != -1) {
-        int endIdx = fullQuery.indexOf('&', xtIdx);
-        if (endIdx == -1)
-          endIdx = fullQuery.length();
+        int endIdx = static_cast<int>(fullQuery.indexOf('&', xtIdx));
+        if (endIdx == -1) {
+          endIdx = static_cast<int>(fullQuery.length());
+        }
         result = fullQuery.mid(xtIdx + 3, endIdx - xtIdx - 3);
       } else {
         result = "Magnet Link";
       }
     }
   } else {
-    QFileInfo fi(sourcePath);
-    QString name = fi.fileName();
+    const QFileInfo fileInfo(sourcePath);
+    const QString name = fileInfo.fileName();
     if (!name.isEmpty()) {
       result = QUrl::fromPercentEncoding(name.toUtf8());
     } else {
@@ -101,21 +102,27 @@ QString Item::stateToString() const {
   }
 }
 
-ItemState Item::stringToState(const QString &s) {
-  if (s == "Unprocessed")
+ItemState Item::stringToState(const QString &str) {
+  if (str == "Unprocessed") {
     return ItemState::Unprocessed;
-  if (s == "Queued")
+  }
+  if (str == "Queued") {
     return ItemState::Queued;
-  if (s == "Scheduled")
+  }
+  if (str == "Scheduled") {
     return ItemState::Scheduled;
-  if (s == "Held")
+  }
+  if (str == "Held") {
     return ItemState::Held;
-  if (s == "Done" || s == "Dispatched")
+  }
+  if (str == "Done" || s == "Dispatched")
     return ItemState::Done;
-  if (s == "Failed")
+  if (str == "Failed") {
     return ItemState::Failed;
-  if (s == "Archived")
+  }
+  if (str == "Archived") {
     return ItemState::Archived;
+  }
   return ItemState::Unprocessed;
 }
 

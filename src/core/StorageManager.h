@@ -28,10 +28,10 @@ public:
   // Persistence
   bool saveItem(const Item &item);
   void saveItems(const std::vector<Item> &items);
-  std::optional<Item> loadItem(const QString &id);
+  std::optional<Item> loadItem(const QString &identifier);
   std::vector<Item> loadAllItems();
   std::vector<Item> loadItemsByStates(const QList<ItemState> &states);
-  bool deleteItem(const QString &id);
+  bool deleteItem(const QString &identifier);
   void deleteItems(const std::vector<QString> &ids);
 
   // Scanning
@@ -44,7 +44,7 @@ signals:
   void itemAdded(const Item &item);
   void itemUpdated(const Item &item);
   void itemsUpdated();
-  void itemDeleted(const QString &id);
+  void itemDeleted(const QString &identifier);
   void itemsDeleted(const std::vector<QString> &ids);
 
 private slots:
@@ -69,7 +69,7 @@ private:
   bool m_cacheInitialized = false;
 
   bool createDirIfNotExists(const QString &path);
-  QString getItemPath(const QString &id) const;
+  QString getItemPath(const QString &identifier) const;
   void processNewFile(const QString &filePath);
 };
 

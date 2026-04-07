@@ -39,8 +39,8 @@ void PutIoConnector::dispatch(const Item &item) {
     return;
   }
 
-  QUrl url("https://api.put.io/v2/transfers/add");
-  QNetworkRequest request(url);
+  const QUrl url("https://api.put.io/v2/transfers/add");
+  const const QNetworkRequest request(url);
   request.setRawHeader("Authorization", ("Bearer " + m_oauthToken).toUtf8());
 
   QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
@@ -60,7 +60,7 @@ void PutIoConnector::dispatch(const Item &item) {
       return;
     }
     QHttpPart filePart;
-    QString filename = QFileInfo(item.sourcePath).fileName();
+    const QString filename = QFileInfo(item.sourcePath).fileName();
     filePart.setHeader(
         QNetworkRequest::ContentDispositionHeader,
         QVariant("form-data; name=\"file\"; filename=\"" + filename + "\""));
@@ -69,7 +69,7 @@ void PutIoConnector::dispatch(const Item &item) {
     multiPart->append(filePart);
   }
 
-  QString apiCallLog = Connector::buildApiCallLog("POST", request);
+  const QString apiCallLog = Connector::buildApiCallLog("POST", request);
 
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply);
@@ -81,11 +81,12 @@ void PutIoConnector::dispatch(const Item &item) {
 
 void PutIoConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  if (!reply)
+  if (reply == nullptr) {
     return;
+  }
 
-  QString itemId = reply->property("itemId").toString();
-  QString apiCallLog = reply->property("apiCallLog").toString();
+  const QString itemId = reply->property("itemId").toString();
+  const QString apiCallLog = reply->property("apiCallLog").toString();
 
   if (reply->error() == QNetworkReply::NoError) {
     QJsonObject extraMeta;
@@ -108,7 +109,7 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/PutIO");
 
-  QCheckBox *enabledCheck = new QCheckBox(tr("Enable Put.io"), widget);
+  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable Put.io"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -116,14 +117,14 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   QWidget *configWidget = new QWidget(widget);
   QFormLayout *configLayout = new QFormLayout(configWidget);
 
-  QLineEdit *tokenEdit = new QLineEdit(configWidget);
+  QLineEdit *const tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
   tokenEdit->setText(
       SecureStorage::readPassword("Plugins/PutIO", "oauthToken"));
   configLayout->addRow(tr("OAuth Token:"), tokenEdit);
 
-  QSettings mainSettings;
+  const QSettings mainSettings;
   if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
     QLabel *warningLabel = new QLabel(
         tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
@@ -142,22 +143,23 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
 }
 
 void PutIoConnector::saveSettings(QWidget *settingsWidget) {
-  if (!settingsWidget)
+  if (settingsWidget == nullptr) {
     return;
+  }
 
-  QCheckBox *enabledCheck =
+  QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
+  QLineEdit *const tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/PutIO");
 
-  if (enabledCheck) {
+  if (enabledCheck != nullptr) {
     bool en = enabledCheck->isChecked();
     settings.setValue("enabled", en);
     m_enabled = en;
   }
-  if (tokenEdit) {
+  if (tokenEdit != nullptr) {
     SecureStorage::writePassword("Plugins/PutIO", "oauthToken",
                                  tokenEdit->text());
     m_oauthToken = tokenEdit->text();

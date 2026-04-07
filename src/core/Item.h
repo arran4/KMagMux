@@ -8,7 +8,7 @@
 #include <QMutex>
 #include <QString>
 
-enum class ItemState {
+enum class ItemState : std::uint8_t {
   Unprocessed,
   Queued,
   Scheduled,
@@ -25,7 +25,7 @@ struct Item {
         destinationPath(other.destinationPath), connectorId(other.connectorId),
         createdTime(other.createdTime), scheduledTime(other.scheduledTime),
         metadata(other.metadata) {
-    QMutexLocker locker(&other.m_cacheMutex);
+    const QMutexLocker<QMutex> locker(&other.m_cacheMutex);
     m_cachedDisplayName = other.m_cachedDisplayName;
     m_cachedSourcePath = other.m_cachedSourcePath;
   }
@@ -41,8 +41,8 @@ struct Item {
       scheduledTime = other.scheduledTime;
       metadata = other.metadata;
 
-      QMutexLocker locker1(&m_cacheMutex);
-      QMutexLocker locker2(&other.m_cacheMutex);
+      const QMutexLocker<QMutex> locker1(&m_cacheMutex);
+      const QMutexLocker<QMutex> locker2(&other.m_cacheMutex);
       m_cachedDisplayName = other.m_cachedDisplayName;
       m_cachedSourcePath = other.m_cachedSourcePath;
     }
@@ -72,7 +72,7 @@ struct Item {
 
   // Helper to get string representation of state
   QString stateToString() const;
-  static ItemState stringToState(const QString &s);
+  static ItemState stringToState(const QString &str);
 };
 
 Q_DECLARE_METATYPE(Item)

@@ -9,7 +9,7 @@ class ItemModel : public QAbstractTableModel {
   Q_OBJECT
 
 public:
-  enum Columns {
+  enum Columns : std::uint8_t {
     ColId = 0,
     ColState,
     ColName,

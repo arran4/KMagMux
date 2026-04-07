@@ -41,8 +41,8 @@ void TorBoxConnector::dispatch(const Item &item) {
   }
 
   // Simple stub for dispatch
-  QUrl url("https://api.torbox.app/v1/api/torrents/createtorrent");
-  QNetworkRequest request(url);
+  const QUrl url("https://api.torbox.app/v1/api/torrents/createtorrent");
+  const const QNetworkRequest request(url);
   // Assuming Bearer token auth
   request.setRawHeader("Authorization", ("Bearer " + m_apiToken).toUtf8());
 
@@ -63,7 +63,7 @@ void TorBoxConnector::dispatch(const Item &item) {
       return;
     }
     QHttpPart filePart;
-    QString filename = QFileInfo(item.sourcePath).fileName();
+    const QString filename = QFileInfo(item.sourcePath).fileName();
     filePart.setHeader(
         QNetworkRequest::ContentDispositionHeader,
         QVariant("form-data; name=\"file\"; filename=\"" + filename + "\""));
@@ -72,7 +72,7 @@ void TorBoxConnector::dispatch(const Item &item) {
     multiPart->append(filePart);
   }
 
-  QString apiCallLog = Connector::buildApiCallLog("POST", request);
+  const QString apiCallLog = Connector::buildApiCallLog("POST", request);
 
   QNetworkReply *reply = m_networkManager->post(request, multiPart);
   multiPart->setParent(reply);
@@ -84,18 +84,19 @@ void TorBoxConnector::dispatch(const Item &item) {
 
 void TorBoxConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  if (!reply)
+  if (reply == nullptr) {
     return;
+  }
 
-  QString itemId = reply->property("itemId").toString();
-  QString apiCallLog = reply->property("apiCallLog").toString();
+  const QString itemId = reply->property("itemId").toString();
+  const QString apiCallLog = reply->property("apiCallLog").toString();
 
   if (reply->error() == QNetworkReply::NoError) {
     QJsonObject extraMeta;
     extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
     emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
   } else {
-    QString errorMessage = "Network error: " + reply->errorString();
+    const QString errorMessage = "Network error: " + reply->errorString();
 
     QJsonObject extraMeta;
     QString rawHttp =
@@ -112,7 +113,7 @@ void TorBoxConnector::onAddTorrentReply() {
       }
     }
 
-    int statusCode =
+    const int statusCode =
         reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     rawHttp +=
         "\nResponse Status Code: " + QString::number(statusCode) + "\n\n";
@@ -123,7 +124,7 @@ void TorBoxConnector::onAddTorrentReply() {
         return str + QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
     });
 
-    QByteArray body = reply->readAll();
+    const QByteArray body = reply->readAll();
     rawHttp += "\nResponse Body:\n" + QString::fromUtf8(body) + "\n";
 
     extraMeta["raw_http"] = rawHttp;
@@ -151,7 +152,7 @@ QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/TorBox");
 
-  QCheckBox *enabledCheck = new QCheckBox(tr("Enable TorBox"), widget);
+  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable TorBox"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -159,13 +160,13 @@ QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
   QWidget *configWidget = new QWidget(widget);
   QFormLayout *configLayout = new QFormLayout(configWidget);
 
-  QLineEdit *tokenEdit = new QLineEdit(configWidget);
+  QLineEdit *const tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
   tokenEdit->setText(SecureStorage::readPassword("Plugins/TorBox", "apiToken"));
   configLayout->addRow(tr("API Token:"), tokenEdit);
 
-  QSettings mainSettings;
+  const QSettings mainSettings;
   if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
     QLabel *warningLabel = new QLabel(
         tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
@@ -184,22 +185,23 @@ QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
 }
 
 void TorBoxConnector::saveSettings(QWidget *settingsWidget) {
-  if (!settingsWidget)
+  if (settingsWidget == nullptr) {
     return;
+  }
 
-  QCheckBox *enabledCheck =
+  QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
+  QLineEdit *const tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/TorBox");
 
-  if (enabledCheck) {
+  if (enabledCheck != nullptr) {
     bool en = enabledCheck->isChecked();
     settings.setValue("enabled", en);
     m_enabled = en;
   }
-  if (tokenEdit) {
+  if (tokenEdit != nullptr) {
     SecureStorage::writePassword("Plugins/TorBox", "apiToken",
                                  tokenEdit->text());
     m_apiToken = tokenEdit->text();

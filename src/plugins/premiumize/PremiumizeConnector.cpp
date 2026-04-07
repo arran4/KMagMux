@@ -40,11 +40,11 @@ void PremiumizeConnector::dispatch(const Item &item) {
     return;
   }
 
-  QUrl url("https://www.premiumize.me/api/transfer/create");
+  const QUrl url("https://www.premiumize.me/api/transfer/create");
 
   if (item.sourcePath.startsWith("magnet:")) {
     // Premiumize uses form-data or x-www-form-urlencoded for magnet links
-    QNetworkRequest request(url);
+    const const QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                       "application/x-www-form-urlencoded");
 
@@ -52,8 +52,8 @@ void PremiumizeConnector::dispatch(const Item &item) {
     postData.addQueryItem("apikey", m_apiKey);
     postData.addQueryItem("src", item.sourcePath);
 
-    QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
-    QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
+    const QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
+    const QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
 
     QNetworkReply *reply = m_networkManager->post(request, body);
     reply->setProperty("itemId", item.id);
@@ -62,7 +62,7 @@ void PremiumizeConnector::dispatch(const Item &item) {
             &PremiumizeConnector::onAddTorrentReply);
   } else {
     // For files we need multipart
-    QNetworkRequest request(url);
+    const const QNetworkRequest request(url);
     // Note: Do not set content-type for multipart, QNetworkAccessManager
     // handles the boundary automatically
 
@@ -84,7 +84,7 @@ void PremiumizeConnector::dispatch(const Item &item) {
       return;
     }
     QHttpPart filePart;
-    QString filename = QFileInfo(item.sourcePath).fileName();
+    const QString filename = QFileInfo(item.sourcePath).fileName();
     filePart.setHeader(
         QNetworkRequest::ContentDispositionHeader,
         QVariant("form-data; name=\"src\"; filename=\"" + filename + "\""));
@@ -106,11 +106,12 @@ void PremiumizeConnector::dispatch(const Item &item) {
 
 void PremiumizeConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  if (!reply)
+  if (reply == nullptr) {
     return;
+  }
 
-  QString itemId = reply->property("itemId").toString();
-  QString apiCallLog = reply->property("apiCallLog").toString();
+  const QString itemId = reply->property("itemId").toString();
+  const QString apiCallLog = reply->property("apiCallLog").toString();
 
   if (reply->error() == QNetworkReply::NoError) {
     QJsonObject extraMeta;
@@ -133,7 +134,7 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
 
-  QCheckBox *enabledCheck = new QCheckBox(tr("Enable Premiumize.me"), widget);
+  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable Premiumize.me"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -141,14 +142,14 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   QWidget *configWidget = new QWidget(widget);
   QFormLayout *configLayout = new QFormLayout(configWidget);
 
-  QLineEdit *tokenEdit = new QLineEdit(configWidget);
+  QLineEdit *const tokenEdit = new QLineEdit(configWidget);
   tokenEdit->setObjectName("tokenEdit");
   tokenEdit->setEchoMode(QLineEdit::Password);
   tokenEdit->setText(
       SecureStorage::readPassword("Plugins/Premiumize", "apiKey"));
   configLayout->addRow(tr("API Key:"), tokenEdit);
 
-  QSettings mainSettings;
+  const QSettings mainSettings;
   if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
     QLabel *warningLabel = new QLabel(
         tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
@@ -167,22 +168,23 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
 }
 
 void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
-  if (!settingsWidget)
+  if (settingsWidget == nullptr) {
     return;
+  }
 
-  QCheckBox *enabledCheck =
+  QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
+  QLineEdit *const tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
 
-  if (enabledCheck) {
+  if (enabledCheck != nullptr) {
     bool en = enabledCheck->isChecked();
     settings.setValue("enabled", en);
     m_enabled = en;
   }
-  if (tokenEdit) {
+  if (tokenEdit != nullptr) {
     SecureStorage::writePassword("Plugins/Premiumize", "apiKey",
                                  tokenEdit->text());
     m_apiKey = tokenEdit->text();
