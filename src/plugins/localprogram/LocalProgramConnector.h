@@ -6,6 +6,13 @@
 #include <QObject>
 #include <QtPlugin>
 
+struct LocalClientConfig {
+  QString name;
+  QString path;
+  bool enabled;
+  bool useTerminal;
+};
+
 class LocalProgramConnector : public QObject, public Connector {
   Q_OBJECT
   Q_INTERFACES(Connector)
@@ -16,6 +23,7 @@ public:
   explicit LocalProgramConnector(QObject *parent,
                                  const QString &path = QString(),
                                  const QString &name = QString(),
+                                 bool useTerminal = false,
                                  bool isFactory = true);
 
   QString getId() const override;
@@ -36,8 +44,10 @@ private:
   bool m_useTerminal;
   bool m_isFactory;
 
+  QList<LocalClientConfig> loadClientConfigs() const;
+
 public:
-  static QStringList discoverClients();
+  static QList<LocalClientConfig> discoverClients();
   static QString findExecutable(const QString &name);
 
 signals:

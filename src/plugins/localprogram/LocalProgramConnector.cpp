@@ -5,57 +5,74 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QProcess>
+#include <QPushButton>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTableWidget>
 #include <QVBoxLayout>
 
 LocalProgramConnector::LocalProgramConnector()
-    : LocalProgramConnector(nullptr, "", "", true) {}
+    : LocalProgramConnector(nullptr, "", "", false, true) {}
 
 LocalProgramConnector::LocalProgramConnector(QObject *parent,
                                              const QString &path,
                                              const QString &name,
-                                             bool isFactory)
+                                             bool useTerminal, bool isFactory)
     : QObject(parent), m_programPath(path), m_programName(name),
-      m_isFactory(isFactory) {
+      m_useTerminal(useTerminal), m_isFactory(isFactory) {
 
   if (m_isFactory) {
     QSettings settings;
     settings.beginGroup("Plugins/LocalProgram");
-    m_enabled = settings.value("enabled", true)
-                    .toBool(); // Default true to allow auto-discovered to work
-    m_programPath = settings.value("programPath", "").toString();
-    m_useTerminal = settings.value("useTerminal", false).toBool();
+    // Local plugin factory is enabled by default as requested
+    m_enabled = settings.value("enabled", true).toBool();
     settings.endGroup();
   } else {
-    m_enabled = true; // Auto-discovered sub-connectors are enabled by default
-    m_useTerminal = false;
+    m_enabled = true; // Auto-discovered sub-connectors are always enabled if
+                      // they reach here
   }
+}
+
+QList<LocalClientConfig> LocalProgramConnector::loadClientConfigs() const {
+  QList<LocalClientConfig> configs;
+  QSettings settings;
+  settings.beginGroup("Plugins/LocalProgram");
+
+  int count = settings.beginReadArray("Clients");
+  for (int i = 0; i < count; ++i) {
+    settings.setArrayIndex(i);
+    LocalClientConfig c;
+    c.name = settings.value("name").toString();
+    c.path = settings.value("path").toString();
+    c.enabled = settings.value("enabled", true).toBool();
+    c.useTerminal = settings.value("useTerminal", false).toBool();
+    configs.append(c);
+  }
+  settings.endArray();
+  settings.endGroup();
+
+  if (configs.isEmpty()) {
+    // First run or empty, auto-discover
+    configs = discoverClients();
+  }
+
+  return configs;
 }
 
 QList<Connector *> LocalProgramConnector::getSubConnectors() {
   QList<Connector *> connectors;
 
   if (m_isFactory && m_enabled) {
-    // Add the main configured/custom instance if a path is explicitly set in
-    // settings
-    if (!m_programPath.isEmpty()) {
-      connectors.append(new LocalProgramConnector(parent(), m_programPath,
-                                                  "Local Program (Custom)"));
-    }
+    QList<LocalClientConfig> configs = loadClientConfigs();
 
-    // Discover and add an instance for every client found
-    QStringList discoveredPaths = discoverClients();
-    for (const QString &path : discoveredPaths) {
-      QString baseName = QFileInfo(path).fileName();
-
-      // Avoid duplicate if custom path is the same as discovered
-      if (path != m_programPath) {
+    for (const LocalClientConfig &c : configs) {
+      if (c.enabled && !c.path.isEmpty()) {
         connectors.append(new LocalProgramConnector(
-            parent(), path, "Local: " + baseName, false));
+            parent(), c.path, "Local: " + c.name, c.useTerminal, false));
       }
     }
   }
@@ -84,7 +101,7 @@ QString LocalProgramConnector::findExecutable(const QString &name) {
   return QString();
 }
 
-QStringList LocalProgramConnector::discoverClients() {
+QList<LocalClientConfig> LocalProgramConnector::discoverClients() {
   QStringList knownClients = {"qbittorrent",     "transmission-gtk",
                               "transmission-qt", "transmission-remote",
                               "deluge",          "deluge-gtk",
@@ -95,18 +112,28 @@ QStringList LocalProgramConnector::discoverClients() {
                               "halite",          "motrix",
                               "aria2c"};
 
-  QStringList discovered;
+  QList<LocalClientConfig> discovered;
 
   // Add system default option
   QString xdgOpenPath = findExecutable("xdg-open");
   if (!xdgOpenPath.isEmpty()) {
-    discovered.append(xdgOpenPath);
+    LocalClientConfig xdg;
+    xdg.name = "System Default (xdg-open)";
+    xdg.path = xdgOpenPath;
+    xdg.enabled = true;
+    xdg.useTerminal = false;
+    discovered.append(xdg);
   }
 
   for (const QString &client : knownClients) {
     QString path = findExecutable(client);
     if (!path.isEmpty()) {
-      discovered.append(path);
+      LocalClientConfig c;
+      c.name = client;
+      c.path = path;
+      c.enabled = true;
+      c.useTerminal = false;
+      discovered.append(c);
     }
   }
   return discovered;
@@ -178,54 +205,113 @@ QWidget *LocalProgramConnector::createSettingsWidget(QWidget *parent) {
   QCheckBox *enabledCheck =
       new QCheckBox(tr("Enable Local Program Routing"), widget);
   enabledCheck->setObjectName("enabledCheck");
-  enabledCheck->setChecked(settings.value("enabled", false).toBool());
+  enabledCheck->setChecked(settings.value("enabled", true).toBool());
   mainLayout->addWidget(enabledCheck);
 
   QWidget *configWidget = new QWidget(widget);
-  QFormLayout *configLayout = new QFormLayout(configWidget);
+  QVBoxLayout *configLayout = new QVBoxLayout(configWidget);
 
-  QComboBox *discoveredCombo = new QComboBox(configWidget);
-  discoveredCombo->setObjectName("discoveredCombo");
+  QLabel *infoLabel = new QLabel(
+      tr("Configure the local programs you want to be available as targets. "
+         "Check 'Terminal' if the application is CLI-only."),
+      configWidget);
+  infoLabel->setWordWrap(true);
+  configLayout->addWidget(infoLabel);
 
-  QStringList discovered = discoverClients();
-  discoveredCombo->addItem(tr("Custom/Manual Entry"), "");
-  for (const QString &clientPath : discovered) {
-    discoveredCombo->addItem(clientPath, clientPath);
-  }
+  QTableWidget *table = new QTableWidget(0, 4, configWidget);
+  table->setObjectName("clientsTable");
+  table->setHorizontalHeaderLabels(
+      {tr("Enabled"), tr("Name"), tr("Executable / Path"), tr("Terminal")});
+  table->horizontalHeader()->setSectionResizeMode(
+      QHeaderView::ResizeToContents);
+  table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+  table->setSelectionBehavior(QAbstractItemView::SelectRows);
+  configLayout->addWidget(table);
 
-  QLineEdit *programEdit = new QLineEdit(configWidget);
-  programEdit->setObjectName("programEdit");
-  QString currentPath = settings.value("programPath", "").toString();
-  programEdit->setText(currentPath);
-  programEdit->setToolTip(
-      "Executable name (e.g. ktorrent, qbittorrent) or absolute path.");
+  QHBoxLayout *btnLayout = new QHBoxLayout();
+  QPushButton *addBtn = new QPushButton(tr("Add Custom"), configWidget);
+  QPushButton *discoverBtn = new QPushButton(tr("Discover"), configWidget);
+  QPushButton *removeBtn = new QPushButton(tr("Remove Selected"), configWidget);
 
-  // Sync combo box and line edit
-  int index = discoveredCombo->findData(currentPath);
-  if (index != -1) {
-    discoveredCombo->setCurrentIndex(index);
-  } else if (!currentPath.isEmpty()) {
-    discoveredCombo->setCurrentIndex(0); // Custom
-  }
-
-  connect(discoveredCombo, &QComboBox::currentIndexChanged, configWidget,
-          [programEdit, discoveredCombo](int idx) {
-            if (idx > 0) {
-              programEdit->setText(discoveredCombo->itemData(idx).toString());
-            }
-          });
-
-  configLayout->addRow(tr("Discovered Clients:"), discoveredCombo);
-  configLayout->addRow(tr("Program Executable:"), programEdit);
-
-  QCheckBox *terminalCheck =
-      new QCheckBox(tr("Run in Terminal Emulator"), configWidget);
-  terminalCheck->setObjectName("terminalCheck");
-  terminalCheck->setChecked(settings.value("useTerminal", false).toBool());
-  configLayout->addRow("", terminalCheck);
+  btnLayout->addWidget(addBtn);
+  btnLayout->addWidget(discoverBtn);
+  btnLayout->addWidget(removeBtn);
+  btnLayout->addStretch();
+  configLayout->addLayout(btnLayout);
 
   mainLayout->addWidget(configWidget);
   settings.endGroup();
+
+  auto addRow = [table](const LocalClientConfig &c) {
+    int row = table->rowCount();
+    table->insertRow(row);
+
+    QTableWidgetItem *enabledItem = new QTableWidgetItem();
+    enabledItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+    enabledItem->setCheckState(c.enabled ? Qt::Checked : Qt::Unchecked);
+    table->setItem(row, 0, enabledItem);
+
+    QTableWidgetItem *nameItem = new QTableWidgetItem(c.name);
+    table->setItem(row, 1, nameItem);
+
+    QTableWidgetItem *pathItem = new QTableWidgetItem(c.path);
+    table->setItem(row, 2, pathItem);
+
+    QTableWidgetItem *termItem = new QTableWidgetItem();
+    termItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+    termItem->setCheckState(c.useTerminal ? Qt::Checked : Qt::Unchecked);
+    table->setItem(row, 3, termItem);
+  };
+
+  QList<LocalClientConfig> configs = loadClientConfigs();
+  for (const LocalClientConfig &c : configs) {
+    addRow(c);
+  }
+
+  connect(addBtn, &QPushButton::clicked, widget, [addRow]() {
+    LocalClientConfig c;
+    c.name = "New Program";
+    c.path = "/path/to/binary";
+    c.enabled = true;
+    c.useTerminal = false;
+    addRow(c);
+  });
+
+  connect(discoverBtn, &QPushButton::clicked, widget, [table, addRow]() {
+    QList<LocalClientConfig> newlyDiscovered =
+        LocalProgramConnector::discoverClients();
+    for (const auto &newC : newlyDiscovered) {
+      // Check if path already exists in table to avoid duplicates
+      bool found = false;
+      for (int i = 0; i < table->rowCount(); ++i) {
+        if (table->item(i, 2)->text() == newC.path) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        addRow(newC);
+      }
+    }
+  });
+
+  connect(removeBtn, &QPushButton::clicked, widget, [table]() {
+    QList<QTableWidgetItem *> selected = table->selectedItems();
+    if (!selected.isEmpty()) {
+      // Get unique rows to delete
+      QList<int> rows;
+      for (auto *item : selected) {
+        if (!rows.contains(item->row())) {
+          rows.append(item->row());
+        }
+      }
+      // Sort descending to avoid index shifting issues
+      std::sort(rows.begin(), rows.end(), std::greater<int>());
+      for (int row : rows) {
+        table->removeRow(row);
+      }
+    }
+  });
 
   configWidget->setVisible(enabledCheck->isChecked());
   connect(enabledCheck, &QCheckBox::toggled, configWidget,
@@ -240,10 +326,8 @@ void LocalProgramConnector::saveSettings(QWidget *settingsWidget) {
 
   QCheckBox *enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *programEdit =
-      settingsWidget->findChild<QLineEdit *>("programEdit");
-  QCheckBox *terminalCheck =
-      settingsWidget->findChild<QCheckBox *>("terminalCheck");
+  QTableWidget *table =
+      settingsWidget->findChild<QTableWidget *>("clientsTable");
 
   QSettings settings;
   settings.beginGroup("Plugins/LocalProgram");
@@ -253,13 +337,23 @@ void LocalProgramConnector::saveSettings(QWidget *settingsWidget) {
     settings.setValue("enabled", en);
     m_enabled = en;
   }
-  if (programEdit) {
-    settings.setValue("programPath", programEdit->text());
-    m_programPath = programEdit->text();
-  }
-  if (terminalCheck) {
-    settings.setValue("useTerminal", terminalCheck->isChecked());
-    m_useTerminal = terminalCheck->isChecked();
+
+  if (table) {
+    settings.beginWriteArray("Clients");
+    for (int i = 0; i < table->rowCount(); ++i) {
+      settings.setArrayIndex(i);
+
+      bool itemEnabled = (table->item(i, 0)->checkState() == Qt::Checked);
+      QString name = table->item(i, 1)->text();
+      QString path = table->item(i, 2)->text();
+      bool useTerm = (table->item(i, 3)->checkState() == Qt::Checked);
+
+      settings.setValue("enabled", itemEnabled);
+      settings.setValue("name", name);
+      settings.setValue("path", path);
+      settings.setValue("useTerminal", useTerm);
+    }
+    settings.endArray();
   }
 
   settings.endGroup();
