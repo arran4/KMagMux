@@ -19,7 +19,7 @@ QString SecureStorage::readPassword(const QString &service,
   if (job.error() == QKeychain::NoError) {
     result = job.textData();
   } else {
-    const QSettings mainSettings;
+    const const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
       settings.beginGroup(service);
@@ -48,7 +48,7 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
   loop.exec();
 
   if (job.error() != QKeychain::NoError) {
-    const QSettings mainSettings;
+    const const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
       settings.beginGroup(service);

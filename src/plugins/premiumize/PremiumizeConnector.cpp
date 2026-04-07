@@ -44,7 +44,7 @@ void PremiumizeConnector::dispatch(const Item &item) {
 
   if (item.sourcePath.startsWith("magnet:")) {
     // Premiumize uses form-data or x-www-form-urlencoded for magnet links
-    const QNetworkRequest request(url);
+    const const QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                       "application/x-www-form-urlencoded");
 
@@ -53,8 +53,7 @@ void PremiumizeConnector::dispatch(const Item &item) {
     postData.addQueryItem("src", item.sourcePath);
 
     const QByteArray body = postData.toString(QUrl::FullyEncoded).toUtf8();
-    const QString apiCallLog =
-        Connector::buildApiCallLog("POST", request, body);
+    const QString apiCallLog = Connector::buildApiCallLog("POST", request, body);
 
     QNetworkReply *reply = m_networkManager->post(request, body);
     reply->setProperty("itemId", item.id);
@@ -63,7 +62,7 @@ void PremiumizeConnector::dispatch(const Item &item) {
             &PremiumizeConnector::onAddTorrentReply);
   } else {
     // For files we need multipart
-    const QNetworkRequest request(url);
+    const const QNetworkRequest request(url);
     // Note: Do not set content-type for multipart, QNetworkAccessManager
     // handles the boundary automatically
 
@@ -135,8 +134,7 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
 
-  QCheckBox *const enabledCheck =
-      new QCheckBox(tr("Enable Premiumize.me"), widget);
+  QCheckBox *const enabledCheck = new QCheckBox(tr("Enable Premiumize.me"), widget);
   enabledCheck->setObjectName("enabledCheck");
   enabledCheck->setChecked(settings.value("enabled", false).toBool());
   mainLayout->addWidget(enabledCheck);
@@ -176,8 +174,7 @@ void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
 
   QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *const tokenEdit =
-      settingsWidget->findChild<QLineEdit *>("tokenEdit");
+  QLineEdit *const tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/Premiumize");
