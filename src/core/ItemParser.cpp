@@ -9,7 +9,8 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
   const qint64 now = QDateTime::currentMSecsSinceEpoch();
   int idx = 0;
 
-  auto processLine = [&](QString line) {
+  auto processLine = [&](const QString &inputLine) {
+    QString line = inputLine;
     line = line.trimmed();
     if (line.isEmpty()) {
       return;
