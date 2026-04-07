@@ -256,8 +256,8 @@ void ProcessItemDialog::onProcessClicked() {
         }
 
         QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
-        if (deleteWhenDoneItem &&
-            deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
+        if (deleteWhenDoneItem != nullptr &&
+            (deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
           if (deleteWhenDoneItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_once_submitted"] = true;
@@ -298,7 +298,8 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     connect(selectAllAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+        if (deleteItem != nullptr &&
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
           deleteItem->setCheckState(Qt::Checked);
         }
       }
@@ -307,7 +308,8 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     connect(selectNoneAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+        if (deleteItem != nullptr &&
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
           deleteItem->setCheckState(Qt::Unchecked);
         }
       }
