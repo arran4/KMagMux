@@ -116,7 +116,8 @@ void ProcessItemDialog::setupUi() {
 
   // Table
   m_itemsTable = new QTableWidget(this);
-  m_itemsTable->setColumnCount(5);
+  const int columnCount = 5;
+  m_itemsTable->setColumnCount(columnCount);
   m_itemsTable->setHorizontalHeaderLabels(
       {"Enable", "Delete file", "Delete when done", "Name", "Link"});
   m_itemsTable->horizontalHeaderItem(1)->setToolTip("Delete file after import");
@@ -203,7 +204,7 @@ void ProcessItemDialog::onProcessClicked() {
   std::vector<Item> processedItems;
 
   ItemState selectedState = ItemState::Queued;
-  QString stateStr = m_stateCombo->currentText();
+  const QString stateStr = m_stateCombo->currentText();
   if (stateStr == "Queue") {
     selectedState = ItemState::Queued;
   } else if (stateStr == "Hold") {
@@ -228,7 +229,7 @@ void ProcessItemDialog::onProcessClicked() {
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
     QTableWidgetItem *const checkItem = m_itemsTable->item(i, 0);
     if (checkItem != nullptr && checkItem->checkState() == Qt::Checked) {
-      Item originalItem = m_items[i];
+      const Item originalItem = m_items[i];
 
       for (const QString &connectorId : selectedConnectors) {
         Item item = originalItem; // Duplicate the item for each connector
@@ -242,7 +243,7 @@ void ProcessItemDialog::onProcessClicked() {
           item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         }
 
-        QString oldState = item.stateToString();
+        const QString oldState = item.stateToString();
         item.state = selectedState;
         item.addHistory(
             QString("Processed and state set to %1").arg(item.stateToString()));
@@ -256,7 +257,7 @@ void ProcessItemDialog::onProcessClicked() {
 
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
         if (deleteItem != nullptr &&
-            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
           if (deleteItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_source_file"] = true;
@@ -264,9 +265,9 @@ void ProcessItemDialog::onProcessClicked() {
           }
         }
 
-        QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
-        if (deleteWhenDoneItem &&
-            deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
+        QTableWidgetItem *const deleteWhenDoneItem = m_itemsTable->item(i, 2);
+        if (deleteWhenDoneItem != nullptr &&
+            (deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
           if (deleteWhenDoneItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_once_submitted"] = true;
@@ -307,7 +308,8 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     connect(selectAllAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+        if (deleteItem != nullptr &&
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
           deleteItem->setCheckState(Qt::Checked);
         }
       }
@@ -316,7 +318,8 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     connect(selectNoneAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
+        if (deleteItem != nullptr &&
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
           deleteItem->setCheckState(Qt::Unchecked);
         }
       }
