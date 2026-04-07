@@ -9,7 +9,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Concurrent Test)
 find_package(Qt6Keychain REQUIRED)
 find_package(KF6XmlGui REQUIRED)
 find_package(KF6I18n REQUIRED)
