@@ -2,6 +2,7 @@
 #define LOCALPROGRAMCONNECTOR_H
 
 #include "core/Connector.h"
+#include <QList>
 #include <QObject>
 #include <QtPlugin>
 
@@ -12,12 +13,17 @@ class LocalProgramConnector : public QObject, public Connector {
 
 public:
   LocalProgramConnector();
-  explicit LocalProgramConnector(QObject *parent);
+  explicit LocalProgramConnector(QObject *parent,
+                                 const QString &path = QString(),
+                                 const QString &name = QString(),
+                                 bool isFactory = true);
 
   QString getId() const override;
   QString getName() const override;
   void dispatch(const Item &item) override;
   bool isEnabled() const override;
+
+  QList<Connector *> getSubConnectors() override;
 
   bool hasSettings() const override;
   QWidget *createSettingsWidget(QWidget *parent) override;
@@ -26,11 +32,13 @@ public:
 private:
   bool m_enabled;
   QString m_programPath;
+  QString m_programName;
   bool m_useTerminal;
+  bool m_isFactory;
 
 public:
-  QStringList discoverClients() const;
-  QString findExecutable(const QString &name) const;
+  static QStringList discoverClients();
+  static QString findExecutable(const QString &name);
 
 signals:
   void dispatchFinished(const QString &itemId, bool success,

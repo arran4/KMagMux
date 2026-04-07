@@ -141,21 +141,38 @@ Engine::Engine(StorageManager *storage, QObject *parent)
       plugin->setParent(this);
       Connector *connector = qobject_cast<Connector *>(plugin);
       if (connector) {
-        if (!m_connectors.contains(connector->getId())) {
-          qDebug() << "Loaded connector plugin:" << connector->getName()
-                   << "from" << info.filePath;
-          m_connectors.insert(connector->getId(), connector);
-          // Connect to its signals via QObject cast
-          connect(
-              plugin,
-              SIGNAL(dispatchFinished(QString, bool, QString, QJsonObject)),
-              this,
-              SLOT(onDispatchFinished(QString, bool, QString, QJsonObject)));
-          // Keep backwards compatibility for older/unmodified connectors
-          connect(plugin, SIGNAL(dispatchFinished(QString, bool, QString)),
-                  this, SLOT(onDispatchFinished(QString, bool, QString)));
-        } else {
-          // Already loaded this connector
+        QList<Connector *> toRegister = connector->getSubConnectors();
+        if (toRegister.isEmpty()) {
+          toRegister.append(connector);
+        }
+
+        bool anyRegistered = false;
+        for (Connector *subConn : toRegister) {
+          if (!m_connectors.contains(subConn->getId())) {
+            qDebug() << "Loaded connector plugin:" << subConn->getName()
+                     << "from" << info.filePath;
+            m_connectors.insert(subConn->getId(), subConn);
+
+            QObject *subPlugin = dynamic_cast<QObject *>(subConn);
+            if (subPlugin) {
+              // Connect to its signals via QObject cast
+              connect(
+                  subPlugin,
+                  SIGNAL(dispatchFinished(QString, bool, QString, QJsonObject)),
+                  this,
+                  SLOT(
+                      onDispatchFinished(QString, bool, QString, QJsonObject)));
+              // Keep backwards compatibility for older/unmodified connectors
+              connect(subPlugin,
+                      SIGNAL(dispatchFinished(QString, bool, QString)), this,
+                      SLOT(onDispatchFinished(QString, bool, QString)));
+            }
+            anyRegistered = true;
+          }
+        }
+
+        if (!anyRegistered) {
+          // Already loaded all these connectors or duplicates
           plugin->setParent(nullptr); // clear parent before unload/delete
           pluginLoader.unload();
           delete plugin;

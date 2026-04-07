@@ -13,37 +13,70 @@
 #include <QVBoxLayout>
 
 LocalProgramConnector::LocalProgramConnector()
-    : LocalProgramConnector(nullptr) {}
+    : LocalProgramConnector(nullptr, "", "", true) {}
 
-LocalProgramConnector::LocalProgramConnector(QObject *parent)
-    : QObject(parent) {
-  QSettings settings;
-  settings.beginGroup("Plugins/LocalProgram");
-  m_enabled = settings.value("enabled", false).toBool();
-  m_programPath = settings.value("programPath", "").toString();
-  m_useTerminal = settings.value("useTerminal", false).toBool();
-  settings.endGroup();
+LocalProgramConnector::LocalProgramConnector(QObject *parent,
+                                             const QString &path,
+                                             const QString &name,
+                                             bool isFactory)
+    : QObject(parent), m_programPath(path), m_programName(name),
+      m_isFactory(isFactory) {
 
-  // If no path is set, try to auto-discover
-  if (m_programPath.isEmpty()) {
-    QStringList discovered = discoverClients();
-    if (!discovered.isEmpty()) {
-      m_programPath = discovered.first();
-      qDebug() << "Auto-discovered local torrent client:" << m_programPath;
-    } else {
-      // Fallback to ktorrent just in case
-      m_programPath = "ktorrent";
-    }
+  if (m_isFactory) {
+    QSettings settings;
+    settings.beginGroup("Plugins/LocalProgram");
+    m_enabled = settings.value("enabled", true)
+                    .toBool(); // Default true to allow auto-discovered to work
+    m_programPath = settings.value("programPath", "").toString();
+    m_useTerminal = settings.value("useTerminal", false).toBool();
+    settings.endGroup();
+  } else {
+    m_enabled = true; // Auto-discovered sub-connectors are enabled by default
+    m_useTerminal = false;
   }
 }
 
-QString LocalProgramConnector::getId() const { return "LocalProgram"; }
+QList<Connector *> LocalProgramConnector::getSubConnectors() {
+  QList<Connector *> connectors;
 
-QString LocalProgramConnector::getName() const { return "Local Program"; }
+  if (m_isFactory && m_enabled) {
+    // Add the main configured/custom instance if a path is explicitly set in
+    // settings
+    if (!m_programPath.isEmpty()) {
+      connectors.append(new LocalProgramConnector(parent(), m_programPath,
+                                                  "Local Program (Custom)"));
+    }
+
+    // Discover and add an instance for every client found
+    QStringList discoveredPaths = discoverClients();
+    for (const QString &path : discoveredPaths) {
+      QString baseName = QFileInfo(path).fileName();
+
+      // Avoid duplicate if custom path is the same as discovered
+      if (path != m_programPath) {
+        connectors.append(new LocalProgramConnector(
+            parent(), path, "Local: " + baseName, false));
+      }
+    }
+  }
+  return connectors;
+}
+
+QString LocalProgramConnector::getId() const {
+  if (m_isFactory)
+    return "LocalProgramFactory";
+  return "LocalProgram_" + m_programName;
+}
+
+QString LocalProgramConnector::getName() const {
+  if (m_isFactory)
+    return "Local Program (Settings)";
+  return m_programName;
+}
 
 bool LocalProgramConnector::isEnabled() const { return m_enabled; }
 
-QString LocalProgramConnector::findExecutable(const QString &name) const {
+QString LocalProgramConnector::findExecutable(const QString &name) {
   QString path = QStandardPaths::findExecutable(name);
   if (!path.isEmpty()) {
     return path;
@@ -51,7 +84,7 @@ QString LocalProgramConnector::findExecutable(const QString &name) const {
   return QString();
 }
 
-QStringList LocalProgramConnector::discoverClients() const {
+QStringList LocalProgramConnector::discoverClients() {
   QStringList knownClients = {"qbittorrent",     "transmission-gtk",
                               "transmission-qt", "transmission-remote",
                               "deluge",          "deluge-gtk",
@@ -131,9 +164,11 @@ void LocalProgramConnector::dispatch(const Item &item) {
   }
 }
 
-bool LocalProgramConnector::hasSettings() const { return true; }
+bool LocalProgramConnector::hasSettings() const { return m_isFactory; }
 
 QWidget *LocalProgramConnector::createSettingsWidget(QWidget *parent) {
+  if (!m_isFactory)
+    return nullptr;
   QWidget *widget = new QWidget(parent);
   QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
@@ -200,7 +235,7 @@ QWidget *LocalProgramConnector::createSettingsWidget(QWidget *parent) {
 }
 
 void LocalProgramConnector::saveSettings(QWidget *settingsWidget) {
-  if (!settingsWidget)
+  if (!m_isFactory || !settingsWidget)
     return;
 
   QCheckBox *enabledCheck =

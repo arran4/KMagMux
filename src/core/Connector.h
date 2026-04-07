@@ -19,6 +19,8 @@ public:
 
   virtual bool isEnabled() const { return true; }
 
+  virtual QList<Connector *> getSubConnectors() { return {}; }
+
   virtual bool hasSettings() const { return false; }
   virtual class QWidget *createSettingsWidget(class QWidget *parent) {
     return nullptr;
