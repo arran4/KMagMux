@@ -36,7 +36,7 @@ protected:
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
 
-private slots:
+private Q_SLOTS:
   void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
   void toggleShowHide();
   void minimizeToTray();

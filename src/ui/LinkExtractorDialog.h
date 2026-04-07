@@ -20,7 +20,7 @@ public:
 protected:
   void closeEvent(QCloseEvent *event) override;
 
-private slots:
+private Q_SLOTS:
   void processNext();
   void onReplyFinished();
   void onCancelClicked();

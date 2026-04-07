@@ -47,7 +47,7 @@ signals:
   void itemDeleted(const QString &identifier);
   void itemsDeleted(const std::vector<QString> &ids);
 
-private slots:
+private Q_SLOTS:
   void onDirectoryChanged(const QString &path);
 
 private:

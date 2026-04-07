@@ -21,7 +21,7 @@ public:
   QStringList getAllConnectors() const;
   Connector *getConnector(const QString &identifier) const;
 
-private slots:
+private Q_SLOTS:
   void processQueue();
   void onDispatchFinished(const QString &itemId, bool success,
                           const QString &message,

@@ -35,7 +35,7 @@ public:
   QList<HttpApiEndpoint> getHttpApiEndpoints() const override;
   QMap<QString, QString> getApiSubstitutions() const override;
 
-private slots:
+private Q_SLOTS:
   void onLoginReply();
   void onAddTorrentReply();
 
