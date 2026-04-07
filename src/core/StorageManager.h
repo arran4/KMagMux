@@ -1,7 +1,6 @@
 #ifndef STORAGEMANAGER_H
 #define STORAGEMANAGER_H
 
-#include "Item.h"
 #include <QDir>
 #include <QFileSystemWatcher>
 #include <QObject>
@@ -15,7 +14,7 @@ class StorageManager : public QObject {
 
 public:
   explicit StorageManager(QObject *parent = nullptr);
-  bool init();
+  static bool init();
 
   // Directory paths
   QString getBaseDir() const;
@@ -26,7 +25,7 @@ public:
   getManagedDir() const; // New: Directory for managed torrent/magnet files
 
   // Persistence
-  bool saveItem(const Item &item);
+  static bool saveItem(const Item &item);
   void saveItems(const std::vector<Item> &items);
   std::optional<Item> loadItem(const QString &identifier);
   std::vector<Item> loadAllItems();

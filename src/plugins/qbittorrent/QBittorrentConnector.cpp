@@ -33,13 +33,15 @@ QBittorrentConnector::QBittorrentConnector(QObject *parent)
   m_password = SecureStorage::readPassword("Plugins/qBittorrent", "password");
 }
 
-QString QBittorrentConnector::getId() const { return "qBittorrent"; }
+static QString QBittorrentConnector::getId() { return "qBittorrent"; }
 
-QString QBittorrentConnector::getName() const { return "qBittorrent (WebAPI)"; }
+static QString QBittorrentConnector::getName() {
+  return "qBittorrent (WebAPI)";
+}
 
 bool QBittorrentConnector::isEnabled() const { return m_enabled; }
 
-void QBittorrentConnector::setBaseUrl(const QString &url) {
+static void QBittorrentConnector::setBaseUrl(const QString &url) {
   m_baseUrl = url;
   if (m_baseUrl.endsWith("/")) {
     m_baseUrl.chop(1);
@@ -52,7 +54,7 @@ void QBittorrentConnector::setCredentials(const QString &username,
   m_password = password;
 }
 
-void QBittorrentConnector::dispatch(const Item &item) {
+void QBittorrentConnector::dispatch(const Item &item) const {
   if (m_isLoggingIn) {
     m_pendingItems.append(item);
   } else {
@@ -125,7 +127,7 @@ void QBittorrentConnector::onLoginReply() {
   reply->deleteLater();
 }
 
-void QBittorrentConnector::performDispatch(const Item &item) {
+static void QBittorrentConnector::performDispatch(const Item &item) {
   const QUrl url(m_baseUrl + "/api/v2/torrents/add");
   const const QNetworkRequest request(url);
 
@@ -251,9 +253,9 @@ void QBittorrentConnector::onAddTorrentReply() {
   reply->deleteLater();
 }
 
-bool QBittorrentConnector::hasSettings() const { return true; }
+bool QBittorrentConnector::hasSettings() { return true; }
 
-QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
+static QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
   QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
@@ -305,7 +307,7 @@ QWidget *QBittorrentConnector::createSettingsWidget(QWidget *parent) {
   return widget;
 }
 
-void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
+void QBittorrentConnector::saveSettings(const QWidget *settingsWidget) {
   if (settingsWidget == nullptr) {
     return;
   }
@@ -340,9 +342,9 @@ void QBittorrentConnector::saveSettings(QWidget *settingsWidget) {
   settings.endGroup();
 }
 
-bool QBittorrentConnector::hasDebugMenu() const { return true; }
+bool QBittorrentConnector::hasDebugMenu() { return true; }
 
-QList<HttpApiEndpoint> QBittorrentConnector::getHttpApiEndpoints() const {
+static QList<HttpApiEndpoint> QBittorrentConnector::getHttpApiEndpoints() {
   QList<HttpApiEndpoint> endpoints;
 
   HttpApiEndpoint loginEp;
@@ -383,7 +385,7 @@ QList<HttpApiEndpoint> QBittorrentConnector::getHttpApiEndpoints() const {
   return endpoints;
 }
 
-QMap<QString, QString> QBittorrentConnector::getApiSubstitutions() const {
+static QMap<QString, QString> QBittorrentConnector::getApiSubstitutions() {
   QMap<QString, QString> subs;
   subs.insert("BASE_URL", m_baseUrl);
   subs.insert("USERNAME", m_username);

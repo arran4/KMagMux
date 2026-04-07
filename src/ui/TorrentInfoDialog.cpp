@@ -1,4 +1,6 @@
 #include "TorrentInfoDialog.h"
+#include "/app/src/core/Item.h"
+#include "/app/src/core/TrackerClient.h"
 #include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -130,7 +132,7 @@ void TorrentInfoDialog::setupUi() {
 
   mainLayout->addWidget(m_trackerTable);
 
-  if (m_item != nullptr && m_item->metadata.contains("history")) {
+  if (m_item && m_item->metadata.contains("history")) {
     QLabel *historyLabel = new QLabel("<b>History:</b>", this);
     mainLayout->addWidget(historyLabel);
 

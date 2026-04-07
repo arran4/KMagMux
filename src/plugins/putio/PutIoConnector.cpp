@@ -27,13 +27,13 @@ PutIoConnector::PutIoConnector(QObject *parent)
   m_oauthToken = SecureStorage::readPassword("Plugins/PutIO", "oauthToken");
 }
 
-QString PutIoConnector::getId() const { return "PutIO"; }
+static QString PutIoConnector::getId() { return "PutIO"; }
 
-QString PutIoConnector::getName() const { return "Put.io"; }
+static QString PutIoConnector::getName() { return "Put.io"; }
 
 bool PutIoConnector::isEnabled() const { return m_enabled; }
 
-void PutIoConnector::dispatch(const Item &item) {
+static void PutIoConnector::dispatch(const Item &item) {
   if (m_oauthToken.isEmpty()) {
     emit dispatchFinished(item.id, false, "OAuth Token is missing.");
     return;
@@ -79,7 +79,7 @@ void PutIoConnector::dispatch(const Item &item) {
           &PutIoConnector::onAddTorrentReply);
 }
 
-void PutIoConnector::onAddTorrentReply() {
+static void PutIoConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
   if (reply == nullptr) {
     return;
@@ -100,9 +100,9 @@ void PutIoConnector::onAddTorrentReply() {
   reply->deleteLater();
 }
 
-bool PutIoConnector::hasSettings() const { return true; }
+bool PutIoConnector::hasSettings() { return true; }
 
-QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
+static QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
   QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
@@ -142,7 +142,7 @@ QWidget *PutIoConnector::createSettingsWidget(QWidget *parent) {
   return widget;
 }
 
-void PutIoConnector::saveSettings(QWidget *settingsWidget) {
+void PutIoConnector::saveSettings(const QWidget *settingsWidget) {
   if (settingsWidget == nullptr) {
     return;
   }
@@ -169,9 +169,9 @@ void PutIoConnector::saveSettings(QWidget *settingsWidget) {
   settings.endGroup();
 }
 
-bool PutIoConnector::hasDebugMenu() const { return true; }
+bool PutIoConnector::hasDebugMenu() { return true; }
 
-QList<HttpApiEndpoint> PutIoConnector::getHttpApiEndpoints() const {
+static QList<HttpApiEndpoint> PutIoConnector::getHttpApiEndpoints() {
   QList<HttpApiEndpoint> endpoints;
 
   HttpApiEndpoint accountInfo;
@@ -216,7 +216,7 @@ QList<HttpApiEndpoint> PutIoConnector::getHttpApiEndpoints() const {
   return endpoints;
 }
 
-QMap<QString, QString> PutIoConnector::getApiSubstitutions() const {
+static QMap<QString, QString> PutIoConnector::getApiSubstitutions() {
   QMap<QString, QString> subs;
   subs.insert("OAUTH_TOKEN", m_oauthToken);
   return subs;

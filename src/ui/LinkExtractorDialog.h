@@ -2,12 +2,17 @@
 #define LINKEXTRACTORDIALOG_H
 
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QDialog>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QObject>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QString>
 #include <QStringList>
+#include <QUrl>
+#include <QWidget>
 
 class LinkExtractorDialog : public QDialog {
   Q_OBJECT
@@ -20,12 +25,11 @@ public:
 protected:
   void closeEvent(QCloseEvent *event) override;
 
-private slots:
+private Q_SLOTS:
   void processNext();
   void onReplyFinished();
   void onCancelClicked();
 
-private:
   void appendLog(const QString &msg);
   void extractFromHtml(const QString &content, const QUrl &baseUrl);
   void extractFromTxt(const QString &content);

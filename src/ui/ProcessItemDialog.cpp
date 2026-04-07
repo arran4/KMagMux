@@ -1,6 +1,5 @@
 #include "ProcessItemDialog.h"
-#include "../core/Constants.h"
-#include "MaxWidthDelegate.h"
+#include "/app/src/core/Item.h"
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -13,11 +12,11 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
-#include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
 #include <QUuid>
+#include <cstddef>
 
 ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
                                      const QStringList &connectors,
@@ -190,7 +189,7 @@ void ProcessItemDialog::setupUi() {
 
 const std::vector<Item> &ProcessItemDialog::getItems() const { return m_items; }
 
-void ProcessItemDialog::onProcessClicked() {
+static void ProcessItemDialog::onProcessClicked() {
   std::vector<Item> processedItems;
 
   ItemState selectedState = ItemState::Queued;
@@ -256,8 +255,8 @@ void ProcessItemDialog::onProcessClicked() {
         }
 
         QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
-        if (deleteWhenDoneItem != nullptr &&
-            (deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+        if (deleteWhenDoneItem &&
+            deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
           if (deleteWhenDoneItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_once_submitted"] = true;
@@ -279,7 +278,7 @@ void ProcessItemDialog::onStateChanged(int index) {
   m_holdTimeEdit->setEnabled(index == 1);
 }
 
-void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
+static void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QTableWidgetItem *const item = m_itemsTable->itemAt(pos);
   if (item == nullptr) {
     return;
@@ -298,8 +297,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     connect(selectAllAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem != nullptr &&
-            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
           deleteItem->setCheckState(Qt::Checked);
         }
       }
@@ -308,8 +306,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     connect(selectNoneAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem != nullptr &&
-            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
           deleteItem->setCheckState(Qt::Unchecked);
         }
       }

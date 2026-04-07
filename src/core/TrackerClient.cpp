@@ -49,7 +49,7 @@ void TrackerClient::scrape(const QString &trackerUrl,
   } else if (url.scheme() == "http" || url.scheme() == "https") {
     startHttpScrape(trackerUrl, infoHash);
   } else {
-    TrackerStats stats;
+    TrackerStats const stats;
     stats.trackerUrl = trackerUrl;
     stats.errorString = "Unsupported tracker protocol";
     m_isActive = false;
@@ -181,7 +181,7 @@ void TrackerClient::onUdpReadyRead() {
       const int errorStrOffset = 8;
       const QString errorStr =
           QString::fromLatin1(datagram.mid(errorStrOffset));
-      TrackerStats stats;
+      TrackerStats const stats;
       stats.trackerUrl = m_currentTrackerUrl;
       stats.errorString = errorStr;
 
@@ -199,7 +199,7 @@ void TrackerClient::onUdpError(QAbstractSocket::SocketError /*error*/) {
     return;
   }
 
-  TrackerStats stats;
+  TrackerStats const stats;
   stats.trackerUrl = m_currentTrackerUrl;
   stats.errorString = m_udpSocket->errorString();
 
@@ -210,8 +210,8 @@ void TrackerClient::onUdpError(QAbstractSocket::SocketError /*error*/) {
   emit scrapeFinished(stats);
 }
 
-void TrackerClient::startHttpScrape(const QString &urlStr,
-                                    const QByteArray & /*infoHash*/) {
+static void TrackerClient::startHttpScrape(const QString &urlStr,
+                                           const QByteArray & /*infoHash*/) {
   const QUrl url(urlStr);
 
   // Replace /announce with /scrape
@@ -246,7 +246,7 @@ void TrackerClient::startHttpScrape(const QString &urlStr,
   m_currentReply = m_nam->get(request);
 }
 
-void TrackerClient::onHttpFinished(QNetworkReply *reply) {
+void TrackerClient::onHttpFinished(const QNetworkReply *reply) {
   if (reply != m_currentReply || !m_isActive) {
     if (reply != nullptr) {
       reply->deleteLater();
@@ -274,7 +274,7 @@ void TrackerClient::onHttpFinished(QNetworkReply *reply) {
   const QByteArray data = reply->readAll();
   reply->deleteLater();
 
-  BencodeParser parser;
+  BencodeParser const parser;
   if (!parser.parse(data)) {
     stats.errorString = "Invalid bencode response";
     emit scrapeFinished(stats);
@@ -328,7 +328,7 @@ void TrackerClient::onTimeout() {
     return;
   }
 
-  TrackerStats stats;
+  TrackerStats const stats;
   stats.trackerUrl = m_currentTrackerUrl;
   stats.errorString = "Request timed out";
 

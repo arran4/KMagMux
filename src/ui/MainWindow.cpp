@@ -1,12 +1,14 @@
 #include "MainWindow.h"
-#include "../core/ItemParser.h"
+#include "/app/src/core/Connector.h"
+#include "/app/src/core/Item.h"
+#include "/app/src/core/ItemModel.h"
+#include "/app/src/core/StorageManager.h"
 #include "AddItemDialog.h"
 #include "ApiExplorerDialog.h"
-#include "LinkExtractorDialog.h"
+#include "ItemFilterProxyModel.h"
 #include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
 #include "ProcessItemDialog.h"
-#include "TorrentInfoDialog.h"
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDateTime>
@@ -79,14 +81,14 @@ MainWindow::~MainWindow() {
     m_trayIcon->hide();
     m_trayIcon->setContextMenu(nullptr); // detach the menu before destruction
   }
-  if (m_engine) {
+  if (m_engine != nullptr) {
     m_engine->stop();
     m_engine->deleteLater();
     m_engine = nullptr;
   }
 }
 
-void MainWindow::closeEvent(QCloseEvent *event) {
+static void MainWindow::closeEvent(const QCloseEvent *event) {
   if (m_closeToTray && m_trayIcon->isVisible() && !m_forceQuit) {
     hide();
     event->ignore();
@@ -102,7 +104,7 @@ void MainWindow::quitApplication() {
   qApp->quit();
 }
 
-void MainWindow::changeEvent(QEvent *event) {
+static void MainWindow::changeEvent(QEvent *event) {
   KXmlGuiWindow::changeEvent(event);
   if (event->type() == QEvent::WindowStateChange) {
     if (isMinimized() && m_minimizeToTray && m_trayIcon->isVisible()) {
@@ -111,13 +113,13 @@ void MainWindow::changeEvent(QEvent *event) {
   }
 }
 
-void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
+static void MainWindow::dragEnterEvent(const QDragEnterEvent *event) {
   if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
     event->acceptProposedAction();
   }
 }
 
-void MainWindow::dropEvent(QDropEvent *event) {
+static void MainWindow::dropEvent(const QDropEvent *event) {
   QStringList lines;
   QStringList filesToRead;
 
@@ -367,7 +369,7 @@ void MainWindow::setupTabs() {
   m_tabWidget = new QTabWidget(this);
   layout->addWidget(m_tabWidget);
 
-  auto setupView = [this](QTableView *view, ItemModel *model,
+  auto setupView = [this](const QTableView *view, ItemModel *model,
                           ItemFilterProxyModel *proxy, const QString &title) {
     QWidget *tab = new QWidget(this);
     QVBoxLayout *tabLayout = new QVBoxLayout(tab);
@@ -596,20 +598,20 @@ void MainWindow::loadData() {
   m_errorModel->setItems(errorItems);
 }
 
-QTableView *MainWindow::getCurrentView() const {
+static QTableView *MainWindow::getCurrentView() {
   QWidget *currentTab = m_tabWidget->currentWidget();
-  if (currentTab) {
+  if (currentTab != nullptr) {
     return currentTab->findChild<QTableView *>();
   }
   return nullptr;
 }
 
-ItemModel *MainWindow::getCurrentModel() const {
+ItemModel *MainWindow::getCurrentModel() {
   const QTableView *view = getCurrentView();
   if (view) {
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
-    if (proxy) {
+    if (proxy != nullptr) {
       return qobject_cast<ItemModel *>(proxy->sourceModel());
     }
   }
@@ -618,8 +620,9 @@ ItemModel *MainWindow::getCurrentModel() const {
 
 void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (!view) {
     return;
+  }
 
   QModelIndex index = view->indexAt(pos);
   QMenu menu(this);
@@ -680,10 +683,10 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   if (index.isValid()) {
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
-    if (proxy) {
+    if (proxy != nullptr) {
       QModelIndex sourceIndex = proxy->mapToSource(index);
       const ItemModel *model = getCurrentModel();
-      if (model) {
+      if (model != nullptr) {
         Item item = model->getItem(sourceIndex.row());
         if (item.metadata.contains("raw_response")) {
           menu.addAction(m_rawResultsAction);
@@ -699,22 +702,26 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
 void MainWindow::onViewRawProcessingResults() {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (!view) {
     return;
+  }
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr) {
     return;
+  }
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
-  if (selection.isEmpty())
+  if (selection.isEmpty()) {
     return;
+  }
 
   QModelIndex sourceIndex = proxy->mapToSource(selection.first());
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr) {
     return;
+  }
 
   Item item = model->getItem(sourceIndex.row());
 
@@ -750,17 +757,20 @@ void MainWindow::onViewRawProcessingResults() {
 
 void MainWindow::onViewRawHttp() {
   QTableView *view = getCurrentView();
-  if (!view || view != m_errorView)
+  if (!view || view != m_errorView) {
     return;
+  }
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr) {
     return;
+  }
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
-  if (selection.isEmpty())
+  if (selection.isEmpty()) {
     return;
+  }
 
   QModelIndex sourceIndex = proxy->mapToSource(selection.first());
   Item item = m_errorModel->getItem(sourceIndex.row());
@@ -773,21 +783,25 @@ void MainWindow::onViewRawHttp() {
 
 void MainWindow::onItemAction(ItemState newState) {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (!view) {
     return;
+  }
 
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr) {
     return;
+  }
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr) {
     return;
+  }
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
-  if (selection.isEmpty())
+  if (selection.isEmpty()) {
     return;
+  }
 
   std::vector<Item> itemsToSave;
   itemsToSave.reserve(selection.size());
@@ -812,9 +826,9 @@ void MainWindow::onItemAction(ItemState newState) {
   }
 }
 
-void MainWindow::onItemAdded(const Item &item) { loadData(); }
+void MainWindow::onItemAdded(const Item & /*item*/) { loadData(); }
 
-void MainWindow::onItemUpdated(const Item &item) { loadData(); }
+void MainWindow::onItemUpdated(const Item & /*item*/) { loadData(); }
 
 void MainWindow::onItemsUpdated() { loadData(); }
 
@@ -824,21 +838,25 @@ void MainWindow::onItemsDeleted(const std::vector<QString> &ids) { loadData(); }
 
 void MainWindow::onDeleteItems() {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (!view) {
     return;
+  }
 
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr) {
     return;
+  }
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr) {
     return;
+  }
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
-  if (selection.isEmpty())
+  if (selection.isEmpty()) {
     return;
+  }
 
   int count = selection.size();
   QMessageBox::StandardButton reply;
@@ -975,9 +993,10 @@ void MainWindow::onAddItems() {
   }
 }
 
-void MainWindow::processAddedLines(const QStringList &lines) {
-  if (lines.isEmpty())
+static void MainWindow::processAddedLines(const QStringList &lines) {
+  if (lines.isEmpty()) {
     return;
+  }
 
   // Offload parsing to a background thread
   auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
@@ -999,21 +1018,25 @@ void MainWindow::processAddedLines(const QStringList &lines) {
 
 void MainWindow::onProcessItem() {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (!view) {
     return;
+  }
 
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr) {
     return;
+  }
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
-  if (selection.isEmpty())
+  if (selection.isEmpty()) {
     return;
+  }
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr) {
     return;
+  }
 
   std::vector<Item> selectedItems;
   selectedItems.reserve(selection.size());
@@ -1062,8 +1085,9 @@ void MainWindow::saveItemsFromDialog(std::vector<Item> updatedItems) {
 }
 
 void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
-  if (items.empty())
+  if (items.empty()) {
     return;
+  }
 
   AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
@@ -1072,8 +1096,9 @@ void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
 }
 
 void MainWindow::openProcessItemDialog(const std::vector<Item> &items) {
-  if (items.empty())
+  if (items.empty()) {
     return;
+  }
 
   ProcessItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
   if (dialog.exec() == QDialog::Accepted) {
@@ -1166,10 +1191,10 @@ void MainWindow::updateActionsState() {
     if (hasSelection && selection.size() == 1) {
       ItemFilterProxyModel *proxy =
           qobject_cast<ItemFilterProxyModel *>(view->model());
-      if (proxy) {
+      if (proxy != nullptr) {
         QModelIndex sourceIndex = proxy->mapToSource(selection.first());
         const ItemModel *model = getCurrentModel();
-        if (model) {
+        if (model != nullptr) {
           Item item = model->getItem(sourceIndex.row());
           if (item.metadata.contains("raw_response")) {
             rawEnabled = true;
@@ -1196,8 +1221,9 @@ void MainWindow::onOpenCacheDirectory() {
 }
 
 void MainWindow::setupPluginMenus(QMenu *helpMenu) {
-  if (!m_engine)
+  if (m_engine == nullptr) {
     return;
+  }
 
   for (const QString &connectorId : m_engine->getAvailableConnectors()) {
     Connector *connector = m_engine->getConnector(connectorId);
@@ -1216,8 +1242,9 @@ void MainWindow::setupPluginMenus(QMenu *helpMenu) {
 }
 
 void MainWindow::onOpenApiExplorer(Connector *connector) {
-  if (!connector)
+  if (connector == nullptr) {
     return;
+  }
 
   ApiExplorerDialog dialog(connector, this);
   dialog.exec();

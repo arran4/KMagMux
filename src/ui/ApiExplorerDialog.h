@@ -1,16 +1,22 @@
 #ifndef APIEXPLORERDIALOG_H
 #define APIEXPLORERDIALOG_H
 
-#include "../core/Connector.h"
+#include <QByteArray>
 #include <QComboBox>
 #include <QDialog>
 #include <QLabel>
 #include <QLineEdit>
+#include <QList>
 #include <QListWidget>
+#include <QMap>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QObject>
 #include <QPlainTextEdit>
+#include <QSslError>
+#include <QString>
 #include <QTableWidget>
+#include <QWidget>
 
 class ApiExplorerDialog : public QDialog {
   Q_OBJECT
@@ -19,18 +25,17 @@ public:
   explicit ApiExplorerDialog(Connector *connector, QWidget *parent = nullptr);
   ~ApiExplorerDialog();
 
-private slots:
+private Q_SLOTS:
   void onEndpointSelected(int currentRow);
-  void onAddHeader();
-  void onRemoveHeader();
-  void onAddMultipart();
-  void onRemoveMultipart();
-  void onBrowseMultipartFile();
-  void onSendRequest();
-  void onNetworkReplyFinished();
+  static void onAddHeader();
+  static void onRemoveHeader();
+  static void onAddMultipart();
+  static void onRemoveMultipart();
+  static void onBrowseMultipartFile();
+  void onSendRequest() const;
+  static void onNetworkReplyFinished();
   void onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
 
-private:
   void setupUi();
   void loadEndpoints();
   void populateForm(const HttpApiEndpoint &endpoint);

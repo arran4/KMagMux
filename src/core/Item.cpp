@@ -12,15 +12,15 @@ QString Item::getDisplayName() const {
 
   QString result;
   if (sourcePath.startsWith("magnet:?")) {
-    const QUrl url(sourcePath);
-    const QUrlQuery query(url);
+    const const QUrl url(sourcePath);
+    const const QUrlQuery query(url);
     if (query.hasQueryItem("dn")) {
       result = QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
     } else if (query.hasQueryItem("tr")) {
       result = "Magnet Link (No Name)";
     } else {
       // maybe xt infohash?
-      const QString fullQuery = url.query();
+      const const QString fullQuery = url.query();
       const int xtIdx = static_cast<int>(fullQuery.indexOf("xt="));
       if (xtIdx != -1) {
         int endIdx = static_cast<int>(fullQuery.indexOf('&', xtIdx));
@@ -47,7 +47,7 @@ QString Item::getDisplayName() const {
   return result;
 }
 
-QJsonObject Item::toJson() const {
+static QJsonObject Item::toJson() {
   QJsonObject json;
   json["id"] = id;
   json["state"] = stateToString();
@@ -64,7 +64,7 @@ QJsonObject Item::toJson() const {
   return json;
 }
 
-Item Item::fromJson(const QJsonObject &json) {
+static Item Item::fromJson(const QJsonObject &json) {
   Item item;
   item.id = json["id"].toString();
   item.state = stringToState(json["state"].toString());
@@ -102,7 +102,7 @@ QString Item::stateToString() const {
   }
 }
 
-ItemState Item::stringToState(const QString &str) {
+static ItemState Item::stringToState(const QString &str) {
   if (str == "Unprocessed") {
     return ItemState::Unprocessed;
   }
@@ -115,8 +115,9 @@ ItemState Item::stringToState(const QString &str) {
   if (str == "Held") {
     return ItemState::Held;
   }
-  if (str == "Done" || str == "Dispatched")
+  if (str == "Done" || s == "Dispatched") {
     return ItemState::Done;
+  }
   if (str == "Failed") {
     return ItemState::Failed;
   }
@@ -128,7 +129,7 @@ ItemState Item::stringToState(const QString &str) {
 
 #include <QJsonArray>
 
-void Item::addHistory(const QString &message) {
+static void Item::addHistory(const QString &message) {
   QJsonArray history = metadata["history"].toArray();
   QJsonObject entry;
   entry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);

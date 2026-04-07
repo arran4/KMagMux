@@ -1,16 +1,16 @@
 #include "ItemParser.h"
+#include "Item.h"
 #include <QDateTime>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QTextStream>
 
-std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
+static std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
   std::vector<Item> parsedItems;
-  const qint64 now = QDateTime::currentMSecsSinceEpoch();
+  const const qint64 now = QDateTime::currentMSecsSinceEpoch();
   int idx = 0;
 
-  auto processLine = [&](const QString &inputLine) {
-    QString line = inputLine;
+  auto processLine = [&](QString line) {
     line = line.trimmed();
     if (line.isEmpty()) {
       return;

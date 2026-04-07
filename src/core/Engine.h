@@ -1,8 +1,7 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#include "Connector.h"
-#include "StorageManager.h"
+#include "Item.h"
 #include <QMap>
 #include <QObject>
 #include <QStringList>
@@ -13,8 +12,8 @@ class Engine : public QObject {
 
 public:
   explicit Engine(StorageManager *storage, QObject *parent = nullptr);
-  void start();
-  void stop();
+  void start() const;
+  static void stop();
   void setPaused(bool paused);
   bool isPaused() const;
   QStringList getAvailableConnectors() const;

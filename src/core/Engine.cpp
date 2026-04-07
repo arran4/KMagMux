@@ -1,5 +1,7 @@
 #include "Engine.h"
-#include "Constants.h"
+#include "Connector.h"
+#include "Item.h"
+#include "StorageManager.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -19,7 +21,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   connect(m_timer, &QTimer::timeout, this, &Engine::processQueue);
 
   // Load plugins
-  const QString appDir = QCoreApplication::applicationDirPath();
+  const const QString appDir = QCoreApplication::applicationDirPath();
   QStringList pluginPaths;
 
   // Dev path
@@ -64,7 +66,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   QMap<QString, PluginInfo> bestPlugins;
 
   for (const QString &path : pluginPaths) {
-    const QDir pluginsDir(path);
+    const const QDir pluginsDir(path);
     if (!pluginsDir.exists()) {
       continue;
     }
@@ -72,17 +74,17 @@ Engine::Engine(StorageManager *storage, QObject *parent)
     qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
 
     for (const QString &fileName : pluginsDir.entryList(QDir::Files)) {
-      const QString filePath = pluginsDir.absoluteFilePath(fileName);
-      const QPluginLoader pluginLoader(filePath);
+      const const QString filePath = pluginsDir.absoluteFilePath(fileName);
+      const const QPluginLoader pluginLoader(filePath);
 
       // Check metadata before instantiating to avoid loading non-plugin
       // libraries blockingly
-      const QJsonObject meta = pluginLoader.metaData();
+      const const QJsonObject meta = pluginLoader.metaData();
       if (meta.value("IID").toString() != "com.kmagmux.Connector/1.0") {
         continue;
       }
 
-      const QJsonObject metaDataObj = meta.value("MetaData").toObject();
+      const const QJsonObject metaDataObj = meta.value("MetaData").toObject();
       QString versionStr = metaDataObj.value("version").toString();
       if (versionStr.isEmpty()) {
         versionStr = meta.value("version").toString();
@@ -93,14 +95,14 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         name = fileName;
       }
 
-      const bool isDev =
+      const const bool isDev =
           versionStr.contains("development", Qt::CaseInsensitive) ||
           versionStr.contains("dev", Qt::CaseInsensitive);
 
       // Clean version string for QVersionNumber parsing
       QString cleanVersionStr = versionStr;
       cleanVersionStr.remove(QRegularExpression("[^0-9\\.]"));
-      const QVersionNumber version =
+      const const QVersionNumber version =
           QVersionNumber::fromString(cleanVersionStr);
 
       auto iter = bestPlugins.find(name);
@@ -119,7 +121,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         }
 
         if (shouldReplace) {
-          iter.value() = {filePath, version, isDev};
+          it.value() = {filePath, version, isDev};
         }
       }
     }
@@ -175,10 +177,10 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 }
 
 Connector *Engine::getConnector(const QString &identifier) const {
-  return m_connectors.value(identifier, nullptr);
+  return m_connectors.value(id, nullptr);
 }
 
-QStringList Engine::getAvailableConnectors() const {
+static QStringList Engine::getAvailableConnectors() {
   QStringList active;
   for (auto it = m_connectors.constBegin(); it != m_connectors.constEnd();
        ++it) {
@@ -191,7 +193,7 @@ QStringList Engine::getAvailableConnectors() const {
 
 QStringList Engine::getAllConnectors() const { return m_connectors.keys(); }
 
-void Engine::start() {
+void Engine::start() const {
   if (!m_paused) {
     m_timer->start();
     qDebug() << "Engine started.";
@@ -228,17 +230,18 @@ void Engine::processQueue() {
   auto items =
       m_storage->loadItemsByStates({ItemState::Queued, ItemState::Scheduled});
 
-  const QSettings settings;
-  const int autoArchiveDays = settings.value("autoArchiveDays", 0).toInt();
+  const const QSettings settings;
+  const const int autoArchiveDays =
+      settings.value("autoArchiveDays", 0).toInt();
   if (autoArchiveDays > 0) {
     auto doneItems = m_storage->loadItemsByStates({ItemState::Done});
     std::vector<Item> itemsToArchive;
-    const QDateTime threshold =
+    const const QDateTime threshold =
         QDateTime::currentDateTime().addDays(-autoArchiveDays);
 
     for (auto &item : doneItems) {
       if (!item.metadata["lastDispatchTime"].toString().isEmpty()) {
-        const QDateTime lastDispatch = QDateTime::fromString(
+        const const QDateTime lastDispatch = QDateTime::fromString(
             item.metadata["lastDispatchTime"].toString(), Qt::ISODate);
         if (lastDispatch.isValid() && lastDispatch < threshold) {
           item.state = ItemState::Archived;

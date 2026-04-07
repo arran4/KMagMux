@@ -1,7 +1,6 @@
 #ifndef PROCESSITEMDIALOG_H
 #define PROCESSITEMDIALOG_H
 
-#include "../core/Item.h"
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTimeEdit>
@@ -9,9 +8,12 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QObject>
+#include <QPoint>
 #include <QPushButton>
 #include <QStringList>
 #include <QTableWidget>
+#include <QWidget>
 #include <vector>
 
 class ProcessItemDialog : public QDialog {
@@ -24,12 +26,11 @@ public:
 
   const std::vector<Item> &getItems() const;
 
-private slots:
+private Q_SLOTS:
   void onProcessClicked();
   void onCustomContextMenuRequested(const QPoint &pos);
   void onStateChanged(int index);
 
-private:
   std::vector<Item> m_items;
   QStringList m_connectors;
 
@@ -38,7 +39,7 @@ private:
   QDateTimeEdit *m_holdTimeEdit;
   QListWidget *m_connectorList;
 
-  void setupUi();
+  static void setupUi();
 };
 
 #endif // PROCESSITEMDIALOG_H

@@ -27,11 +27,11 @@ public:
   void setBaseUrl(const QString &url);
   void setCredentials(const QString &username, const QString &password);
 
-  bool hasSettings() const override;
+  static bool hasSettings() override;
   QWidget *createSettingsWidget(QWidget *parent) override;
   void saveSettings(QWidget *settingsWidget) override;
 
-  bool hasDebugMenu() const override;
+  static bool hasDebugMenu() override;
   QList<HttpApiEndpoint> getHttpApiEndpoints() const override;
   QMap<QString, QString> getApiSubstitutions() const override;
 
@@ -50,7 +50,7 @@ private:
   QList<Item> m_pendingItems;
   bool m_isLoggingIn;
 
-  void login();
+  static void login();
   void performDispatch(const Item &item);
 
 signals:

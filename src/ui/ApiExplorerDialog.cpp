@@ -1,4 +1,6 @@
 #include "ApiExplorerDialog.h"
+#include "/app/src/core/Connector.h"
+#include "/app/src/core/HttpApiEndpoint.h"
 
 #include <QFormLayout>
 #include <QGroupBox>
@@ -24,7 +26,7 @@ ApiExplorerDialog::ApiExplorerDialog(Connector *connector, QWidget *parent)
   connect(m_networkManager, &QNetworkAccessManager::sslErrors, this,
           &ApiExplorerDialog::onSslErrors);
 
-  if (m_connector) {
+  if (m_connector != nullptr) {
     m_endpoints = m_connector->getHttpApiEndpoints();
     m_substitutions = m_connector->getApiSubstitutions();
   }
@@ -42,8 +44,9 @@ ApiExplorerDialog::~ApiExplorerDialog() {
 }
 
 void ApiExplorerDialog::setupUi() {
-  setWindowTitle(QString("API Explorer - %1")
-                     .arg(m_connector ? m_connector->getName() : "Unknown"));
+  setWindowTitle(
+      QString("API Explorer - %1")
+          .arg((m_connector != nullptr) ? m_connector->getName() : "Unknown"));
   resize(900, 600);
 
   QHBoxLayout *mainLayout = new QHBoxLayout(this);
@@ -218,7 +221,7 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint) {
   m_statusLabel->setText("Status: ");
 }
 
-QString ApiExplorerDialog::applySubstitutions(QString text) const {
+static QString ApiExplorerDialog::applySubstitutions(QString text) {
   auto subKeys = m_substitutions.keys();
   for (const QString &key : subKeys) {
     QString val = m_substitutions.value(key);
@@ -227,7 +230,7 @@ QString ApiExplorerDialog::applySubstitutions(QString text) const {
   return text;
 }
 
-QByteArray ApiExplorerDialog::applySubstitutions(QByteArray data) const {
+static QByteArray ApiExplorerDialog::applySubstitutions(QByteArray data) {
   QString text = QString::fromUtf8(data);
   text = applySubstitutions(text);
   return text.toUtf8();
@@ -292,7 +295,7 @@ void ApiExplorerDialog::onBrowseMultipartFile() {
   }
 }
 
-void ApiExplorerDialog::onSendRequest() {
+void ApiExplorerDialog::onSendRequest() const {
   if (m_currentReply) {
     m_currentReply->abort();
     m_currentReply->deleteLater();
@@ -407,8 +410,9 @@ void ApiExplorerDialog::onSendRequest() {
 
 void ApiExplorerDialog::onNetworkReplyFinished() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  if (!reply)
+  if (!reply) {
     return;
+  }
 
   m_urlEdit->setEnabled(true);
   m_methodCombo->setEnabled(true);
@@ -448,8 +452,8 @@ void ApiExplorerDialog::onNetworkReplyFinished() {
   reply->deleteLater();
 }
 
-void ApiExplorerDialog::onSslErrors(QNetworkReply *reply,
-                                    const QList<QSslError> &errors) {
+static void ApiExplorerDialog::onSslErrors(QNetworkReply *reply,
+                                           const QList<QSslError> &errors) {
   QString errorString;
   for (const QSslError &error : errors) {
     if (!errorString.isEmpty()) {

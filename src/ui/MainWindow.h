@@ -1,10 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "../core/Engine.h"
-#include "../core/ItemModel.h"
-#include "../core/StorageManager.h"
-#include "ItemFilterProxyModel.h"
+#include "/app/src/core/Item.h"
 #include <KActionCollection>
 #include <KStandardAction>
 #include <KXmlGuiWindow>
@@ -38,8 +35,8 @@ protected:
 
 private slots:
   void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
-  void toggleShowHide();
-  void minimizeToTray();
+  static void toggleShowHide();
+  static void minimizeToTray();
   void quitApplication();
 
   void onCustomContextMenuRequested(const QPoint &pos);
@@ -53,7 +50,7 @@ private slots:
   void onItemsDeleted(const std::vector<QString> &ids);
   void onProcessItem();
   void onDeleteItems();
-  void onAddItems();
+  static void onAddItems();
   void onPreferences();
   void onAbout();
   void onToggleProcessing(bool checked);
@@ -102,12 +99,12 @@ private:
   QAction *m_rawResultsAction;
 
   void setupUi();
-  void setupActionsAndMenus();
+  static void setupActionsAndMenus();
   void setupTabs();
-  void setupSystemTray();
+  static void setupSystemTray();
   void loadData();
   QTableView *getCurrentView() const;
-  ItemModel *getCurrentModel() const;
+  static ItemModel *getCurrentModel();
   void processAddedLines(const QStringList &lines);
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);

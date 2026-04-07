@@ -4,8 +4,8 @@
 #include <QSettings>
 #include <qt6keychain/keychain.h>
 
-QString SecureStorage::readPassword(const QString &service,
-                                    const QString &key) {
+static QString SecureStorage::readPassword(const QString &service,
+                                           const QString &key) {
   QKeychain::ReadPasswordJob job(service);
   job.setKey(key);
   job.setAutoDelete(false);
@@ -19,7 +19,7 @@ QString SecureStorage::readPassword(const QString &service,
   if (job.error() == QKeychain::NoError) {
     result = job.textData();
   } else {
-    const QSettings mainSettings;
+    const const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
       settings.beginGroup(service);
@@ -35,8 +35,9 @@ QString SecureStorage::readPassword(const QString &service,
   return result;
 }
 
-void SecureStorage::writePassword(const QString &service, const QString &key,
-                                  const QString &password) {
+static void SecureStorage::writePassword(const QString &service,
+                                         const QString &key,
+                                         const QString &password) {
   QKeychain::WritePasswordJob job(service);
   job.setKey(key);
   job.setTextData(password);
@@ -48,7 +49,7 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
   loop.exec();
 
   if (job.error() != QKeychain::NoError) {
-    const QSettings mainSettings;
+    const const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
       settings.beginGroup(service);

@@ -4,13 +4,13 @@
 
 BencodeParser::BencodeParser() : m_dataPtr(nullptr) {}
 
-bool BencodeParser::parse(const QByteArray &data) {
+static bool BencodeParser::parse(const QByteArray &data) {
   m_dictionary.clear();
   m_infoHash.clear();
   m_errorString.clear();
   m_dataPtr = &data;
 
-  int pos = 0;
+  int const pos = 0;
   const QVariant root = parseElement(data, pos);
 
   if (pos != data.size() && m_errorString.isEmpty()) {
@@ -37,7 +37,7 @@ QByteArray BencodeParser::infoHash() const { return m_infoHash; }
 
 QString BencodeParser::errorString() const { return m_errorString; }
 
-QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
+static QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
   if (pos >= data.size()) {
     m_errorString = "Unexpected end of data";
     return QVariant();
@@ -58,7 +58,7 @@ QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
   }
 }
 
-QVariant BencodeParser::parseInteger(const QByteArray &data, int &pos) {
+static QVariant BencodeParser::parseInteger(const QByteArray &data, int &pos) {
   pos++; // skip 'i'
   const int endPos = static_cast<int>(data.indexOf('e', pos));
   if (endPos == -1) {
@@ -78,7 +78,8 @@ QVariant BencodeParser::parseInteger(const QByteArray &data, int &pos) {
   return val;
 }
 
-QByteArray BencodeParser::parseByteString(const QByteArray &data, int &pos) {
+static QByteArray BencodeParser::parseByteString(const QByteArray &data,
+                                                 int &pos) {
   const int colonPos = static_cast<int>(data.indexOf(':', pos));
   if (colonPos == -1) {
     m_errorString = "Unterminated string length";
@@ -104,7 +105,7 @@ QByteArray BencodeParser::parseByteString(const QByteArray &data, int &pos) {
   return str;
 }
 
-QVariant BencodeParser::parseList(const QByteArray &data, int &pos) {
+static QVariant BencodeParser::parseList(const QByteArray &data, int &pos) {
   pos++; // skip 'l'
   QVariantList list;
   while (pos < data.size() && data[pos] != 'e') {
@@ -124,7 +125,8 @@ QVariant BencodeParser::parseList(const QByteArray &data, int &pos) {
   return list;
 }
 
-QVariant BencodeParser::parseDictionary(const QByteArray &data, int &pos) {
+static QVariant BencodeParser::parseDictionary(const QByteArray &data,
+                                               int &pos) {
   pos++; // skip 'd'
   QVariantMap dict;
 

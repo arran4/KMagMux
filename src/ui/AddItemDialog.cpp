@@ -1,6 +1,5 @@
 #include "AddItemDialog.h"
-#include "../core/Constants.h"
-#include "MaxWidthDelegate.h"
+#include "/app/src/core/Item.h"
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -13,10 +12,10 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
-#include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
+#include <cstddef>
 
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
                              const QStringList &connectors, QWidget *parent)
@@ -126,7 +125,7 @@ void AddItemDialog::setupUi() {
 
 const std::vector<Item> &AddItemDialog::getItems() const { return m_items; }
 
-void AddItemDialog::onProcessClicked() {
+static void AddItemDialog::onProcessClicked() {
   std::vector<Item> processedItems;
 
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
@@ -153,7 +152,7 @@ void AddItemDialog::onProcessClicked() {
   accept();
 }
 
-void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
+static void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QTableWidgetItem *const item = m_itemsTable->itemAt(pos);
   if (item == nullptr) {
     return;
