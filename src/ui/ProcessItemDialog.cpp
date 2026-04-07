@@ -15,6 +15,7 @@
 
 #include "../core/Item.h"
 #include "TorrentInfoDialog.h"
+#include <QAbstractItemView>
 #include <QAction>
 #include <QClipboard>
 #include <QComboBox>
@@ -88,7 +89,7 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     QString displayName = m_items[i].getDisplayName();
     QTableWidgetItem *nameItem = new QTableWidgetItem(displayName);
     nameItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    m_itemsTable->setItem(i, 3, nameItem);
+    m_itemsTable->setItem(static_cast<int>(i), 3, nameItem);
 
     QLabel *linkLabel =
         new QLabel(QString("<a href=\"%1\">%1</a>").arg(m_items[i].sourcePath));
@@ -96,12 +97,12 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
         false); // We want to show it, not necessarily open a browser directly
     linkLabel->setTextFormat(Qt::RichText);
     linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    m_itemsTable->setCellWidget(i, 4, linkLabel);
+    m_itemsTable->setCellWidget(static_cast<int>(i), 4, linkLabel);
 
     // Keep the actual data in the item for easy retrieval
     QTableWidgetItem *linkItem = new QTableWidgetItem();
     linkItem->setData(Qt::UserRole, m_items[i].sourcePath);
-    m_itemsTable->setItem(i, 4, linkItem);
+    m_itemsTable->setItem(static_cast<int>(i), 4, linkItem);
   }
 
   // Check if any items are local files. If none are, hide the delete column.
