@@ -1,4 +1,8 @@
 #include "TorrentInfoDialog.h"
+#include "../core/Item.h"
+#include "../core/TorrentParser.h"
+#include "../core/TrackerClient.h"
+#include <QAbstractItemView>
 #include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -8,9 +12,11 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QObject>
 #include <QPushButton>
 #include <QTextEdit>
 #include <QVBoxLayout>
+#include <qnamespace.h>
 
 TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath,
                                      const Item *item, QWidget *parent)
@@ -149,10 +155,10 @@ void TorrentInfoDialog::setupUi() {
     historyTable->setRowCount(history.size());
     for (int i = 0; i < history.size(); ++i) {
       QJsonObject entry = history[i].toObject();
-      QDateTime dt =
+      const QDateTime dt =
           QDateTime::fromString(entry["timestamp"].toString(), Qt::ISODate);
-      QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate)
-                                     : entry["timestamp"].toString();
+      const QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate)
+                                           : entry["timestamp"].toString();
       historyTable->setItem(i, 0, new QTableWidgetItem(timeStr));
       historyTable->setItem(i, 1,
                             new QTableWidgetItem(entry["message"].toString()));

@@ -7,6 +7,7 @@
 #include <QDialog>
 #include <QObject>
 #include <QPushButton>
+#include <QString>
 #include <QTableWidget>
 #include <QTextEdit>
 #include <QWidget>
