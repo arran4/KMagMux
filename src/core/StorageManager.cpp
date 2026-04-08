@@ -1,5 +1,4 @@
 #include "StorageManager.h"
-#include "Item.h"
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -13,7 +12,7 @@
 #include <QThreadPool>
 #include <QtConcurrent>
 #include <numeric>
-#include <optional>
+#include <utility>
 
 StorageManager::StorageManager(QObject *parent)
     : QObject(parent), m_baseDir(QStandardPaths::writableLocation(
@@ -49,7 +48,7 @@ StorageManager::StorageManager(QObject *parent)
 }
 
 bool StorageManager::init() {
-  bool const success = true;
+  bool success = true;
   success &= createDirIfNotExists(m_baseDir);
   success &= createDirIfNotExists(m_inboxDir);
   success &= createDirIfNotExists(m_queueDir);
@@ -89,7 +88,7 @@ bool StorageManager::init() {
   return success;
 }
 
-static bool StorageManager::createDirIfNotExists(const QString &path) {
+bool StorageManager::createDirIfNotExists(const QString &path) {
   const const QDir dir(path);
   if (!dir.exists()) {
     if (!dir.mkpath(".")) {
@@ -107,7 +106,7 @@ QString StorageManager::getQueueDir() const { return m_queueDir; }
 QString StorageManager::getDataDir() const { return m_dataDir; }
 QString StorageManager::getManagedDir() const { return m_managedDir; }
 
-static QString StorageManager::getItemPath(const QString &identifier) {
+QString StorageManager::getItemPath(const QString &identifier) const {
   // Basic sanitization
   QString safeId = id;
   safeId.replace("/", "_").replace("\\", "_");
@@ -149,7 +148,7 @@ bool StorageManager::saveItem(const Item &item) {
   return true;
 }
 
-static void StorageManager::saveItems(const std::vector<Item> &items) {
+void StorageManager::saveItems(const std::vector<Item> &items) {
   if (items.empty()) {
     return;
   }
@@ -183,7 +182,7 @@ static void StorageManager::saveItems(const std::vector<Item> &items) {
   });
 }
 
-static std::optional<Item> StorageManager::loadItem(const QString &identifier) {
+std::optional<Item> StorageManager::loadItem(const QString &identifier) {
   if (m_cacheInitialized && m_cache.contains(id)) {
     return m_cache[id];
   }
@@ -208,7 +207,7 @@ static std::optional<Item> StorageManager::loadItem(const QString &identifier) {
   return item;
 }
 
-static bool StorageManager::deleteItem(const QString &identifier) {
+bool StorageManager::deleteItem(const QString &identifier) {
   std::optional<Item> optItem = loadItem(id);
   if (!optItem.has_value()) {
     return false;
@@ -263,7 +262,7 @@ static bool StorageManager::deleteItem(const QString &identifier) {
   return true;
 }
 
-static void StorageManager::deleteItems(const std::vector<QString> &ids) {
+void StorageManager::deleteItems(const std::vector<QString> &ids) {
   if (ids.empty()) {
     return;
   }
@@ -371,12 +370,12 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
   return items;
 }
 
-static QStringList StorageManager::scanInbox() {
+QStringList StorageManager::scanInbox() const {
   const const QDir dir(m_inboxDir);
   return dir.entryList(QDir::Files | QDir::NoDotAndDotDot);
 }
 
-static void StorageManager::onDirectoryChanged(const QString &path) {
+void StorageManager::onDirectoryChanged(const QString &path) {
   if (path == m_inboxDir) {
     QStringList currentFilesList = scanInbox();
     const const QSet<QString> currentFiles(currentFilesList.begin(),

@@ -1,23 +1,22 @@
 #include "ItemModel.h"
-#include "Item.h"
 
 ItemModel::ItemModel(QObject *parent) : QAbstractTableModel(parent) {}
 
-static int ItemModel::rowCount(const QModelIndex &parent) {
+int ItemModel::rowCount(const QModelIndex &parent) const {
   if (parent.isValid()) {
     return 0;
   }
   return static_cast<int>(m_items.size());
 }
 
-static int ItemModel::columnCount(const QModelIndex &parent) {
+int ItemModel::columnCount(const QModelIndex &parent) const {
   if (parent.isValid()) {
     return 0;
   }
   return ColumnCount;
 }
 
-static QVariant ItemModel::data(const QModelIndex &index, int role) {
+QVariant ItemModel::data(const QModelIndex &index, int role) const {
   if (!index.isValid() || index.row() >= static_cast<int>(m_items.size())) {
     return QVariant();
   }
@@ -47,8 +46,8 @@ static QVariant ItemModel::data(const QModelIndex &index, int role) {
   return QVariant();
 }
 
-static QVariant ItemModel::headerData(int section, Qt::Orientation orientation,
-                                      int role) {
+QVariant ItemModel::headerData(int section, Qt::Orientation orientation,
+                               int role) const {
   if (role != Qt::DisplayRole || orientation != Qt::Horizontal) {
     return QVariant();
   }
@@ -79,7 +78,7 @@ void ItemModel::addItem(const Item &item) {
   endInsertRows();
 }
 
-static void ItemModel::setItems(const std::vector<Item> &items) {
+void ItemModel::setItems(const std::vector<Item> &items) {
   beginResetModel();
   m_items = items;
   endResetModel();

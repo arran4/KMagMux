@@ -1,4 +1,3 @@
-#include "core/Item.h"
 #include "core/StorageManager.h"
 #include "ui/MainWindow.h"
 #include <KAboutData>

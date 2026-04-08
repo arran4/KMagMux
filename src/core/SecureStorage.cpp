@@ -4,8 +4,8 @@
 #include <QSettings>
 #include <qt6keychain/keychain.h>
 
-static QString SecureStorage::readPassword(const QString &service,
-                                           const QString &key) {
+QString SecureStorage::readPassword(const QString &service,
+                                    const QString &key) {
   QKeychain::ReadPasswordJob job(service);
   job.setKey(key);
   job.setAutoDelete(false);
@@ -35,9 +35,8 @@ static QString SecureStorage::readPassword(const QString &service,
   return result;
 }
 
-static void SecureStorage::writePassword(const QString &service,
-                                         const QString &key,
-                                         const QString &password) {
+void SecureStorage::writePassword(const QString &service, const QString &key,
+                                  const QString &password) {
   QKeychain::WritePasswordJob job(service);
   job.setKey(key);
   job.setTextData(password);

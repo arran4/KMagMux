@@ -84,9 +84,8 @@ PreferencesDialog::~PreferencesDialog() {}
 
 void PreferencesDialog::changePage(QListWidgetItem *current,
                                    QListWidgetItem *previous) {
-  if (current == nullptr) {
+  if (!current)
     current = previous;
-  }
 
   m_pagesWidget->setCurrentIndex(m_categoriesList->row(current));
 }
@@ -206,7 +205,7 @@ void PreferencesDialog::createPluginsPage() {
   QWidget *scrollContent = new QWidget(scrollArea);
   QVBoxLayout *scrollLayout = new QVBoxLayout(scrollContent);
 
-  if (m_engine != nullptr) {
+  if (m_engine) {
     QStringList connectors = m_engine->getAllConnectors();
     if (connectors.isEmpty()) {
       QLabel *noPluginsLabel = new QLabel(

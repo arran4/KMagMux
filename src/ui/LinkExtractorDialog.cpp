@@ -51,7 +51,7 @@ void LinkExtractorDialog::appendLog(const QString &msg) {
   m_logEdit->appendPlainText(msg);
 }
 
-void LinkExtractorDialog::closeEvent(const QCloseEvent *event) {
+void LinkExtractorDialog::closeEvent(QCloseEvent *event) {
   if (!m_cancelled && m_currentIndex < m_inputLines.size()) {
     onCancelClicked();
     event->ignore();
@@ -72,9 +72,8 @@ void LinkExtractorDialog::onCancelClicked() {
 }
 
 void LinkExtractorDialog::processNext() {
-  if (m_cancelled) {
+  if (m_cancelled)
     return;
-  }
 
   if (m_currentIndex >= m_inputLines.size()) {
     appendLog(tr("Finished processing."));
@@ -144,9 +143,8 @@ void LinkExtractorDialog::processNext() {
 }
 
 void LinkExtractorDialog::onReplyFinished() {
-  if (m_cancelled) {
+  if (m_cancelled)
     return;
-  }
 
   if (!m_currentReply) {
     QMetaObject::invokeMethod(this, "processNext", Qt::QueuedConnection);
@@ -180,8 +178,8 @@ void LinkExtractorDialog::onReplyFinished() {
   QMetaObject::invokeMethod(this, "processNext", Qt::QueuedConnection);
 }
 
-static void LinkExtractorDialog::extractFromHtml(const QString &content,
-                                                 const QUrl &baseUrl) {
+void LinkExtractorDialog::extractFromHtml(const QString &content,
+                                          const QUrl &baseUrl) {
   QRegularExpression re("href=[\"']([^\"']+)[\"']",
                         QRegularExpression::CaseInsensitiveOption);
   QRegularExpressionMatchIterator i = re.globalMatch(content);
@@ -210,9 +208,9 @@ static void LinkExtractorDialog::extractFromHtml(const QString &content,
   appendLog(tr("Extracted %1 links from HTML.").arg(addedCount));
 }
 
-static void LinkExtractorDialog::extractFromTxt(const QString &content) {
+void LinkExtractorDialog::extractFromTxt(const QString &content) {
   QStringList lines = content.split('\n');
-  int const addedCount = 0;
+  int addedCount = 0;
   for (const QString &line : lines) {
     QString trimmed = line.trimmed();
     if (!trimmed.isEmpty()) {

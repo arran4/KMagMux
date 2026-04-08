@@ -1,6 +1,7 @@
 #ifndef ITEMPARSER_H
 #define ITEMPARSER_H
 
+#include "Item.h"
 #include <QStringList>
 #include <vector>
 

@@ -2,9 +2,7 @@
 #define PREFERENCESDIALOG_H
 
 #include <QDialog>
-#include <QObject>
 #include <QSpinBox>
-#include <QWidget>
 
 class QCheckBox;
 class QComboBox;
@@ -22,9 +20,10 @@ public:
   explicit PreferencesDialog(Engine *engine, QWidget *parent = nullptr);
   ~PreferencesDialog();
 
-private Q_SLOTS:
+private slots:
   void changePage(QListWidgetItem *current, QListWidgetItem *previous);
 
+private:
   void createGeneralPage();
   void createShortcutsPage();
   void createPluginsPage();

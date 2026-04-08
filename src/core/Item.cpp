@@ -47,7 +47,7 @@ QString Item::getDisplayName() const {
   return result;
 }
 
-static QJsonObject Item::toJson() {
+QJsonObject Item::toJson() const {
   QJsonObject json;
   json["id"] = id;
   json["state"] = stateToString();
@@ -64,7 +64,7 @@ static QJsonObject Item::toJson() {
   return json;
 }
 
-static Item Item::fromJson(const QJsonObject &json) {
+Item Item::fromJson(const QJsonObject &json) {
   Item item;
   item.id = json["id"].toString();
   item.state = stringToState(json["state"].toString());
@@ -102,7 +102,7 @@ QString Item::stateToString() const {
   }
 }
 
-static ItemState Item::stringToState(const QString &str) {
+ItemState Item::stringToState(const QString &str) {
   if (str == "Unprocessed") {
     return ItemState::Unprocessed;
   }
@@ -115,9 +115,8 @@ static ItemState Item::stringToState(const QString &str) {
   if (str == "Held") {
     return ItemState::Held;
   }
-  if (str == "Done" || s == "Dispatched") {
+  if (str == "Done" || s == "Dispatched")
     return ItemState::Done;
-  }
   if (str == "Failed") {
     return ItemState::Failed;
   }
@@ -129,7 +128,7 @@ static ItemState Item::stringToState(const QString &str) {
 
 #include <QJsonArray>
 
-static void Item::addHistory(const QString &message) {
+void Item::addHistory(const QString &message) {
   QJsonArray history = metadata["history"].toArray();
   QJsonObject entry;
   entry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);

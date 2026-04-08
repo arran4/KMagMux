@@ -1,7 +1,5 @@
 #include "Engine.h"
-#include "Connector.h"
-#include "Item.h"
-#include "StorageManager.h"
+#include "Constants.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -180,7 +178,7 @@ Connector *Engine::getConnector(const QString &identifier) const {
   return m_connectors.value(id, nullptr);
 }
 
-static QStringList Engine::getAvailableConnectors() {
+QStringList Engine::getAvailableConnectors() const {
   QStringList active;
   for (auto it = m_connectors.constBegin(); it != m_connectors.constEnd();
        ++it) {
@@ -193,7 +191,7 @@ static QStringList Engine::getAvailableConnectors() {
 
 QStringList Engine::getAllConnectors() const { return m_connectors.keys(); }
 
-void Engine::start() const {
+void Engine::start() {
   if (!m_paused) {
     m_timer->start();
     qDebug() << "Engine started.";

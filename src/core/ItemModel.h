@@ -1,6 +1,7 @@
 #ifndef ITEMMODEL_H
 #define ITEMMODEL_H
 
+#include "Item.h"
 #include <QAbstractTableModel>
 #include <vector>
 
@@ -28,7 +29,7 @@ public:
   QVariant headerData(int section, Qt::Orientation orientation,
                       int role = Qt::DisplayRole) const override;
 
-  static void addItem(const Item &item);
+  void addItem(const Item &item);
   void setItems(const std::vector<Item> &items);
   const Item &getItem(int row) const;
 

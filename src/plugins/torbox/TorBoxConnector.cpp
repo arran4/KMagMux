@@ -28,13 +28,13 @@ TorBoxConnector::TorBoxConnector(QObject *parent)
   m_apiToken = SecureStorage::readPassword("Plugins/TorBox", "apiToken");
 }
 
-static QString TorBoxConnector::getId() { return "TorBox"; }
+QString TorBoxConnector::getId() const { return "TorBox"; }
 
-static QString TorBoxConnector::getName() { return "TorBox"; }
+QString TorBoxConnector::getName() const { return "TorBox"; }
 
 bool TorBoxConnector::isEnabled() const { return m_enabled; }
 
-static void TorBoxConnector::dispatch(const Item &item) {
+void TorBoxConnector::dispatch(const Item &item) {
   if (m_apiToken.isEmpty()) {
     emit dispatchFinished(item.id, false, "API Token is missing.");
     return;
@@ -82,7 +82,7 @@ static void TorBoxConnector::dispatch(const Item &item) {
           &TorBoxConnector::onAddTorrentReply);
 }
 
-static void TorBoxConnector::onAddTorrentReply() {
+void TorBoxConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
   if (reply == nullptr) {
     return;
@@ -146,9 +146,9 @@ static void TorBoxConnector::onAddTorrentReply() {
   reply->deleteLater();
 }
 
-bool TorBoxConnector::hasSettings() { return true; }
+bool TorBoxConnector::hasSettings() const { return true; }
 
-static QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
+QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
   QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
@@ -187,7 +187,7 @@ static QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
   return widget;
 }
 
-void TorBoxConnector::saveSettings(const QWidget *settingsWidget) {
+void TorBoxConnector::saveSettings(QWidget *settingsWidget) {
   if (settingsWidget == nullptr) {
     return;
   }
@@ -214,9 +214,9 @@ void TorBoxConnector::saveSettings(const QWidget *settingsWidget) {
   settings.endGroup();
 }
 
-bool TorBoxConnector::hasDebugMenu() { return true; }
+bool TorBoxConnector::hasDebugMenu() const { return true; }
 
-static QList<HttpApiEndpoint> TorBoxConnector::getHttpApiEndpoints() {
+QList<HttpApiEndpoint> TorBoxConnector::getHttpApiEndpoints() const {
   QList<HttpApiEndpoint> endpoints;
 
   HttpApiEndpoint userInfo;
@@ -283,7 +283,7 @@ static QList<HttpApiEndpoint> TorBoxConnector::getHttpApiEndpoints() {
   return endpoints;
 }
 
-static QMap<QString, QString> TorBoxConnector::getApiSubstitutions() {
+QMap<QString, QString> TorBoxConnector::getApiSubstitutions() const {
   QMap<QString, QString> subs;
   subs.insert("API_TOKEN", m_apiToken);
   return subs;

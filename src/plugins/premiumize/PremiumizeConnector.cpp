@@ -28,13 +28,13 @@ PremiumizeConnector::PremiumizeConnector(QObject *parent)
   m_apiKey = SecureStorage::readPassword("Plugins/Premiumize", "apiKey");
 }
 
-static QString PremiumizeConnector::getId() { return "Premiumize"; }
+QString PremiumizeConnector::getId() const { return "Premiumize"; }
 
-static QString PremiumizeConnector::getName() { return "Premiumize.me"; }
+QString PremiumizeConnector::getName() const { return "Premiumize.me"; }
 
 bool PremiumizeConnector::isEnabled() const { return m_enabled; }
 
-static void PremiumizeConnector::dispatch(const Item &item) {
+void PremiumizeConnector::dispatch(const Item &item) {
   if (m_apiKey.isEmpty()) {
     emit dispatchFinished(item.id, false, "API Key is missing.");
     return;
@@ -105,7 +105,7 @@ static void PremiumizeConnector::dispatch(const Item &item) {
   }
 }
 
-static void PremiumizeConnector::onAddTorrentReply() {
+void PremiumizeConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
   if (reply == nullptr) {
     return;
@@ -126,9 +126,9 @@ static void PremiumizeConnector::onAddTorrentReply() {
   reply->deleteLater();
 }
 
-bool PremiumizeConnector::hasSettings() { return true; }
+bool PremiumizeConnector::hasSettings() const { return true; }
 
-static QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
+QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   QWidget *widget = new QWidget(parent);
   QVBoxLayout *mainLayout = new QVBoxLayout(widget);
 
@@ -169,7 +169,7 @@ static QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
   return widget;
 }
 
-void PremiumizeConnector::saveSettings(const QWidget *settingsWidget) {
+void PremiumizeConnector::saveSettings(QWidget *settingsWidget) {
   if (settingsWidget == nullptr) {
     return;
   }
@@ -196,9 +196,9 @@ void PremiumizeConnector::saveSettings(const QWidget *settingsWidget) {
   settings.endGroup();
 }
 
-bool PremiumizeConnector::hasDebugMenu() { return true; }
+bool PremiumizeConnector::hasDebugMenu() const { return true; }
 
-static QList<HttpApiEndpoint> PremiumizeConnector::getHttpApiEndpoints() {
+QList<HttpApiEndpoint> PremiumizeConnector::getHttpApiEndpoints() const {
   QList<HttpApiEndpoint> endpoints;
 
   HttpApiEndpoint accountInfo;
@@ -243,7 +243,7 @@ static QList<HttpApiEndpoint> PremiumizeConnector::getHttpApiEndpoints() {
   return endpoints;
 }
 
-static QMap<QString, QString> PremiumizeConnector::getApiSubstitutions() {
+QMap<QString, QString> PremiumizeConnector::getApiSubstitutions() const {
   QMap<QString, QString> subs;
   subs.insert("API_KEY", m_apiKey);
   return subs;

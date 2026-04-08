@@ -1,5 +1,6 @@
 #include "ProcessItemDialog.h"
-#include "/app/src/core/Item.h"
+#include "../core/Constants.h"
+#include "MaxWidthDelegate.h"
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -12,11 +13,11 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
+#include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
 #include <QUuid>
-#include <cstddef>
 
 ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
                                      const QStringList &connectors,
@@ -189,7 +190,7 @@ void ProcessItemDialog::setupUi() {
 
 const std::vector<Item> &ProcessItemDialog::getItems() const { return m_items; }
 
-static void ProcessItemDialog::onProcessClicked() {
+void ProcessItemDialog::onProcessClicked() {
   std::vector<Item> processedItems;
 
   ItemState selectedState = ItemState::Queued;
@@ -278,7 +279,7 @@ void ProcessItemDialog::onStateChanged(int index) {
   m_holdTimeEdit->setEnabled(index == 1);
 }
 
-static void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
+void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QTableWidgetItem *const item = m_itemsTable->itemAt(pos);
   if (item == nullptr) {
     return;

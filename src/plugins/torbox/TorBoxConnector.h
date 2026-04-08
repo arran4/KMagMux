@@ -20,11 +20,11 @@ public:
   void dispatch(const Item &item) override;
   bool isEnabled() const override;
 
-  static bool hasSettings() override;
+  bool hasSettings() const override;
   QWidget *createSettingsWidget(QWidget *parent) override;
   void saveSettings(QWidget *settingsWidget) override;
 
-  static bool hasDebugMenu() override;
+  bool hasDebugMenu() const override;
   QList<HttpApiEndpoint> getHttpApiEndpoints() const override;
   QMap<QString, QString> getApiSubstitutions() const override;
 

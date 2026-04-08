@@ -5,14 +5,14 @@
 #include <QUrlQuery>
 #include <QVariantList>
 
-static TorrentInfo TorrentParser::parse(const QString &sourcePath) {
+TorrentInfo TorrentParser::parse(const QString &sourcePath) {
   if (sourcePath.startsWith("magnet:?")) {
     return parseMagnet(sourcePath);
   }
   return parseTorrentFile(sourcePath);
 }
 
-static TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
+TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
   TorrentInfo info;
   const QUrl url(magnetUri);
   if (!url.isValid() || url.scheme() != "magnet") {
@@ -64,7 +64,7 @@ static TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
   return info;
 }
 
-static TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
+TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
   TorrentInfo info;
 
   QString path = filePath;
@@ -81,7 +81,7 @@ static TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
   const QByteArray data = file.readAll();
   file.close();
 
-  BencodeParser const parser;
+  BencodeParser parser;
   if (!parser.parse(data)) {
     info.errorString = "Failed to parse bencode data: " + parser.errorString();
     return info;

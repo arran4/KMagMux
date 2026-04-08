@@ -1,6 +1,4 @@
 #include "TorrentInfoDialog.h"
-#include "/app/src/core/Item.h"
-#include "/app/src/core/TrackerClient.h"
 #include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -31,7 +29,7 @@ TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath,
 }
 
 TorrentInfoDialog::~TorrentInfoDialog() {
-  if (m_trackerClient != nullptr) {
+  if (m_trackerClient) {
     m_trackerClient->cancel();
   }
 }
@@ -191,9 +189,8 @@ void TorrentInfoDialog::setupUi() {
 }
 
 void TorrentInfoDialog::onQueryTrackers() {
-  if (m_info.trackers.isEmpty()) {
+  if (m_info.trackers.isEmpty())
     return;
-  }
 
   m_isQuerying = true;
   m_queryBtn->setEnabled(false);
@@ -242,9 +239,8 @@ void TorrentInfoDialog::onCancelQuery() {
 }
 
 void TorrentInfoDialog::processNextTracker() {
-  if (!m_isQuerying) {
+  if (!m_isQuerying)
     return;
-  }
 
   while (m_currentTrackerIndex < m_trackerTable->rowCount() &&
          m_trackerTable->item(m_currentTrackerIndex, 0)->checkState() !=
@@ -268,9 +264,8 @@ void TorrentInfoDialog::processNextTracker() {
 }
 
 void TorrentInfoDialog::onScrapeFinished(const TrackerStats &stats) {
-  if (!m_isQuerying) {
+  if (!m_isQuerying)
     return;
-  }
 
   // Find the row for this tracker (should be m_currentTrackerIndex)
   if (m_currentTrackerIndex < m_trackerTable->rowCount()) {

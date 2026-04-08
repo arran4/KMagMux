@@ -40,8 +40,8 @@ private:
   void startUdpScrape(const QString &url, const QByteArray &infoHash);
   void startHttpScrape(const QString &url, const QByteArray &infoHash);
 
-  static void sendUdpConnect();
-  static void sendUdpScrape();
+  void sendUdpConnect();
+  void sendUdpScrape();
 
   QString m_currentTrackerUrl;
   QByteArray m_currentInfoHash;

@@ -1,6 +1,8 @@
 #ifndef CONNECTOR_H
 #define CONNECTOR_H
 
+#include "HttpApiEndpoint.h"
+#include "Item.h"
 #include <QList>
 #include <QMap>
 #include <QNetworkRequest>
