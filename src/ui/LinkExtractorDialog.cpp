@@ -130,7 +130,8 @@ void LinkExtractorDialog::processNext() {
     return;
   }
 
-  if (url.isValid() && (url.scheme() == "http" || url.scheme() == "https")) {
+  if (url.isValid() && (url.scheme() == "http" || url.scheme() == "https" ||
+                        url.scheme() == "magnet")) {
     appendLog(tr("Downloading remote file: %1").arg(line));
     m_currentReply = m_networkManager->get(QNetworkRequest(url));
     connect(m_currentReply, &QNetworkReply::finished, this,
