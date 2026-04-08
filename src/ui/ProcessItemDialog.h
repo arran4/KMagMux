@@ -9,12 +9,9 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QObject>
-#include <QPoint>
 #include <QPushButton>
 #include <QStringList>
 #include <QTableWidget>
-#include <QWidget>
 #include <vector>
 
 class ProcessItemDialog : public QDialog {
@@ -32,6 +29,7 @@ private Q_SLOTS:
   void onCustomContextMenuRequested(const QPoint &pos);
   void onStateChanged(int index);
 
+private:
   std::vector<Item> m_items;
   QStringList m_connectors;
 
