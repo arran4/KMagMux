@@ -42,7 +42,7 @@ void TorBoxConnector::dispatch(const Item &item) {
 
   // Simple stub for dispatch
   const QUrl url("https://api.torbox.app/v1/api/torrents/createtorrent");
-  const const QNetworkRequest request(url);
+  const QNetworkRequest request(url);
   // Assuming Bearer token auth
   request.setRawHeader("Authorization", ("Bearer " + m_apiToken).toUtf8());
 

@@ -89,7 +89,7 @@ bool StorageManager::init() {
 }
 
 bool StorageManager::createDirIfNotExists(const QString &path) {
-  const const QDir dir(path);
+  const QDir dir(path);
   if (!dir.exists()) {
     if (!dir.mkpath(".")) {
       qWarning() << "Failed to create directory:" << path;
@@ -108,7 +108,7 @@ QString StorageManager::getManagedDir() const { return m_managedDir; }
 
 QString StorageManager::getItemPath(const QString &identifier) const {
   // Basic sanitization
-  QString safeId = id;
+  QString safeId = identifier;
   safeId.replace("/", "_").replace("\\", "_");
   return m_dataDir + "/" + safeId + ".json";
 }
@@ -119,14 +119,14 @@ bool StorageManager::saveItem(const Item &item) {
     return false;
   }
 
-  const const QString path = getItemPath(item.id);
+  const QString path = getItemPath(item.id);
   QFile file(path);
   if (!file.open(QIODevice::WriteOnly)) {
     qWarning() << "Failed to open file for writing:" << path;
     return false;
   }
 
-  const const QJsonDocument doc(item.toJson());
+  const QJsonDocument doc(item.toJson());
   if (file.write(doc.toJson()) == -1) {
     qWarning() << "Failed to write to file:" << path;
     return false;
@@ -134,7 +134,7 @@ bool StorageManager::saveItem(const Item &item) {
 
   // Update cache and secondary index
   if (m_cache.contains(item.id)) {
-    const const Item oldItem = m_cache[item.id];
+    const Item oldItem = m_cache[item.id];
     if (oldItem.state != item.state) {
       m_stateIndex[oldItem.state].remove(item.id);
     }
@@ -156,7 +156,7 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
   // Update cache immediately on the main thread to prevent stale data
   for (const Item &item : items) {
     if (m_cache.contains(item.id)) {
-      const const Item oldItem = m_cache[item.id];
+      const Item oldItem = m_cache[item.id];
       if (oldItem.state != item.state) {
         m_stateIndex[oldItem.state].remove(item.id);
       }
@@ -172,10 +172,10 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
         continue;
       }
 
-      const const QString path = getItemPath(item.id);
+      const QString path = getItemPath(item.id);
       QFile file(path);
       if (file.open(QIODevice::WriteOnly)) {
-        const const QJsonDocument doc(item.toJson());
+        const QJsonDocument doc(item.toJson());
         file.write(doc.toJson());
       }
     }
@@ -183,8 +183,8 @@ void StorageManager::saveItems(const std::vector<Item> &items) {
 }
 
 std::optional<Item> StorageManager::loadItem(const QString &identifier) {
-  if (m_cacheInitialized && m_cache.contains(id)) {
-    return m_cache[id];
+  if (m_cacheInitialized && m_cache.contains(identifier)) {
+    return m_cache[identifier];
   }
 
   const QString path = getItemPath(identifier);
@@ -194,35 +194,35 @@ std::optional<Item> StorageManager::loadItem(const QString &identifier) {
     return std::nullopt;
   }
 
-  const const QByteArray data = file.readAll();
-  const const QJsonDocument doc = QJsonDocument::fromJson(data);
+  const QByteArray data = file.readAll();
+  const QJsonDocument doc = QJsonDocument::fromJson(data);
   if (doc.isNull() || !doc.isObject()) {
     qWarning() << "Failed to parse JSON from file:" << path;
     return std::nullopt;
   }
 
-  const const Item item = Item::fromJson(doc.object());
+  const Item item = Item::fromJson(doc.object());
   m_cache[item.id] = item;
   m_stateIndex[item.state].insert(item.id);
   return item;
 }
 
 bool StorageManager::deleteItem(const QString &identifier) {
-  std::optional<Item> optItem = loadItem(id);
+  std::optional<Item> optItem = loadItem(identifier);
   if (!optItem.has_value()) {
     return false;
   }
 
   Item item = optItem.value();
 
-  const const QString cleanManagedDir =
+  const QString cleanManagedDir =
       QDir::cleanPath(QDir(m_managedDir).absolutePath()) + "/";
 
   // Remove the managed file if it exists
   if (item.metadata.contains("managedFile")) {
-    const const QString managedPath = item.metadata["managedFile"].toString();
+    const QString managedPath = item.metadata["managedFile"].toString();
     if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
-      const const QString cleanManagedPath =
+      const QString cleanManagedPath =
           QDir::cleanPath(QFileInfo(managedPath).absoluteFilePath());
       if (cleanManagedPath.startsWith(cleanManagedDir)) {
         QFile::remove(managedPath);
@@ -235,7 +235,7 @@ bool StorageManager::deleteItem(const QString &identifier) {
   } else if (item.sourcePath.startsWith(m_managedDir) &&
              QFile::exists(item.sourcePath)) {
     // Sometimes sourcePath points directly to the managed dir
-    const const QString cleanSourcePath =
+    const QString cleanSourcePath =
         QDir::cleanPath(QFileInfo(item.sourcePath).absoluteFilePath());
     if (cleanSourcePath.startsWith(cleanManagedDir)) {
       QFile::remove(item.sourcePath);
@@ -255,10 +255,10 @@ bool StorageManager::deleteItem(const QString &identifier) {
     }
   }
 
-  m_stateIndex[item.state].remove(id);
-  m_cache.remove(id);
+  m_stateIndex[item.state].remove(identifier);
+  m_cache.remove(identifier);
 
-  emit itemDeleted(id);
+  emit itemDeleted(identifier);
   return true;
 }
 
@@ -271,7 +271,7 @@ void StorageManager::deleteItems(const std::vector<QString> &ids) {
   actuallyDeletedIds.reserve(ids.size());
 
   for (const QString &identifier : ids) {
-    std::optional<Item> optItem = loadItem(id);
+    std::optional<Item> optItem = loadItem(identifier);
     if (!optItem.has_value()) {
       continue;
     }
@@ -280,7 +280,7 @@ void StorageManager::deleteItems(const std::vector<QString> &ids) {
 
     // Remove the managed file if it exists
     if (item.metadata.contains("managedFile")) {
-      const const QString managedPath = item.metadata["managedFile"].toString();
+      const QString managedPath = item.metadata["managedFile"].toString();
       if (!managedPath.isEmpty() && QFile::exists(managedPath)) {
         QFile::remove(managedPath);
       }
@@ -299,9 +299,9 @@ void StorageManager::deleteItems(const std::vector<QString> &ids) {
       }
     }
 
-    m_stateIndex[item.state].remove(id);
-    m_cache.remove(id);
-    actuallyDeletedIds.push_back(id);
+    m_stateIndex[item.state].remove(identifier);
+    m_cache.remove(identifier);
+    actuallyDeletedIds.push_back(identifier);
   }
 
   if (!actuallyDeletedIds.empty()) {
@@ -315,7 +315,7 @@ std::vector<Item> StorageManager::loadAllItems() {
   if (m_cacheInitialized) {
     items.reserve(m_cache.size());
     for (auto it = m_cache.constBegin(); it != m_cache.constEnd(); ++it) {
-      items.push_back(it.value());
+      items.push_back(iter.value());
     }
     return items;
   }
@@ -327,10 +327,10 @@ std::vector<Item> StorageManager::loadAllItems() {
     const QString path = iter.next();
     QFile file(path);
     if (file.open(QIODevice::ReadOnly)) {
-      const const QByteArray data = file.readAll();
-      const const QJsonDocument doc = QJsonDocument::fromJson(data);
+      const QByteArray data = file.readAll();
+      const QJsonDocument doc = QJsonDocument::fromJson(data);
       if (!doc.isNull() && doc.isObject()) {
-        const const Item item = Item::fromJson(doc.object());
+        const Item item = Item::fromJson(doc.object());
         items.push_back(item);
         m_cache.insert(item.id, item);
         m_stateIndex[item.state].insert(item.id);
@@ -349,7 +349,7 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
     loadAllItems();
   }
 
-  const const int totalSize = std::accumulate(
+  const int totalSize = std::accumulate(
       states.begin(), states.end(), 0, [this](int sum, ItemState state) {
         return sum + m_stateIndex.value(state).size();
       });
@@ -360,8 +360,8 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
       const QSet<QString> &ids = m_stateIndex.value(state);
       for (const QString &identifier : ids) {
         auto iter = m_cache.constFind(identifier);
-        if (it != m_cache.constEnd()) {
-          items.push_back(it.value());
+        if (iter != m_cache.constEnd()) {
+          items.push_back(iter.value());
         }
       }
     }
@@ -371,15 +371,15 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
 }
 
 QStringList StorageManager::scanInbox() const {
-  const const QDir dir(m_inboxDir);
+  const QDir dir(m_inboxDir);
   return dir.entryList(QDir::Files | QDir::NoDotAndDotDot);
 }
 
 void StorageManager::onDirectoryChanged(const QString &path) {
   if (path == m_inboxDir) {
     QStringList currentFilesList = scanInbox();
-    const const QSet<QString> currentFiles(currentFilesList.begin(),
-                                           currentFilesList.end());
+    const QSet<QString> currentFiles(currentFilesList.begin(),
+                                     currentFilesList.end());
 
     // Find new files
     QSet<QString> newFiles = currentFiles;
@@ -410,13 +410,13 @@ void StorageManager::processNewFile(const QString &filePath) {
 
   Item newItem;
   newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
-               info.fileName();
+               fileInfo.fileName();
   newItem.state = ItemState::Unprocessed;
   newItem.sourcePath = filePath;
   newItem.createdTime = QDateTime::currentDateTime();
 
-  const const QSettings settings;
-  const const QVariant autoMoveSetting = settings.value("autoMoveInbox", 0);
+  const QSettings settings;
+  const QVariant autoMoveSetting = settings.value("autoMoveInbox", 0);
   int actionIndex = 0;
 
   if (autoMoveSetting.typeId() == QMetaType::Bool) {
@@ -453,8 +453,8 @@ bool StorageManager::moveToManaged(Item &item, bool deleteOriginal,
                                    bool skipSave) {
   if (item.sourcePath.startsWith("magnet:")) {
     // For magnets, we just create a .magnet file in managed dir
-    const const QString filename = item.id + ".magnet";
-    const const QString managedPath = m_managedDir + "/" + filename;
+    const QString filename = item.id + ".magnet";
+    const QString managedPath = m_managedDir + "/" + filename;
     QFile file(managedPath);
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
       file.write(item.sourcePath.toUtf8());
@@ -474,15 +474,14 @@ bool StorageManager::moveToManaged(Item &item, bool deleteOriginal,
     return false;
   } else {
     // For .torrent files
-    const const QFileInfo sourceInfo(item.sourcePath);
+    const QFileInfo sourceInfo(item.sourcePath);
     if (!sourceInfo.exists()) {
       return false;
     }
 
-    const const QString filename = sourceInfo.fileName();
+    const QString filename = sourceInfo.fileName();
     // Maybe ensure uniqueness
-    const const QString managedPath =
-        m_managedDir + "/" + item.id + "_" + filename;
+    const QString managedPath = m_managedDir + "/" + item.id + "_" + filename;
 
     bool success = false;
     if (deleteOriginal) {
