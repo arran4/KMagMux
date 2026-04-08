@@ -246,7 +246,8 @@ void ProcessItemDialog::onProcessClicked() {
         }
 
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem != nullptr && (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+        if (deleteItem != nullptr &&
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
           if (deleteItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_source_file"] = true;
@@ -284,8 +285,8 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     return;
   }
 
-  const const int row = item->row();
-  const const int col = item->column();
+  const int row = item->row();
+  const int col = item->column();
   if (row < 0 || static_cast<size_t>(row) >= m_items.size()) {
     return;
   }
@@ -330,7 +331,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
 
   QAction *const infoAction = menu.addAction("Get Info");
   connect(infoAction, &QAction::triggered, this, [this, row]() {
-    const const QString sourcePath = m_items[row].sourcePath;
+    const QString sourcePath = m_items[row].sourcePath;
     if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
       TorrentInfoDialog dialog(sourcePath, &m_items[row], this);
       dialog.exec();

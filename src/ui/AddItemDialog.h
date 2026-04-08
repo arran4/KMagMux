@@ -23,7 +23,7 @@ public:
 
   const std::vector<Item> &getItems() const;
 
-private slots:
+private Q_SLOTS:
   void onProcessClicked();
   void onCustomContextMenuRequested(const QPoint &pos);
 

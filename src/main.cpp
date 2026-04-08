@@ -51,7 +51,7 @@ QString setupApplication(QApplication &app) {
 }
 
 bool sendArgsToExistingInstance(const QString &serverName,
-                                       const QStringList &args) {
+                                const QStringList &args) {
   QLocalSocket socket;
   socket.connectToServer(serverName);
   const int connectTimeoutMs = 500;
@@ -84,7 +84,7 @@ void setupLocalServer(QLocalServer &server, const QString &serverName) {
 }
 
 void setupIpcHandler(QLocalServer &server, StorageManager &storage,
-                            MainWindow *window) {
+                     MainWindow *window) {
   // Handle incoming connections from new instances
   const QPointer<MainWindow> windowPtr(window);
   QObject::connect(
@@ -160,7 +160,6 @@ void processCliArgs(const QStringList &args, StorageManager &storage) {
     }
   }
 }
-
 
 } // namespace
 

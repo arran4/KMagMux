@@ -30,7 +30,7 @@ public:
 signals:
   void scrapeFinished(const TrackerStats &stats);
 
-private slots:
+private Q_SLOTS:
   void onUdpReadyRead();
   void onUdpError(QAbstractSocket::SocketError error);
   void onHttpFinished(QNetworkReply *reply);

@@ -20,7 +20,7 @@ public:
   explicit PreferencesDialog(Engine *engine, QWidget *parent = nullptr);
   ~PreferencesDialog();
 
-private slots:
+private Q_SLOTS:
   void changePage(QListWidgetItem *current, QListWidgetItem *previous);
 
 private:

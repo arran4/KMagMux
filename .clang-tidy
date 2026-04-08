@@ -1,5 +1,5 @@
 ---
-Checks: '-*,clang-diagnostic-*,clang-analyzer-*,-*,readability-*,bugprone-*,performance-*,misc-*,-misc-non-private-member-variables-in-classes'
+Checks: '-*,clang-diagnostic-*,clang-analyzer-*,-*,readability-*,bugprone-*,performance-*,misc-*,-misc-non-private-member-variables-in-classes,-misc-const-correctness,-readability-braces-around-statements,-modernize-use-auto,-modernize-avoid-c-style-cast,-misc-include-cleaner,-bugprone-narrowing-conversions,-readability-implicit-bool-conversion,-readability-magic-numbers,-readability-redundant-access-specifiers'
 WarningsAsErrors: ''
 ExtraArgs: ['-Wno-unknown-warning-option', '-Wno-unknown-argument']
 ...

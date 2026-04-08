@@ -1,4 +1,8 @@
 #include "TorrentInfoDialog.h"
+#include "../core/Item.h"
+#include "../core/TorrentParser.h"
+#include "../core/TrackerClient.h"
+#include <QAbstractItemView>
 #include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -8,7 +12,11 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QObject>
+#include <QPushButton>
+#include <QTextEdit>
 #include <QVBoxLayout>
+#include <qnamespace.h>
 
 TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath,
                                      const Item *item, QWidget *parent)
@@ -147,10 +155,10 @@ void TorrentInfoDialog::setupUi() {
     historyTable->setRowCount(history.size());
     for (int i = 0; i < history.size(); ++i) {
       QJsonObject entry = history[i].toObject();
-      QDateTime dt =
+      const QDateTime dt =
           QDateTime::fromString(entry["timestamp"].toString(), Qt::ISODate);
-      QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate)
-                                     : entry["timestamp"].toString();
+      const QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate)
+                                           : entry["timestamp"].toString();
       historyTable->setItem(i, 0, new QTableWidgetItem(timeStr));
       historyTable->setItem(i, 1,
                             new QTableWidgetItem(entry["message"].toString()));
@@ -189,8 +197,9 @@ void TorrentInfoDialog::setupUi() {
 }
 
 void TorrentInfoDialog::onQueryTrackers() {
-  if (m_info.trackers.isEmpty())
+  if (m_info.trackers.isEmpty()) {
     return;
+  }
 
   m_isQuerying = true;
   m_queryBtn->setEnabled(false);
@@ -239,8 +248,9 @@ void TorrentInfoDialog::onCancelQuery() {
 }
 
 void TorrentInfoDialog::processNextTracker() {
-  if (!m_isQuerying)
+  if (!m_isQuerying) {
     return;
+  }
 
   while (m_currentTrackerIndex < m_trackerTable->rowCount() &&
          m_trackerTable->item(m_currentTrackerIndex, 0)->checkState() !=
@@ -256,7 +266,7 @@ void TorrentInfoDialog::processNextTracker() {
     return;
   }
 
-  QString trackerUrl = m_info.trackers[m_currentTrackerIndex];
+  const QString trackerUrl = m_info.trackers[m_currentTrackerIndex];
   m_trackerTable->item(m_currentTrackerIndex, 1)->setText("Querying...");
   m_logView->append(QString("Querying %1 ...").arg(trackerUrl));
 
@@ -264,8 +274,9 @@ void TorrentInfoDialog::processNextTracker() {
 }
 
 void TorrentInfoDialog::onScrapeFinished(const TrackerStats &stats) {
-  if (!m_isQuerying)
+  if (!m_isQuerying) {
     return;
+  }
 
   // Find the row for this tracker (should be m_currentTrackerIndex)
   if (m_currentTrackerIndex < m_trackerTable->rowCount()) {

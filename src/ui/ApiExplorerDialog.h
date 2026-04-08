@@ -19,7 +19,7 @@ public:
   explicit ApiExplorerDialog(Connector *connector, QWidget *parent = nullptr);
   ~ApiExplorerDialog();
 
-private slots:
+private Q_SLOTS:
   void onEndpointSelected(int currentRow);
   void onAddHeader();
   void onRemoveHeader();
