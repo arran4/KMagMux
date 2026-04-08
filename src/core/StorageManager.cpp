@@ -315,7 +315,7 @@ std::vector<Item> StorageManager::loadAllItems() {
   if (m_cacheInitialized) {
     items.reserve(m_cache.size());
     for (auto it = m_cache.constBegin(); it != m_cache.constEnd(); ++it) {
-      items.push_back(it.value());
+      items.push_back(iter.value());
     }
     return items;
   }
@@ -360,8 +360,8 @@ StorageManager::loadItemsByStates(const QList<ItemState> &states) {
       const QSet<QString> &ids = m_stateIndex.value(state);
       for (const QString &identifier : ids) {
         auto it = m_cache.constFind(identifier);
-        if (it != m_cache.constEnd()) {
-          items.push_back(it.value());
+        if (iter != m_cache.constEnd()) {
+          items.push_back(iter.value());
         }
       }
     }
