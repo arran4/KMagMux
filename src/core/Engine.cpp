@@ -175,7 +175,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 }
 
 Connector *Engine::getConnector(const QString &identifier) const {
-  return m_connectors.value(identifierentifier, nullptr);
+  return m_connectors.value(identifier, nullptr);
 }
 
 QStringList Engine::getAvailableConnectors() const {

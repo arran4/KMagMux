@@ -179,7 +179,8 @@ void TrackerClient::onUdpReadyRead() {
       emit scrapeFinished(stats);
     } else if (action == UDP_ACTION_ERROR) {
       const int errorStrOffset = 8;
-      const QString errorStr = QString::fromLatin1(datagram.mid(errorStrOffset));
+      const QString errorStr =
+          QString::fromLatin1(datagram.mid(errorStrOffset));
       TrackerStats stats;
       stats.trackerUrl = m_currentTrackerUrl;
       stats.errorString = errorStr;
