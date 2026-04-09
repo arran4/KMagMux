@@ -6,8 +6,10 @@
 #include "../core/TrackerClient.h"
 #include <QDialog>
 #include <QPushButton>
+#include <QString>
 #include <QTableWidget>
 #include <QTextEdit>
+#include <QWidget>
 
 class TorrentInfoDialog : public QDialog {
   Q_OBJECT

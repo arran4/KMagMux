@@ -8,6 +8,10 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QTextEdit>
 #include <QVBoxLayout>
 
 TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath,
@@ -71,7 +75,8 @@ void TorrentInfoDialog::setupUi() {
   }
 
   if (m_info.totalSize > 0) {
-    double sizeMb = static_cast<double>(m_info.totalSize) / (1024.0 * 1024.0);
+    constexpr double BytesPerMegabyte = 1024.0 * 1024.0;
+    const double sizeMb = static_cast<double>(m_info.totalSize) / BytesPerMegabyte;
     infoLayout->addRow(
         new QLabel("<b>Total Size:</b>"),
         createReadOnlyField(QString::number(sizeMb, 'f', 2) + " MB"));
@@ -83,7 +88,7 @@ void TorrentInfoDialog::setupUi() {
     QLabel *filesLabel = new QLabel("<b>Files:</b>");
     mainLayout->addWidget(filesLabel);
 
-    QTableWidget *filesTable = new QTableWidget(m_info.files.size(), 2, this);
+    QTableWidget *filesTable = new QTableWidget(static_cast<int>(m_info.files.size()), 2, this);
     filesTable->setHorizontalHeaderLabels({"Path", "Size (MB)"});
     filesTable->horizontalHeader()->setSectionResizeMode(0,
                                                          QHeaderView::Stretch);
@@ -91,12 +96,13 @@ void TorrentInfoDialog::setupUi() {
         1, QHeaderView::ResizeToContents);
     filesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     filesTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    filesTable->setMaximumHeight(150);
+    constexpr int MaxFilesTableHeight = 150;
+    filesTable->setMaximumHeight(MaxFilesTableHeight);
 
     for (int i = 0; i < m_info.files.size(); ++i) {
       filesTable->setItem(i, 0, new QTableWidgetItem(m_info.files[i].path));
-      double fileMb =
-          static_cast<double>(m_info.files[i].length) / (1024.0 * 1024.0);
+      const double fileMb =
+          static_cast<double>(m_info.files[i].length) / BytesPerMegabyte;
       QTableWidgetItem *sizeItem =
           new QTableWidgetItem(QString::number(fileMb, 'f', 2));
       sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -105,7 +111,8 @@ void TorrentInfoDialog::setupUi() {
     mainLayout->addWidget(filesTable);
   }
 
-  m_trackerTable = new QTableWidget(m_info.trackers.size(), 5, this);
+  constexpr int TrackerColumnCount = 5;
+  m_trackerTable = new QTableWidget(static_cast<int>(m_info.trackers.size()), TrackerColumnCount, this);
   m_trackerTable->setHorizontalHeaderLabels(
       {"Tracker", "Status", "Seeders", "Leechers", "Downloaded"});
   m_trackerTable->horizontalHeader()->setSectionResizeMode(
@@ -130,7 +137,7 @@ void TorrentInfoDialog::setupUi() {
 
   mainLayout->addWidget(m_trackerTable);
 
-  if (m_item && m_item->metadata.contains("history")) {
+  if (m_item != nullptr && m_item->metadata.contains("history")) {
     QLabel *historyLabel = new QLabel("<b>History:</b>", this);
     mainLayout->addWidget(historyLabel);
 
@@ -144,12 +151,12 @@ void TorrentInfoDialog::setupUi() {
     historyTable->setShowGrid(false);
 
     QJsonArray history = m_item->metadata["history"].toArray();
-    historyTable->setRowCount(history.size());
+    historyTable->setRowCount(static_cast<int>(history.size()));
     for (int i = 0; i < history.size(); ++i) {
       QJsonObject entry = history[i].toObject();
-      QDateTime dt =
+      const QDateTime dt =
           QDateTime::fromString(entry["timestamp"].toString(), Qt::ISODate);
-      QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate)
+      const QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate)
                                      : entry["timestamp"].toString();
       historyTable->setItem(i, 0, new QTableWidgetItem(timeStr));
       historyTable->setItem(i, 1,
@@ -258,7 +265,7 @@ void TorrentInfoDialog::processNextTracker() {
     return;
   }
 
-  QString trackerUrl = m_info.trackers[m_currentTrackerIndex];
+  const QString trackerUrl = m_info.trackers[m_currentTrackerIndex];
   m_trackerTable->item(m_currentTrackerIndex, 1)->setText("Querying...");
   m_logView->append(QString("Querying %1 ...").arg(trackerUrl));
 

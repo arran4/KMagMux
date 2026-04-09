@@ -9,9 +9,11 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QPoint>
 #include <QPushButton>
 #include <QStringList>
 #include <QTableWidget>
+#include <QWidget>
 #include <vector>
 
 class ProcessItemDialog : public QDialog {
