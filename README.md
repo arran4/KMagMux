@@ -22,7 +22,7 @@ The Inbox serves as a staging area. Here you can see the items you've added, ver
 ![Inbox](screenshots/06-inbox.png)
 
 ### Processing Items
-When you process items from the Inbox, you can select specific destination connectors. Connectors represent the local programs or remote services (e.g., qBittorrent, Premiumize.me, TorBox) where the torrent will be sent.
+When you process items from the Inbox, you can select specific destination connectors. Connectors represent the local programs or remote services (e.g., qBittorrent, Premiumize.me, TorBox) where the items will be sent.
 ![Process Items](screenshots/07-process-items.png)
 
 ### Queue Management
