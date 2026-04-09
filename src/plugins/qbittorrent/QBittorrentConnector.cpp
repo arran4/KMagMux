@@ -62,7 +62,7 @@ void QBittorrentConnector::dispatch(const Item &item) {
 
 void QBittorrentConnector::login() {
   const QUrl url(m_baseUrl + "/api/v2/auth/login");
-  const const QNetworkRequest request(url);
+  QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader,
                     "application/x-www-form-urlencoded");
 
@@ -127,7 +127,7 @@ void QBittorrentConnector::onLoginReply() {
 
 void QBittorrentConnector::performDispatch(const Item &item) {
   const QUrl url(m_baseUrl + "/api/v2/torrents/add");
-  const const QNetworkRequest request(url);
+  QNetworkRequest request(url);
 
   // We use QHttpMultiPart for both files and magnets because qBittorrent API
   // accepts multipart/form-data
