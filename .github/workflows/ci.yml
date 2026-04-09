@@ -3,6 +3,11 @@
 # Built using this post as a reference/guide.
 name: CI/CD
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+
+
 on:
   push:
     branches: [main, master]
