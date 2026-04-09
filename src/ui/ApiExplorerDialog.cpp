@@ -365,8 +365,14 @@ void ApiExplorerDialog::onSendRequest() {
           } else {
             QMessageBox::warning(this, "File Error",
                                  "Failed to open file: " + filePath);
-            file->deleteLater();
-            multiPart->deleteLater();
+            if (file) {
+              file->deleteLater();
+              file = nullptr;
+            }
+            if (multiPart) {
+              multiPart->deleteLater();
+              multiPart = nullptr;
+            }
             return;
           }
         } else {
@@ -445,7 +451,10 @@ void ApiExplorerDialog::onNetworkReplyFinished() {
 
   m_responseEdit->setPlainText(responseText);
 
-  reply->deleteLater();
+  if (reply) {
+    reply->deleteLater();
+    reply = nullptr;
+  }
 }
 
 void ApiExplorerDialog::onSslErrors(QNetworkReply *reply,
