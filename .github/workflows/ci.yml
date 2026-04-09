@@ -252,7 +252,9 @@ jobs:
     needs: [route, discover]
     if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
-    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+    container:
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+      options: --user root
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -276,7 +278,9 @@ jobs:
     needs: [route, discover]
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'lint-fix' && inputs.allow_prs == true }}
     runs-on: ubuntu-latest
-    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+    container:
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+      options: --user root
     steps:
       - uses: actions/checkout@v4
       - name: Install formatting and linting tools
@@ -325,7 +329,9 @@ jobs:
     needs: [route, discover, cpp-qt-build-test]
     if: ${{ !failure() && !cancelled() && needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_release == 'true' }}
     runs-on: ubuntu-latest
-    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+    container:
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+      options: --user root
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies

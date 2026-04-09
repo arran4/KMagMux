@@ -7,7 +7,6 @@
 #include <QMap>
 #include <QNetworkRequest>
 #include <QString>
-#include <QUrlQuery>
 
 class Connector {
 public:
@@ -42,14 +41,7 @@ public:
     if (!url.userInfo().isEmpty()) {
       url.setUserInfo("***:***");
     }
-    QUrlQuery query(url.query());
-    for (const QString &key : {"apikey", "password", "username"}) {
-      if (query.hasQueryItem(key)) {
-        query.removeQueryItem(key);
-        query.addQueryItem(key, "***");
-      }
-    }
-    url.setQuery(query);
+    url.clearQuery();
 
     QString log = QString("\n--- API Call ---\nMethod: %1\nURL: %2\nHeaders:\n")
                       .arg(method, url.toString());
@@ -69,14 +61,7 @@ public:
       const QString contentType =
           request.header(QNetworkRequest::ContentTypeHeader).toString();
       if (contentType.contains("application/x-www-form-urlencoded")) {
-        QUrlQuery bodyQuery(QString::fromUtf8(body));
-        for (const QString &key : {"apikey", "password", "username"}) {
-          if (bodyQuery.hasQueryItem(key)) {
-            bodyQuery.removeQueryItem(key);
-            bodyQuery.addQueryItem(key, "***");
-          }
-        }
-        log += QString("Body:\n%1\n").arg(bodyQuery.toString());
+        log += "Body: <application/x-www-form-urlencoded omitted>\n";
       } else if (!contentType.contains("multipart/form-data")) {
         log += QString("Body:\n%1\n").arg(QString::fromUtf8(body));
       } else {
