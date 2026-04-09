@@ -148,11 +148,50 @@ void LocalProgramConnector::dispatch(const Item &item) {
     return;
   }
 
-  QString program = m_programPath;
-  QStringList args;
+  QStringList userCommand = QProcess::splitCommand(m_programPath);
+  if (userCommand.isEmpty()) {
+    emit dispatchFinished(item.id, false, "Invalid program path configured.");
+    return;
+  }
 
-  // Handle specific client variations if needed
-  QString baseName = QFileInfo(program).fileName();
+  QString program = userCommand.takeFirst();
+  QStringList args = userCommand; // Any remaining args from the user config
+
+  // Security enhancement: Validate executable and arguments
+  QString baseName = QFileInfo(program).fileName().toLower();
+  if (baseName.endsWith(".exe")) {
+    baseName.chop(4);
+  }
+
+  const QStringList allowedPrograms = {
+      "qbittorrent",     "transmission-gtk", "transmission-qt",
+      "transmission-remote", "deluge",       "deluge-gtk",
+      "ktorrent",        "fragments",        "biglybt",
+      "tribler",         "webtorrent",       "tixati",
+      "bitcomet",        "frostwire",        "halite",
+      "motrix",          "aria2c",           "xdg-open"};
+
+  if (!allowedPrograms.contains(baseName)) {
+    emit dispatchFinished(item.id, false,
+                          "Security Alert: Program '" + baseName +
+                              "' is not in the allowed list of applications.");
+    return;
+  }
+
+  // Prevent argument injection (e.g., executing arbitrary scripts via client flags)
+  const QStringList dangerousFlags = {
+      "--torrent-done-script", "-S", "--on-download-complete",
+      "--on-bt-download-complete", "--execute", "-x", "-e"};
+  for (const QString &arg : args) {
+    for (const QString &flag : dangerousFlags) {
+      if (arg.startsWith(flag)) {
+        emit dispatchFinished(item.id, false,
+                              "Security Alert: Dangerous argument '" + arg +
+                                  "' is not allowed.");
+        return;
+      }
+    }
+  }
 
   if (m_useTerminal) {
     // Launch via terminal (e.g. xterm -e program args)
@@ -163,20 +202,21 @@ void LocalProgramConnector::dispatch(const Item &item) {
       terminal = findExecutable("konsole");
 
     if (!terminal.isEmpty()) {
-      args.append("-e");
-      args.append(program);
-      if (baseName == "aria2c") {
-        // aria2c might need specific args for torrent files/magnets
-        // but standard passing often works
-      }
+      args.prepend(program);
+      args.prepend("-e");
+
+      // Ensure positional argument safety for the torrent
+      if (baseName != "xdg-open") args.append("--");
       args.append(item.sourcePath);
       program = terminal;
     } else {
       qWarning()
           << "Requested terminal execution, but no terminal emulator found.";
+      if (baseName != "xdg-open") args.append("--");
       args << item.sourcePath;
     }
   } else {
+    if (baseName != "xdg-open") args.append("--");
     args << item.sourcePath;
   }
 
