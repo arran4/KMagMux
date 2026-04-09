@@ -96,7 +96,7 @@ void TorBoxConnector::onAddTorrentReply() {
     extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
     emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
   } else {
-    const QString errorMessage = "Network error: " + reply->errorString();
+    QString errorMessage = "Network error: " + reply->errorString();
 
     QJsonObject extraMeta;
     QString rawHttp =
@@ -139,8 +139,7 @@ void TorBoxConnector::onAddTorrentReply() {
           QString(" (Status: %1, Body: %2)").arg(statusCode).arg(shortBody);
     }
 #endif
-    emit dispatchFinished(
-        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
+    emit dispatchFinished(itemId, false, errorMessage + apiCallLog);
   }
 
   reply->deleteLater();
