@@ -163,15 +163,16 @@ void LocalProgramConnector::dispatch(const Item &item) {
     baseName.chop(4);
   }
 
-  const QStringList allowedPrograms = {"qbittorrent",     "transmission-gtk",
-                                       "transmission-qt", "transmission-remote",
-                                       "deluge",          "deluge-gtk",
-                                       "ktorrent",        "fragments",
-                                       "biglybt",         "tribler",
-                                       "webtorrent",      "tixati",
-                                       "bitcomet",        "frostwire",
-                                       "halite",          "motrix",
-                                       "aria2c",          "xdg-open"};
+  static const QStringList allowedPrograms = {
+      "qbittorrent",     "transmission-gtk",
+      "transmission-qt", "transmission-remote",
+      "deluge",          "deluge-gtk",
+      "ktorrent",        "fragments",
+      "biglybt",         "tribler",
+      "webtorrent",      "tixati",
+      "bitcomet",        "frostwire",
+      "halite",          "motrix",
+      "aria2c",          "xdg-open"};
 
   if (!allowedPrograms.contains(baseName)) {
     emit dispatchFinished(item.id, false,
@@ -182,18 +183,21 @@ void LocalProgramConnector::dispatch(const Item &item) {
 
   // Prevent argument injection (e.g., executing arbitrary scripts via client
   // flags)
-  const QStringList dangerousFlags = {"--torrent-done-script",
-                                      "-S",
-                                      "--on-download-complete",
-                                      "--on-bt-download-complete",
-                                      "--execute",
-                                      "-x",
-                                      "-e"};
+  static const QStringList dangerousFlags = {"--torrent-done-script",
+                                             "-S",
+                                             "--on-download-complete",
+                                             "--on-download-start",
+                                             "--on-download-pause",
+                                             "--on-download-stop",
+                                             "--on-download-error",
+                                             "--on-bt-download-complete",
+                                             "--execute",
+                                             "-x",
+                                             "-e"};
   for (const QString &arg : args) {
-    if (std::any_of(dangerousFlags.begin(), dangerousFlags.end(),
-                    [&arg](const QString &flag) {
-                      return arg.startsWith(flag);
-                    })) {
+    if (std::any_of(
+            dangerousFlags.begin(), dangerousFlags.end(),
+            [&arg](const QString &flag) { return arg.startsWith(flag); })) {
       emit dispatchFinished(item.id, false,
                             "Security Alert: Dangerous argument '" + arg +
                                 "' is not allowed.");
