@@ -11,12 +11,12 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QSet>
-#include <algorithm>
-#include <functional>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTableWidget>
 #include <QVBoxLayout>
+#include <algorithm>
+#include <functional>
 
 LocalProgramConnector::LocalProgramConnector()
     : LocalProgramConnector(nullptr, "", "", false, true) {}
@@ -163,13 +163,15 @@ void LocalProgramConnector::dispatch(const Item &item) {
     baseName.chop(4);
   }
 
-  const QStringList allowedPrograms = {
-      "qbittorrent",     "transmission-gtk", "transmission-qt",
-      "transmission-remote", "deluge",       "deluge-gtk",
-      "ktorrent",        "fragments",        "biglybt",
-      "tribler",         "webtorrent",       "tixati",
-      "bitcomet",        "frostwire",        "halite",
-      "motrix",          "aria2c",           "xdg-open"};
+  const QStringList allowedPrograms = {"qbittorrent",     "transmission-gtk",
+                                       "transmission-qt", "transmission-remote",
+                                       "deluge",          "deluge-gtk",
+                                       "ktorrent",        "fragments",
+                                       "biglybt",         "tribler",
+                                       "webtorrent",      "tixati",
+                                       "bitcomet",        "frostwire",
+                                       "halite",          "motrix",
+                                       "aria2c",          "xdg-open"};
 
   if (!allowedPrograms.contains(baseName)) {
     emit dispatchFinished(item.id, false,
@@ -178,10 +180,15 @@ void LocalProgramConnector::dispatch(const Item &item) {
     return;
   }
 
-  // Prevent argument injection (e.g., executing arbitrary scripts via client flags)
-  const QStringList dangerousFlags = {
-      "--torrent-done-script", "-S", "--on-download-complete",
-      "--on-bt-download-complete", "--execute", "-x", "-e"};
+  // Prevent argument injection (e.g., executing arbitrary scripts via client
+  // flags)
+  const QStringList dangerousFlags = {"--torrent-done-script",
+                                      "-S",
+                                      "--on-download-complete",
+                                      "--on-bt-download-complete",
+                                      "--execute",
+                                      "-x",
+                                      "-e"};
   for (const QString &arg : args) {
     for (const QString &flag : dangerousFlags) {
       if (arg.startsWith(flag)) {
@@ -206,17 +213,20 @@ void LocalProgramConnector::dispatch(const Item &item) {
       args.prepend("-e");
 
       // Ensure positional argument safety for the torrent
-      if (baseName != "xdg-open") args.append("--");
+      if (baseName != "xdg-open")
+        args.append("--");
       args.append(item.sourcePath);
       program = terminal;
     } else {
       qWarning()
           << "Requested terminal execution, but no terminal emulator found.";
-      if (baseName != "xdg-open") args.append("--");
+      if (baseName != "xdg-open")
+        args.append("--");
       args << item.sourcePath;
     }
   } else {
-    if (baseName != "xdg-open") args.append("--");
+    if (baseName != "xdg-open")
+      args.append("--");
     args << item.sourcePath;
   }
 
