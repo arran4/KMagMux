@@ -378,8 +378,8 @@ QStringList StorageManager::scanInbox() const {
 void StorageManager::onDirectoryChanged(const QString &path) {
   if (path == m_inboxDir) {
     QStringList currentFilesList = scanInbox();
-    const const QSet<QString> currentFiles(currentFilesList.begin(),
-                               currentFilesList.end());
+    const QSet<QString> currentFiles(currentFilesList.begin(),
+                                     currentFilesList.end());
 
     // Find new files
     QSet<QString> newFiles = currentFiles;
@@ -479,9 +479,9 @@ bool StorageManager::moveToManaged(Item &item, bool deleteOriginal,
       return false;
     }
 
-    const const QString filename = sourceInfo.fileName();
+    const QString filename = sourceInfo.fileName();
     // Maybe ensure uniqueness
-    const const QString managedPath = m_managedDir + "/" + item.id + "_" + filename;
+    const QString managedPath = m_managedDir + "/" + item.id + "_" + filename;
 
     bool success = false;
     if (deleteOriginal) {

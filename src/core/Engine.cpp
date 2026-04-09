@@ -96,13 +96,15 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         name = fileName;
       }
 
-      const const bool isDev = versionStr.contains("development", Qt::CaseInsensitive) ||
-                   versionStr.contains("dev", Qt::CaseInsensitive);
+      const bool isDev =
+          versionStr.contains("development", Qt::CaseInsensitive) ||
+          versionStr.contains("dev", Qt::CaseInsensitive);
 
       // Clean version string for QVersionNumber parsing
       QString cleanVersionStr = versionStr;
       cleanVersionStr.remove(QRegularExpression("[^0-9\\.]"));
-      const const QVersionNumber version = QVersionNumber::fromString(cleanVersionStr);
+      const QVersionNumber version =
+          QVersionNumber::fromString(cleanVersionStr);
 
       auto iter = bestPlugins.find(name);
       if (iter == bestPlugins.end()) {
@@ -246,8 +248,8 @@ void Engine::processQueue() {
   auto items =
       m_storage->loadItemsByStates({ItemState::Queued, ItemState::Scheduled});
 
-  const const QSettings settings;
-  const const int autoArchiveDays = settings.value("autoArchiveDays", 0).toInt();
+  const QSettings settings;
+  const int autoArchiveDays = settings.value("autoArchiveDays", 0).toInt();
   if (autoArchiveDays > 0) {
     auto doneItems = m_storage->loadItemsByStates({ItemState::Done});
     std::vector<Item> itemsToArchive;

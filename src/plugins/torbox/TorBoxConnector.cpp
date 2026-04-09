@@ -7,13 +7,13 @@
 #include <QFormLayout>
 #include <QHttpMultiPart>
 #include <QHttpPart>
-#include <numeric>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSettings>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <numeric>
 
 TorBoxConnector::TorBoxConnector() : TorBoxConnector(nullptr) {}
 
@@ -120,9 +120,12 @@ void TorBoxConnector::onAddTorrentReply() {
 
     rawHttp += "Response Headers:\n";
     const auto resHeaders = reply->rawHeaderList();
-    rawHttp = std::accumulate(resHeaders.begin(), resHeaders.end(), rawHttp, [reply](const QString& str, const QByteArray& headerName) {
-        return str + QString::fromUtf8(headerName) + ": " + QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
-    });
+    rawHttp = std::accumulate(
+        resHeaders.begin(), resHeaders.end(), rawHttp,
+        [reply](const QString &str, const QByteArray &headerName) {
+          return str + QString::fromUtf8(headerName) + ": " +
+                 QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
+        });
 
     const QByteArray body = reply->readAll();
     rawHttp += "\nResponse Body:\n" + QString::fromUtf8(body) + "\n";
@@ -191,7 +194,8 @@ void TorBoxConnector::saveSettings(QWidget *settingsWidget) {
 
   QCheckBox *const enabledCheck =
       settingsWidget->findChild<QCheckBox *>("enabledCheck");
-  QLineEdit *const tokenEdit = settingsWidget->findChild<QLineEdit *>("tokenEdit");
+  QLineEdit *const tokenEdit =
+      settingsWidget->findChild<QLineEdit *>("tokenEdit");
 
   QSettings settings;
   settings.beginGroup("Plugins/TorBox");

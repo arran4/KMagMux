@@ -18,14 +18,14 @@ jobs:
   test:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          pacman -Syu --noconfirm base-devel cmake gcc qt6-base qt6-svg qt6-tools qtkeychain-qt6 kxmlgui kconfig kconfigwidgets kcoreaddons ki18n
+          zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel cppcheck clang-tools kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
 
       - name: Configure CMake
         run: cmake -B build
@@ -41,14 +41,14 @@ jobs:
   vet:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install cppcheck
         run: |
-          pacman -Syu --noconfirm cppcheck
+          zypper install -y cppcheck
 
       - name: Run cppcheck
         run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=unknownMacro --suppress=unmatchedSuppression -I src/ src/ -Dslots= -Dsignals=protected -DQ_SIGNALS=protected -DQ_SLOTS= -DQ_OBJECT= -DQ_DECLARE_METATYPE\(x\)= -Demit= -DQ_PLUGIN_METADATA\(x\)=
@@ -56,14 +56,14 @@ jobs:
   format:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install clang-format
         run: |
-          pacman -Syu --noconfirm clang git
+          zypper install -y clang-tools git
 
       - name: Run clang-format check
         run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format --Werror --dry-run
@@ -71,14 +71,14 @@ jobs:
   lint:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install clang-tidy and dependencies
         run: |
-          pacman -Syu --noconfirm base-devel gcc clang cmake git qt6-base qt6-svg qt6-tools qtkeychain-qt6 kxmlgui kconfig kconfigwidgets kcoreaddons ki18n
+          zypper install -y cmake gcc-c++ make clang-tools git qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
 
       - name: Configure CMake for compile_commands.json
         run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -90,14 +90,14 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
     needs: [test, vet, format, lint]
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          pacman -Syu --noconfirm base-devel cmake gcc qt6-base qt6-svg qt6-tools qtkeychain-qt6 kxmlgui kconfig kconfigwidgets kcoreaddons ki18n
+          zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
 
       - name: Configure CMake
         run: cmake -B build
@@ -115,14 +115,14 @@ jobs:
   fix:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.fix }}
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install formatting and linting tools
         run: |
-          pacman -Syu --noconfirm clang cmake git qt6-base qt6-svg qt6-tools qtkeychain-qt6 kxmlgui kconfig kconfigwidgets kcoreaddons ki18n
+          zypper install -y cmake gcc-c++ make clang-tools git qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
 
       - name: Configure CMake
         run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
