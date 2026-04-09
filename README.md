@@ -41,7 +41,7 @@ If any item fails to dispatch (for example, due to a missing API token or connec
 KMagMux supports a variety of local programs and remote services via plugins. You can configure credentials (API keys, OAuth tokens, passwords) securely for each service.
 ![Preferences Plugins](screenshots/01-preferences-plugins.png)
 
-General settings allow you to customize application behavior such as minimizing to tray, auto-archiving, and managing new inbox files.
+General settings allow you to customize application behavior such as minimizing to tray, auto-archiving, and managing new Inbox files.
 ![Preferences General](screenshots/02-preferences-general.png)
 
 ## Architecture
