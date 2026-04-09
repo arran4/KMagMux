@@ -10,6 +10,7 @@
 #include <QLineEdit>
 #include <QProcess>
 #include <QPushButton>
+#include <QSet>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTableWidget>
@@ -299,12 +300,11 @@ QWidget *LocalProgramConnector::createSettingsWidget(QWidget *parent) {
     QList<QTableWidgetItem *> selected = table->selectedItems();
     if (!selected.isEmpty()) {
       // Get unique rows to delete
-      QList<int> rows;
+      QSet<int> rowSet;
       for (auto *item : selected) {
-        if (!rows.contains(item->row())) {
-          rows.append(item->row());
-        }
+        rowSet.insert(item->row());
       }
+      QList<int> rows(rowSet.begin(), rowSet.end());
       // Sort descending to avoid index shifting issues
       std::sort(rows.begin(), rows.end(), std::greater<int>());
       for (int row : rows) {
