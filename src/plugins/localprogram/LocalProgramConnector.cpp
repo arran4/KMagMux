@@ -11,12 +11,12 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QSet>
-#include <algorithm>
-#include <functional>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTableWidget>
 #include <QVBoxLayout>
+#include <algorithm>
+#include <functional>
 
 LocalProgramConnector::LocalProgramConnector()
     : LocalProgramConnector(nullptr, "", "", false, true) {}
