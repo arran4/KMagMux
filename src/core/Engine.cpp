@@ -122,7 +122,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         }
 
         if (shouldReplace) {
-          bestPlugins[id] = {filePath, version, isDev};
+          iter.value() = {filePath, version, isDev};
         }
       }
     }
