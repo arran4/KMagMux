@@ -147,7 +147,7 @@ jobs:
       release_tag: ${{ steps.tag.outputs.release_tag }}
       next_version: ${{ steps.tag.outputs.next_version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
         with:
           fetch-depth: 0
       - name: Setup git-tag-inc
@@ -234,7 +234,7 @@ jobs:
       profile: ${{ steps.profile.outputs.profile }}
       has_qt_cpp: ${{ steps.detect.outputs.has_qt_cpp }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
 
       - id: detect
         shell: bash
@@ -259,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
       - name: Install dependencies
         run: zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
       - name: Configure CMake for compile_commands.json
@@ -283,7 +283,7 @@ jobs:
     runs-on: ubuntu-latest
     container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
       - name: Install formatting and linting tools
         run: |
           zypper install -y cmake gcc-c++ make clang-tools git qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel jq
@@ -312,7 +312,7 @@ jobs:
     if: ${{ needs.route.outputs.run_cleanup == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PARENT_PR: ${{ github.event.pull_request.number }}
@@ -332,7 +332,7 @@ jobs:
     runs-on: ubuntu-latest
     container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
       - name: Install dependencies
         run: zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
       - name: Configure CMake
@@ -354,7 +354,7 @@ jobs:
       contents: write
       discussions: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
         with:
           fetch-depth: 0
       - name: Push prepared tag (retry)
@@ -416,7 +416,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && (startsWith(inputs.mode, 'release-') || inputs.mode == 'release-test') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4.2.0
       - name: Bump to next version and open PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
