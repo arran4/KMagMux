@@ -3,8 +3,8 @@
 #include <QSet>
 #include <QElapsedTimer>
 #include <QDebug>
-#include <vector>
 #include <algorithm>
+#include <functional>
 
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
