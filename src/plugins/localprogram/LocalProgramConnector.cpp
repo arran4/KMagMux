@@ -11,6 +11,8 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QSet>
+#include <algorithm>
+#include <functional>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTableWidget>
