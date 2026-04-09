@@ -1,6 +1,4 @@
 #include "ProcessItemDialog.h"
-#include "../core/Constants.h"
-#include "MaxWidthDelegate.h"
 #include <QDateTime>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -12,8 +10,8 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVBoxLayout>
+#include <cstddef>
 
-#include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
