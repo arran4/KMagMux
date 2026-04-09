@@ -22,6 +22,7 @@
 #include <QVBoxLayout>
 #include <cstddef>
 
+#include "../core/Constants.h"
 #include "MaxWidthDelegate.h"
 #include "TorrentInfoDialog.h"
 
