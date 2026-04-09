@@ -190,13 +190,14 @@ void LocalProgramConnector::dispatch(const Item &item) {
                                       "-x",
                                       "-e"};
   for (const QString &arg : args) {
-    for (const QString &flag : dangerousFlags) {
-      if (arg.startsWith(flag)) {
-        emit dispatchFinished(item.id, false,
-                              "Security Alert: Dangerous argument '" + arg +
-                                  "' is not allowed.");
-        return;
-      }
+    if (std::any_of(dangerousFlags.begin(), dangerousFlags.end(),
+                    [&arg](const QString &flag) {
+                      return arg.startsWith(flag);
+                    })) {
+      emit dispatchFinished(item.id, false,
+                            "Security Alert: Dangerous argument '" + arg +
+                                "' is not allowed.");
+      return;
     }
   }
 
