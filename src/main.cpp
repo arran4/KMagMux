@@ -32,7 +32,7 @@ bool isValidInput(const QString &arg) {
     pathToCheck = QUrl(arg).toLocalFile();
   }
   const QFileInfo fileInfo(pathToCheck);
-  return fileInfo.exists() && fi.isFile();
+  return fileInfo.exists() && fileInfo.isFile();
 }
 
 QString setupApplication(QApplication &app) {
@@ -40,7 +40,7 @@ QString setupApplication(QApplication &app) {
   QApplication::setOrganizationName("KMagMux");
   QApplication::setWindowIcon(QIcon(":/icons/kmagmux.svg"));
 
-  const QString appName = "kmagmux";
+  QString appName = "kmagmux";
 #ifdef QT_DEBUG
   appName = "kmagmux-dev1";
 #endif
