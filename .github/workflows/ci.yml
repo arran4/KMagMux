@@ -1,138 +1,297 @@
-name: CI/CD Pipeline
+# Agent rules for generation:
+# https://arran4.github.io/blog/post/2026/006-github-ci-and-deploy/
+# Built using this post as a reference/guide.
+name: CI/CD
 
 on:
   push:
-    branches: [ "**" ]
-    tags: [ "v*.*.*" ]
+    branches: [main, master]
+    tags:
+      - 'v*'
+      - 'v*.*.*'
+      - 'v*.*.*-rc*'
+      - 'v*.*.*-beta*'
+      - 'test-*'
   pull_request:
-    branches: [ "**" ]
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+    branches: [main, master]
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
-      fix:
-        description: 'Run auto-format and auto-fix, then submit a PR'
+      mode:
+        description: "Pipeline mode"
         required: true
+        default: "lint-fix"
+        type: choice
+        options:
+          - lint-fix
+          - build
+          - release-major
+          - release-minor
+          - release-patch
+          - release-test
+          - release-rc
+          - release-alpha
+          - monthly-maintenance
+      release_version_override:
+        description: "Optional explicit release version (for example 2.4.0 or 2.4.0-rc.2)"
+        required: false
+        default: ""
+        type: string
+      allow_prs:
+        description: "Allow automation to open pull requests"
+        required: false
+        default: true
         type: boolean
-        default: false
+  schedule:
+    - cron: '17 3 1 * *'
+    - cron: '41 2 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  discussions: write
+  pull-requests: write
+  checks: write
+  packages: write
+  security-events: write
 
 jobs:
-  test:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
+  route:
+    name: Route event
+    runs-on: ubuntu-latest
+    outputs:
+      run_code_checks: ${{ steps.route.outputs.run_code_checks }}
+      run_pr_meta_checks: ${{ steps.route.outputs.run_pr_meta_checks }}
+      run_cleanup: ${{ steps.route.outputs.run_cleanup }}
+      run_release: ${{ steps.route.outputs.run_release }}
+      is_monthly: ${{ steps.route.outputs.is_monthly }}
+      is_nightly: ${{ steps.route.outputs.is_nightly }}
+    steps:
+      - id: route
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          run_code_checks=false
+          run_pr_meta_checks=false
+          run_cleanup=false
+          run_release=false
+          is_monthly=false
+          is_nightly=false
+
+          case "${{ github.event_name }}" in
+            push)
+              run_code_checks=true
+              if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+                run_release=true
+              fi
+              ;;
+            pull_request)
+              if [[ "${{ github.event.action }}" == "closed" ]]; then
+                run_cleanup=true
+              else
+                run_pr_meta_checks=true
+                run_code_checks=true
+              fi
+              ;;
+            release)
+              run_release=true
+              run_code_checks=true
+              ;;
+            workflow_dispatch)
+              run_code_checks=true
+              if [[ "${{ inputs.mode }}" == release-* ]]; then
+                run_release=true
+              fi
+              if [[ "${{ inputs.mode }}" == "monthly-maintenance" ]]; then
+                is_monthly=true
+              fi
+              if [[ "${{ inputs.mode }}" == "lint-fix" ]]; then
+                is_nightly=true
+              fi
+              ;;
+            schedule)
+              run_code_checks=true
+              if [[ "${{ github.event.schedule }}" == "17 3 1 * *" ]]; then
+                is_monthly=true
+              fi
+              if [[ "${{ github.event.schedule }}" == "41 2 * * *" ]]; then
+                is_nightly=true
+              fi
+              ;;
+          esac
+
+          echo "run_code_checks=$run_code_checks" >> "$GITHUB_OUTPUT"
+          echo "run_pr_meta_checks=$run_pr_meta_checks" >> "$GITHUB_OUTPUT"
+          echo "run_cleanup=$run_cleanup" >> "$GITHUB_OUTPUT"
+          echo "run_release=$run_release" >> "$GITHUB_OUTPUT"
+          echo "is_monthly=$is_monthly" >> "$GITHUB_OUTPUT"
+          echo "is_nightly=$is_nightly" >> "$GITHUB_OUTPUT"
+
+  prepare-release-tag:
+    name: Prepare release tag
+    needs: [route]
+    if: ${{ github.event_name == 'workflow_dispatch' && startsWith(inputs.mode, 'release-') }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tag.outputs.release_tag }}
+      next_version: ${{ steps.tag.outputs.next_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup git-tag-inc
+        uses: arran4/git-tag-inc-action@v1
+        with:
+          mode: install
+      - id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          MODE="${{ inputs.mode }}"
+          OVERRIDE="${{ inputs.release_version_override }}"
+
+          if [[ -n "$OVERRIDE" ]]; then
+            OVERRIDE="${OVERRIDE#v}"
+            next_tag="v$OVERRIDE"
+          else
+            case "$MODE" in
+              release-major) level="major"; suffix="" ;;
+              release-minor) level="minor"; suffix="" ;;
+              release-patch) level="patch"; suffix="" ;;
+              release-test)  level="patch"; suffix="test" ;;
+              release-rc)    level="patch"; suffix="rc" ;;
+              release-alpha) level="patch"; suffix="alpha" ;;
+              *) echo "Unsupported release mode: $MODE"; exit 1 ;;
+            esac
+            if command -v git-tag-inc >/dev/null 2>&1; then
+              level="${level#-}"
+              args=(-print-version-only "$level")
+              [[ -n "$suffix" ]] && args+=("$suffix")
+              next_tag=$(git-tag-inc "${args[@]}")
+            else
+              git fetch --tags --force
+              latest=$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -n 1)
+              [[ -z "$latest" ]] && latest='0.0.0'
+
+              if command -v npx >/dev/null 2>&1; then
+                case "$level" in
+                  major) bumped=$(npx --yes semver "$latest" -i major) ;;
+                  minor) bumped=$(npx --yes semver "$latest" -i minor) ;;
+                  *) bumped=$(npx --yes semver "$latest" -i patch) ;;
+                esac
+                next_tag="v${bumped}"
+              else
+                base="${latest%%-*}"
+                IFS='.' read -r maj min pat <<< "$base"
+                case "$level" in
+                  major) maj=$((maj+1)); min=0; pat=0 ;;
+                  minor) min=$((min+1)); pat=0 ;;
+                  *) pat=$((pat+1)) ;;
+                esac
+                next_tag="v${maj}.${min}.${pat}"
+              fi
+
+              if [[ -n "$suffix" ]]; then
+                next_tag="${next_tag}-${suffix}.1"
+              fi
+            fi
+          fi
+
+          [[ "$next_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]] || {
+            echo "Invalid tag format: $next_tag" >&2
+            exit 1
+          }
+          git fetch --tags --force
+          if git rev-parse "$next_tag" >/dev/null 2>&1; then
+            echo "Tag already exists: $next_tag" >&2
+            echo "Choose a new mode or set release_version_override." >&2
+            exit 1
+          fi
+
+          echo "release_tag=$next_tag" >> "$GITHUB_OUTPUT"
+          clean_tag="${next_tag#v}"; clean_tag="${clean_tag%%-*}"
+          IFS='.' read -r maj min pat <<< "$clean_tag"
+          echo "next_version=${maj:-0}.${min:-0}.$(( ${pat:-0} + 1 ))-SNAPSHOT" >> "$GITHUB_OUTPUT"
+
+  discover:
+    name: Discover capabilities and cost profile
+    needs: route
+    runs-on: ubuntu-latest
+    outputs:
+      profile: ${{ steps.profile.outputs.profile }}
+      has_qt_cpp: ${{ steps.detect.outputs.has_qt_cpp }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "has_qt_cpp=true" >> "$GITHUB_OUTPUT"
+
+      - id: profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.repository.private }}" == "true" ]]; then
+            echo "profile=private" >> "$GITHUB_OUTPUT"
+          else
+            echo "profile=public" >> "$GITHUB_OUTPUT"
+          fi
+
+  cpp-qt-build-test:
+    name: Qt/C++ build
+    needs: [route, discover]
+    if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
     container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Install dependencies
+        run: zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
+      - name: Configure CMake for compile_commands.json
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Lint style and static checks
         run: |
-          zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel cppcheck clang-tools kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
-
-      - name: Configure CMake
-        run: cmake -B build
-
+          find src \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' \) -print0 | xargs -0 -r clang-format --dry-run --Werror
+          cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=unknownMacro --suppress=unmatchedSuppression --check-level=exhaustive -I src/ src/ -Dslots= -Dsignals=protected -DQ_SIGNALS=protected -DQ_SLOTS= -DQ_OBJECT= -DQ_DECLARE_METATYPE\(x\)= -Demit= -DQ_PLUGIN_METADATA\(x\)=
+          find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/
       - name: Build
         run: cmake --build build -j$(nproc)
-
       - name: Test
         run: |
           cd build
           QT_QPA_PLATFORM=offscreen ctest --output-on-failure
 
-  vet:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
+  autofix:
+    name: Auto-format and open PR
+    needs: [route, discover]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'lint-fix' && inputs.allow_prs == true }}
     runs-on: ubuntu-latest
     container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install cppcheck
-        run: |
-          zypper install -y cppcheck
-
-      - name: Run cppcheck
-        run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=unknownMacro --suppress=unmatchedSuppression -I src/ src/ -Dslots= -Dsignals=protected -DQ_SIGNALS=protected -DQ_SLOTS= -DQ_OBJECT= -DQ_DECLARE_METATYPE\(x\)= -Demit= -DQ_PLUGIN_METADATA\(x\)=
-
-  format:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
-    runs-on: ubuntu-latest
-    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install clang-format
-        run: |
-          zypper install -y clang-tools git
-
-      - name: Run clang-format check
-        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format --Werror --dry-run
-
-  lint:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.fix) }}
-    runs-on: ubuntu-latest
-    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install clang-tidy and dependencies
-        run: |
-          zypper install -y cmake gcc-c++ make clang-tools git qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
-
-      - name: Configure CMake for compile_commands.json
-        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
-      - name: Run clang-tidy
-        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
-    needs: [test, vet, format, lint]
-    runs-on: ubuntu-latest
-    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
-
-      - name: Configure CMake
-        run: cmake -B build
-
-      - name: Build release
-        run: cmake --build build --config Release -j$(nproc)
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/KMagMux
-          draft: false
-          prerelease: false
-
-  fix:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.fix }}
-    runs-on: ubuntu-latest
-    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Install formatting and linting tools
         run: |
-          zypper install -y cmake gcc-c++ make clang-tools git qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
-
-      - name: Configure CMake
-        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
-      - name: Auto-format code
-        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format -i
-
-      - name: Auto-fix linting issues
-        run: find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/ --fix-errors || true
-
+          zypper install -y cmake gcc-c++ make clang-tools git qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel jq
+      - name: Setup Git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Run autofix formatters
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format -i || true
+          find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/ --fix-errors || true
+          find src -type f -exec sed -i 's/const const/const/g' {} + || true
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
@@ -141,3 +300,132 @@ jobs:
           body: "Automated changes applied by clang-format and clang-tidy."
           branch: "chore/auto-fixes-${{ github.run_id }}"
           base: ${{ github.ref_name }}
+
+  cleanup-autofix-prs:
+    name: Cleanup autofix PRs on parent close
+    needs: [route]
+    if: ${{ needs.route.outputs.run_cleanup == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PARENT_PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr list --state open --search "label:ci-autofix in:title" --json number,headRefName,body | \
+            jq -r '.[] | select(.body | contains("Parent-PR: '"$PARENT_PR"'")) | [.number, .headRefName] | @tsv' | \
+            while IFS=$'\t' read -r pr branch; do
+              gh pr close "$pr" --comment "Closing auto-fix PR because parent PR #$PARENT_PR was closed."
+              git push origin --delete "$branch" || true
+            done
+
+  cpp-qt-release:
+    name: Build Release Artifacts
+    needs: [route, discover, cpp-qt-build-test]
+    if: ${{ !failure() && !cancelled() && needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_release == 'true' }}
+    runs-on: ubuntu-latest
+    container: invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: zypper install -y cmake gcc-c++ make qtkeychain-qt6-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
+      - name: Configure CMake
+        run: cmake -B build
+      - name: Build release
+        run: cmake --build build --config Release -j$(nproc)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kmagmux-release
+          retention-days: 1
+          path: build/KMagMux
+
+  manual-gh-release:
+    name: Manual release creation
+    needs: [prepare-release-tag, cpp-qt-release]
+    if: ${{ github.event_name == 'workflow_dispatch' && startsWith(inputs.mode, 'release-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push prepared tag (retry)
+        env:
+          TAG: ${{ needs.prepare-release-tag.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          git tag "$TAG"
+          git push origin "$TAG" || { sleep 2; git push origin "$TAG"; }
+      - name: Create release with generated notes + discussion
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare-release-tag.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          prerelease=""
+          case "${{ inputs.mode }}" in
+            release-test|release-rc|release-alpha) prerelease="--prerelease" ;;
+          esac
+          discussion_arg="--discussion-category Announcements"
+          if [[ -n "$prerelease" ]]; then
+            gh release create "$TAG" --generate-notes $prerelease || true
+          else
+            gh release create "$TAG" --generate-notes $discussion_arg || \
+              gh release create "$TAG" --generate-notes
+          fi
+
+  publish-draft:
+    name: Publish draft release assets
+    needs: [cpp-qt-release, prepare-release-tag]
+    if: ${{ needs.route.outputs.run_release == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-release
+      - name: Publish draft GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: dist-release/**
+          tag_name: ${{ needs.prepare-release-tag.outputs.release_tag || github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  promote-release:
+    name: Promote draft to published
+    needs: [publish-draft]
+    if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && startsWith(inputs.mode, 'release-')) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release promoted via upstream process
+        run: echo "Promotion step placeholder (gh api patch release draft=false)"
+
+  prepare-next-version-pr:
+    name: Prepare next development iteration PR
+    needs: [publish-draft, prepare-release-tag]
+    if: ${{ github.event_name == 'workflow_dispatch' && (startsWith(inputs.mode, 'release-') || inputs.mode == 'release-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump to next version and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NEXT_VERSION="${{ needs.prepare-release-tag.outputs.next_version || '' }}"
+          [[ -z "$NEXT_VERSION" ]] && { echo "No next version calculated; skipping."; exit 0; }
+
+          BRANCH="bump-version-$NEXT_VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          git add -A
+          git commit --allow-empty -m "Prepare next development iteration $NEXT_VERSION"
+          git push -u origin "$BRANCH"
+          gh pr create --title "Prepare next development iteration $NEXT_VERSION" --body "Automated PR for next iteration." --base main --head "$BRANCH"
