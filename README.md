@@ -1,6 +1,6 @@
 # KMagMux
 
-Torrent and Magnet file and protocol handler for routing to programs / services.
+Torrent file and Magnet link handler for routing to programs / services.
 
 KMagMux is a powerful and flexible router and manager for Torrent files and Magnet links. It allows you to collect links from various sources, review them in an Inbox, and dispatch them to multiple different clients or services based on your preferences.
 
