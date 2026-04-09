@@ -19,7 +19,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   connect(m_timer, &QTimer::timeout, this, &Engine::processQueue);
 
   // Load plugins
-  const const QString appDir = QCoreApplication::applicationDirPath();
+  const QString appDir = QCoreApplication::applicationDirPath();
   QStringList pluginPaths;
 
   // Dev path
@@ -67,7 +67,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   QMap<QString, PluginInfo> bestPlugins;
 
   for (const QString &path : pluginPaths) {
-    const const QDir pluginsDir(path);
+    const QDir pluginsDir(path);
     if (!pluginsDir.exists()) {
       continue;
     }
@@ -75,17 +75,17 @@ Engine::Engine(StorageManager *storage, QObject *parent)
     qDebug() << "Looking for plugins in:" << pluginsDir.absolutePath();
 
     for (const QString &fileName : pluginsDir.entryList(QDir::Files)) {
-      const const QString filePath = pluginsDir.absoluteFilePath(fileName);
-      const const QPluginLoader pluginLoader(filePath);
+      const QString filePath = pluginsDir.absoluteFilePath(fileName);
+      const QPluginLoader pluginLoader(filePath);
 
       // Check metadata before instantiating to avoid loading non-plugin
       // libraries blockingly
-      const const QJsonObject meta = pluginLoader.metaData();
+      const QJsonObject meta = pluginLoader.metaData();
       if (meta.value("IID").toString() != "com.kmagmux.Connector/1.0") {
         continue;
       }
 
-      const const QJsonObject metaDataObj = meta.value("MetaData").toObject();
+      const QJsonObject metaDataObj = meta.value("MetaData").toObject();
       QString versionStr = metaDataObj.value("version").toString();
       if (versionStr.isEmpty()) {
         versionStr = meta.value("version").toString();
@@ -122,7 +122,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
         }
 
         if (shouldReplace) {
-          it.value() = {filePath, version, isDev};
+          iter.value() = {filePath, version, isDev};
         }
       }
     }
@@ -195,7 +195,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
 }
 
 Connector *Engine::getConnector(const QString &identifier) const {
-  return m_connectors.value(id, nullptr);
+  return m_connectors.value(identifier, nullptr);
 }
 
 QStringList Engine::getAvailableConnectors() const {
@@ -253,12 +253,12 @@ void Engine::processQueue() {
   if (autoArchiveDays > 0) {
     auto doneItems = m_storage->loadItemsByStates({ItemState::Done});
     std::vector<Item> itemsToArchive;
-    const const QDateTime threshold =
+    const QDateTime threshold =
         QDateTime::currentDateTime().addDays(-autoArchiveDays);
 
     for (auto &item : doneItems) {
       if (!item.metadata["lastDispatchTime"].toString().isEmpty()) {
-        const const QDateTime lastDispatch = QDateTime::fromString(
+        const QDateTime lastDispatch = QDateTime::fromString(
             item.metadata["lastDispatchTime"].toString(), Qt::ISODate);
         if (lastDispatch.isValid() && lastDispatch < threshold) {
           item.state = ItemState::Archived;

@@ -12,15 +12,15 @@ QString Item::getDisplayName() const {
 
   QString result;
   if (sourcePath.startsWith("magnet:?")) {
-    const const QUrl url(sourcePath);
-    const const QUrlQuery query(url);
+    const QUrl url(sourcePath);
+    const QUrlQuery query(url);
     if (query.hasQueryItem("dn")) {
       result = QUrl::fromPercentEncoding(query.queryItemValue("dn").toUtf8());
     } else if (query.hasQueryItem("tr")) {
       result = "Magnet Link (No Name)";
     } else {
       // maybe xt infohash?
-      const const QString fullQuery = url.query();
+      const QString fullQuery = url.query();
       const int xtIdx = static_cast<int>(fullQuery.indexOf("xt="));
       if (xtIdx != -1) {
         int endIdx = static_cast<int>(fullQuery.indexOf('&', xtIdx));
@@ -115,7 +115,7 @@ ItemState Item::stringToState(const QString &str) {
   if (str == "Held") {
     return ItemState::Held;
   }
-  if (str == "Done" || s == "Dispatched")
+  if (str == "Done" || str == "Dispatched")
     return ItemState::Done;
   if (str == "Failed") {
     return ItemState::Failed;

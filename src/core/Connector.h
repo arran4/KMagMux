@@ -55,7 +55,7 @@ public:
                       .arg(method, url.toString());
 
     for (const QByteArray &header : request.rawHeaderList()) {
-      const const QString headerName = QString::fromUtf8(header).toLower();
+      const QString headerName = QString::fromUtf8(header).toLower();
       if (headerName == "authorization" || headerName == "cookie") {
         log += QString("  %1: ***\n").arg(QString::fromUtf8(header));
       } else {
@@ -66,7 +66,7 @@ public:
     }
 
     if (!body.isEmpty()) {
-      const const QString contentType =
+      const QString contentType =
           request.header(QNetworkRequest::ContentTypeHeader).toString();
       if (contentType.contains("application/x-www-form-urlencoded")) {
         QUrlQuery bodyQuery(QString::fromUtf8(body));

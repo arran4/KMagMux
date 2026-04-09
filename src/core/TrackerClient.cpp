@@ -33,7 +33,7 @@ TrackerClient::TrackerClient(QObject *parent)
 TrackerClient::~TrackerClient() { cancel(); }
 
 void TrackerClient::scrape(const QString &trackerUrl,
-                           const QByteArray & /*infoHash*/) {
+                           const QByteArray &infoHash) {
   cancel(); // stop any ongoing request
 
   m_isActive = true;
@@ -76,7 +76,7 @@ void TrackerClient::cancel() {
 }
 
 void TrackerClient::startUdpScrape(const QString &urlStr,
-                                   const QByteArray & /*infoHash*/) {
+                                   const QByteArray &infoHash) {
   const QUrl url(urlStr);
 
   const int defaultPort = 80;
@@ -211,8 +211,8 @@ void TrackerClient::onUdpError(QAbstractSocket::SocketError /*error*/) {
 }
 
 void TrackerClient::startHttpScrape(const QString &urlStr,
-                                    const QByteArray & /*infoHash*/) {
-  const QUrl url(urlStr);
+                                    const QByteArray &infoHash) {
+  QUrl url(urlStr);
 
   // Replace /announce with /scrape
   QString path = url.path();

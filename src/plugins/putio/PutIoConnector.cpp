@@ -40,7 +40,7 @@ void PutIoConnector::dispatch(const Item &item) {
   }
 
   const QUrl url("https://api.put.io/v2/transfers/add");
-  const const QNetworkRequest request(url);
+  QNetworkRequest request(url);
   request.setRawHeader("Authorization", ("Bearer " + m_oauthToken).toUtf8());
 
   QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);

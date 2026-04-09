@@ -44,7 +44,7 @@ QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
   }
 
   const char chr = data[pos];
-  if (c == 'i') {
+  if (chr == 'i') {
     return parseInteger(data, pos);
   } else if (chr == 'l') {
     return parseList(data, pos);
