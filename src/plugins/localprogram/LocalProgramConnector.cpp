@@ -302,11 +302,11 @@ QWidget *LocalProgramConnector::createSettingsWidget(QWidget *parent) {
     QList<QTableWidgetItem *> selected = table->selectedItems();
     if (!selected.isEmpty()) {
       // Get unique rows to delete
-      QSet<int> rowSet;
+      QSet<int> uniqueRows;
       for (auto *item : selected) {
-        rowSet.insert(item->row());
+        uniqueRows.insert(item->row());
       }
-      QList<int> rows(rowSet.begin(), rowSet.end());
+      QList<int> rows = uniqueRows.values();
       // Sort descending to avoid index shifting issues
       std::sort(rows.begin(), rows.end(), std::greater<int>());
       for (int row : rows) {
