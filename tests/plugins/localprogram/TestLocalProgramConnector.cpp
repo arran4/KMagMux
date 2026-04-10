@@ -11,12 +11,12 @@ class TestLocalProgramConnector : public QObject {
 private slots:
   void testGetId() {
     LocalProgramConnector connector;
-    QCOMPARE(connector.getId(), QString("LocalProgram"));
+    QCOMPARE(connector.getId(), QString("LocalProgramFactory"));
   }
 
   void testGetName() {
     LocalProgramConnector connector;
-    QCOMPARE(connector.getName(), QString("Local Program"));
+    QCOMPARE(connector.getName(), QString("Local Program (Settings)"));
   }
 
   void testDiscoverClients() {
