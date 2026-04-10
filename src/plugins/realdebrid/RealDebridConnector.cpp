@@ -160,7 +160,7 @@ void RealDebridConnector::onAddTorrentReply() {
     extraMeta["raw_http"] = rawHttp;
 
 #ifndef QT_NO_DEBUG
-    QString shortBody = QString::fromUtf8(responseBody).left(500);
+    QString shortBody = QString::fromUtf8(responseBody.left(500));
     if (statusCode > 0 || !shortBody.isEmpty()) {
       errorMessage +=
           QString(" (Status: %1, Body: %2)").arg(statusCode).arg(shortBody);
