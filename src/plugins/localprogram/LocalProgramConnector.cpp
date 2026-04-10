@@ -194,15 +194,17 @@ void LocalProgramConnector::dispatch(const Item &item) {
                                              "--execute",
                                              "-x",
                                              "-e"};
-  for (const QString &arg : args) {
-    if (std::any_of(
-            dangerousFlags.begin(), dangerousFlags.end(),
-            [&arg](const QString &flag) { return arg.startsWith(flag); })) {
-      emit dispatchFinished(item.id, false,
-                            "Security Alert: Dangerous argument '" + arg +
-                                "' is not allowed.");
-      return;
-    }
+  auto it = std::find_if(args.begin(), args.end(), [](const QString &arg) {
+    return std::any_of(
+        dangerousFlags.begin(), dangerousFlags.end(),
+        [&arg](const QString &flag) { return arg.startsWith(flag); });
+  });
+
+  if (it != args.end()) {
+    emit dispatchFinished(item.id, false,
+                          "Security Alert: Dangerous argument '" + *it +
+                              "' is not allowed.");
+    return;
   }
 
   if (m_useTerminal) {

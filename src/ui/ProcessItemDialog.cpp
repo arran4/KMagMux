@@ -8,9 +8,23 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QUrl>
+
+#include <QAbstractItemView>
+#include <QAction>
+#include <QComboBox>
+#include <QDateTimeEdit>
+#include <QJsonObject>
+#include <QListWidget>
+#include <QPushButton>
+#include <QStringList>
+#include <QTableWidget>
 #include <QUrlQuery>
 #include <QVBoxLayout>
 #include <cstddef>
+
+#include "../core/Constants.h"
+#include "MaxWidthDelegate.h"
+#include "TorrentInfoDialog.h"
 
 #include <QClipboard>
 #include <QGuiApplication>
