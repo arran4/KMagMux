@@ -68,17 +68,15 @@ void RealDebridConnector::dispatch(const Item &item) {
     QNetworkRequest request(url);
     request.setRawHeader("Authorization", ("Bearer " + m_apiToken).toUtf8());
 
-    QFile *file = new QFile(item.sourcePath);
-    if (!file->open(QIODevice::ReadOnly)) {
+    QFile file(item.sourcePath);
+    if (!file.open(QIODevice::ReadOnly)) {
       emit dispatchFinished(item.id, false,
                             "Could not open torrent file: " + item.sourcePath);
-      file->deleteLater();
       return;
     }
 
-    const QByteArray body = file->readAll();
-    file->close();
-    file->deleteLater();
+    const QByteArray body = file.readAll();
+    file.close();
 
     // Since addTorrent accepts raw bytes in PUT body
     const QString apiCallLog = Connector::buildApiCallLog("PUT", request, body);
