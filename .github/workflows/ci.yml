@@ -371,7 +371,7 @@ jobs:
 
   cpp-qt-release:
     name: Build Release Artifacts
-    needs: [route, discover, cpp-qt-build-test]
+    needs: [route, discover, cpp-qt-test]
     if: ${{ !failure() && !cancelled() && needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_release == 'true' }}
     runs-on: ubuntu-latest
     container:
