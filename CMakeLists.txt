@@ -60,6 +60,7 @@ add_subdirectory(src/plugins/torbox)
 add_subdirectory(src/plugins/putio)
 add_subdirectory(src/plugins/premiumize)
 add_subdirectory(src/plugins/localprogram)
+add_subdirectory(src/plugins/realdebrid)
 
 include(CTest)
 if(BUILD_TESTING)
