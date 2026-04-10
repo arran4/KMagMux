@@ -21,7 +21,7 @@ private slots:
 
   void testDiscoverClients() {
     LocalProgramConnector connector;
-    QStringList clients = connector.discoverClients();
+    QList<LocalClientConfig> clients = LocalProgramConnector::discoverClients();
     // Just make sure it returns a list, can't guarantee what's installed on CI
     QVERIFY(clients.size() >= 0);
   }
