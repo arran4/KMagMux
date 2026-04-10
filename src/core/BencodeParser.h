@@ -2,9 +2,9 @@
 #define BENCODEPARSER_H
 
 #include <QByteArray>
+#include <QMap>
 #include <QString>
 #include <QVariant>
-#include <QVariantMap>
 
 class BencodeParser {
 public:

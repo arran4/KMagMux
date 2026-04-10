@@ -1,5 +1,8 @@
 #include "BencodeParser.h"
 #include <QCryptographicHash>
+#include <QList>
+#include <QMetaType>
+#include <QVariant>
 #include <QVariantList>
 
 BencodeParser::BencodeParser() : m_dataPtr(nullptr) {}
@@ -46,16 +49,18 @@ QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
   const char chr = data[pos];
   if (chr == 'i') {
     return parseInteger(data, pos);
-  } else if (chr == 'l') {
-    return parseList(data, pos);
-  } else if (chr == 'd') {
-    return parseDictionary(data, pos);
-  } else if (chr >= '0' && chr <= '9') {
-    return parseByteString(data, pos);
-  } else {
-    m_errorString = "Invalid character at start of element";
-    return QVariant();
   }
+  if (chr == 'l') {
+    return parseList(data, pos);
+  }
+  if (chr == 'd') {
+    return parseDictionary(data, pos);
+  }
+  if (chr >= '0' && chr <= '9') {
+    return parseByteString(data, pos);
+  }
+  m_errorString = "Invalid character at start of element";
+  return QVariant();
 }
 
 QVariant BencodeParser::parseInteger(const QByteArray &data, int &pos) {

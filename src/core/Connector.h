@@ -41,7 +41,7 @@ public:
     if (!url.userInfo().isEmpty()) {
       url.setUserInfo("***:***");
     }
-    url.clearQuery();
+    url.setQuery(QString());
 
     QString log = QString("\n--- API Call ---\nMethod: %1\nURL: %2\nHeaders:\n")
                       .arg(method, url.toString());
