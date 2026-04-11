@@ -1,0 +1,6 @@
+[
+  {
+    "comment_id": "3067651022",
+    "reply": "I have reverted the `std::accumulate` back to the range-based `for` loop and added a `// cppcheck-suppress useStlAlgorithm` comment to bypass the linter warning while maintaining performance. Thanks for the feedback!"
+  }
+]
