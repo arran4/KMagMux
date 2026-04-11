@@ -17,6 +17,7 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <numeric>
 
 RealDebridConnector::RealDebridConnector() : RealDebridConnector(nullptr) {}
 
@@ -149,10 +150,12 @@ void RealDebridConnector::onAddTorrentReply() {
 
     rawHttp += "Response Headers:\n";
     const auto resHeaders = reply->rawHeaderList();
-    for (const QByteArray &headerName : resHeaders) {
-      rawHttp += QString::fromUtf8(headerName) + ": " +
+    rawHttp = std::accumulate(
+        resHeaders.begin(), resHeaders.end(), rawHttp,
+        [reply](const QString &acc, const QByteArray &headerName) {
+          return acc + QString::fromUtf8(headerName) + ": " +
                  QString::fromUtf8(reply->rawHeader(headerName)) + "\n";
-    }
+        });
     rawHttp += "\nResponse Body:\n" + QString::fromUtf8(responseBody) + "\n";
 
     extraMeta["raw_http"] = rawHttp;
