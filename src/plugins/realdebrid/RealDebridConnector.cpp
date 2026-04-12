@@ -17,7 +17,7 @@
 #include <QUrlQuery>
 #include <QVBoxLayout>
 #include <QWidget>
-#include <numeric>
+#include <algorithm>
 
 RealDebridConnector::RealDebridConnector() : RealDebridConnector(nullptr) {}
 
