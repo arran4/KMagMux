@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "TorrentParser.h"
 #include "BencodeParser.h"
 #include <QFile>
@@ -28,26 +29,27 @@ TorrentInfo TorrentParser::parseMagnet(const QString &magnetUri) {
 
   // Find info hash
   // xt=urn:btih:<hash>
-  const QList<QPair<QString, QString>> items = query.queryItems();
-  for (const auto &item : items) {
-    if (item.first == "xt") {
-      const QString val = item.second;
-      if (val.startsWith("urn:btih:")) {
-        const int hashHexPrefixLen = 9;
-        const QString hashHex = val.mid(hashHexPrefixLen);
-        if (hashHex.length() == 40) {
-          info.infoHash = QByteArray::fromHex(hashHex.toUtf8());
-        } else if (hashHex.length() == 32) {
-          // base32 encoded, not fully supported here, simplified
-          info.infoHash = hashHex.toUtf8(); // Need full base32 decoding if used
-        }
-      }
-    } else if (item.first == "tr") {
-      const QString trackerUrl =
-          QUrl::fromPercentEncoding(item.second.toUtf8());
-      if (!info.trackers.contains(trackerUrl)) {
-        info.trackers.append(trackerUrl);
-      }
+  const QStringList xts = query.allQueryItemValues("xt");
+  auto it = std::find_if(xts.begin(), xts.end(), [](const QString &val) {
+    return val.startsWith("urn:btih:");
+  });
+
+  if (it != xts.end()) {
+    const int hashHexPrefixLen = 9;
+    const QString hashHex = it->mid(hashHexPrefixLen);
+    if (hashHex.length() == 40) {
+      info.infoHash = QByteArray::fromHex(hashHex.toUtf8());
+    } else if (hashHex.length() == 32) {
+      // base32 encoded, not fully supported here, simplified
+      info.infoHash = hashHex.toUtf8(); // Need full base32 decoding if used
+    }
+  }
+
+  const QStringList trackers = query.allQueryItemValues("tr");
+  for (const QString &tracker : trackers) {
+    const QString trackerUrl = QUrl::fromPercentEncoding(tracker.toUtf8());
+    if (!info.trackers.contains(trackerUrl)) {
+      info.trackers.append(trackerUrl);
     }
   }
 
