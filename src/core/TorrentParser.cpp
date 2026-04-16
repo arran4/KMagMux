@@ -1,10 +1,10 @@
-#include <algorithm>
 #include "TorrentParser.h"
 #include "BencodeParser.h"
 #include <QFile>
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVariantList>
+#include <algorithm>
 
 TorrentInfo TorrentParser::parse(const QString &sourcePath) {
   if (sourcePath.startsWith("magnet:?")) {
