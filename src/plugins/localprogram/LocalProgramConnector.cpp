@@ -216,13 +216,29 @@ void LocalProgramConnector::dispatch(const Item &item) {
       terminal = findExecutable("konsole");
 
     if (!terminal.isEmpty()) {
-      args.prepend(program);
-      args.prepend("-e");
+      QString termBaseName = QFileInfo(terminal).fileName().toLower();
 
-      // Ensure positional argument safety for the torrent
+      QStringList commandArgs;
+      commandArgs << program;
+      commandArgs << args;
       if (baseName != "xdg-open")
-        args.append("--");
-      args.append(item.sourcePath);
+        commandArgs << "--";
+      commandArgs << item.sourcePath;
+
+      QString commandString;
+      for (const QString &arg : commandArgs) {
+        QString escaped = arg;
+        escaped.replace("'", "'\\''");
+        commandString += " '" + escaped + "'";
+      }
+      commandString = commandString.trimmed();
+
+      args.clear();
+      if (termBaseName == "gnome-terminal") {
+        args << "--" << "sh" << "-c" << commandString;
+      } else {
+        args << "-e" << "sh" << "-c" << commandString;
+      }
       program = terminal;
     } else {
       qWarning()
