@@ -89,6 +89,26 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   QVariantMap dict = parser.dictionary();
 
+  parseTrackers(dict, info);
+  parseMetadata(dict, info);
+  parseInfoDict(dict, info);
+
+  info.infoHash = parser.infoHash();
+
+  if (info.infoHash.isEmpty()) {
+    info.errorString = "No info dict found, cannot compute info hash";
+    return info;
+  }
+
+  if (info.name.isEmpty()) {
+    info.name = "Unknown Name";
+  }
+
+  info.valid = true;
+  return info;
+}
+
+void TorrentParser::parseTrackers(const QVariantMap &dict, TorrentInfo &info) {
   // Extract announce
   if (dict.contains("announce")) {
     const QString announce = QString::fromUtf8(dict["announce"].toByteArray());
@@ -115,7 +135,9 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
       }
     }
   }
+}
 
+void TorrentParser::parseMetadata(const QVariantMap &dict, TorrentInfo &info) {
   if (dict.contains("comment")) {
     info.comment = QString::fromUtf8(dict["comment"].toByteArray());
   }
@@ -130,7 +152,9 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
       info.creationDate = QDateTime::fromSecsSinceEpoch(creationTs);
     }
   }
+}
 
+void TorrentParser::parseInfoDict(const QVariantMap &dict, TorrentInfo &info) {
   // Extract info dictionary values
   if (dict.contains("info")) {
     const QVariant infoVar = dict["info"];
@@ -185,18 +209,4 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
       }
     }
   }
-
-  info.infoHash = parser.infoHash();
-
-  if (info.infoHash.isEmpty()) {
-    info.errorString = "No info dict found, cannot compute info hash";
-    return info;
-  }
-
-  if (info.name.isEmpty()) {
-    info.name = "Unknown Name";
-  }
-
-  info.valid = true;
-  return info;
 }

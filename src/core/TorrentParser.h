@@ -6,6 +6,7 @@
 #include <QStringList>
 
 #include <QDateTime>
+#include <QVariantMap>
 
 struct TorrentFileInfo {
   QString path;
@@ -34,6 +35,9 @@ public:
 private:
   static TorrentInfo parseMagnet(const QString &magnetUri);
   static TorrentInfo parseTorrentFile(const QString &filePath);
+  static void parseTrackers(const QVariantMap &dict, TorrentInfo &info);
+  static void parseMetadata(const QVariantMap &dict, TorrentInfo &info);
+  static void parseInfoDict(const QVariantMap &dict, TorrentInfo &info);
 };
 
 #endif // TORRENTPARSER_H
