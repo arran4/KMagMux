@@ -29,6 +29,7 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
   // Populate table
   m_itemsTable->setRowCount(m_items.size());
   QHash<QString, bool> localFileCache;
+  localFileCache.reserve(static_cast<int>(m_items.size()));
 
   for (size_t i = 0; i < m_items.size(); ++i) {
     QTableWidgetItem *checkItem = new QTableWidgetItem();
