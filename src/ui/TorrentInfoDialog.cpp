@@ -40,6 +40,15 @@ void TorrentInfoDialog::setupUi() {
 
   QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
+  setupBasicInfoSection(mainLayout);
+  setupFilesSection(mainLayout);
+  setupTrackerSection(mainLayout);
+  setupHistorySection(mainLayout);
+  setupLogSection(mainLayout);
+  setupButtonsSection(mainLayout);
+}
+
+void TorrentInfoDialog::setupBasicInfoSection(QVBoxLayout *mainLayout) {
   QFormLayout *infoLayout = new QFormLayout();
 
   auto createReadOnlyField = [](const QString &text) {
@@ -78,7 +87,9 @@ void TorrentInfoDialog::setupUi() {
   }
 
   mainLayout->addLayout(infoLayout);
+}
 
+void TorrentInfoDialog::setupFilesSection(QVBoxLayout *mainLayout) {
   if (!m_info.files.isEmpty()) {
     QLabel *filesLabel = new QLabel("<b>Files:</b>");
     mainLayout->addWidget(filesLabel);
@@ -104,7 +115,9 @@ void TorrentInfoDialog::setupUi() {
     }
     mainLayout->addWidget(filesTable);
   }
+}
 
+void TorrentInfoDialog::setupTrackerSection(QVBoxLayout *mainLayout) {
   m_trackerTable = new QTableWidget(m_info.trackers.size(), 5, this);
   m_trackerTable->setHorizontalHeaderLabels(
       {"Tracker", "Status", "Seeders", "Leechers", "Downloaded"});
@@ -129,7 +142,9 @@ void TorrentInfoDialog::setupUi() {
   }
 
   mainLayout->addWidget(m_trackerTable);
+}
 
+void TorrentInfoDialog::setupHistorySection(QVBoxLayout *mainLayout) {
   if (m_item && m_item->metadata.contains("history")) {
     QLabel *historyLabel = new QLabel("<b>History:</b>", this);
     mainLayout->addWidget(historyLabel);
@@ -158,11 +173,15 @@ void TorrentInfoDialog::setupUi() {
     historyTable->resizeColumnsToContents();
     mainLayout->addWidget(historyTable);
   }
+}
 
+void TorrentInfoDialog::setupLogSection(QVBoxLayout *mainLayout) {
   m_logView = new QTextEdit(this);
   m_logView->setReadOnly(true);
   mainLayout->addWidget(m_logView);
+}
 
+void TorrentInfoDialog::setupButtonsSection(QVBoxLayout *mainLayout) {
   QHBoxLayout *btnLayout = new QHBoxLayout();
   m_queryBtn = new QPushButton("Query Trackers", this);
   m_cancelBtn = new QPushButton("Cancel Query", this);

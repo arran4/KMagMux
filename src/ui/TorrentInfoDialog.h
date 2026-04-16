@@ -25,6 +25,12 @@ private slots:
 
 private:
   void setupUi();
+  void setupBasicInfoSection(QVBoxLayout *mainLayout);
+  void setupFilesSection(QVBoxLayout *mainLayout);
+  void setupTrackerSection(QVBoxLayout *mainLayout);
+  void setupHistorySection(QVBoxLayout *mainLayout);
+  void setupLogSection(QVBoxLayout *mainLayout);
+  void setupButtonsSection(QVBoxLayout *mainLayout);
   void updateTrackerRow(int row, const TrackerStats &stats);
   void processNextTracker();
 
