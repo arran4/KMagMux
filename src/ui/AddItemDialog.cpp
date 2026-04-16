@@ -16,6 +16,7 @@
 #include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QHash>
 #include <QLabel>
 
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
@@ -27,6 +28,9 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
 
   // Populate table
   m_itemsTable->setRowCount(m_items.size());
+  QHash<QString, bool> localFileCache;
+  localFileCache.reserve(static_cast<int>(m_items.size()));
+
   for (size_t i = 0; i < m_items.size(); ++i) {
     QTableWidgetItem *checkItem = new QTableWidgetItem();
     checkItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
@@ -35,11 +39,24 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
 
     bool isLocalFile = false;
     QString pathToCheck = m_items[i].sourcePath;
-    if (pathToCheck.startsWith("file://")) {
-      pathToCheck = QUrl(pathToCheck).toLocalFile();
-      isLocalFile = QFileInfo(pathToCheck).exists();
+
+    if (pathToCheck.startsWith("magnet:") ||
+        pathToCheck.startsWith("http://") ||
+        pathToCheck.startsWith("https://")) {
+      isLocalFile = false;
     } else {
-      isLocalFile = QFileInfo(pathToCheck).exists();
+      QString actualPath = pathToCheck;
+      if (pathToCheck.startsWith("file://")) {
+        actualPath = QUrl(pathToCheck).toLocalFile();
+      }
+
+      auto it = localFileCache.find(actualPath);
+      if (it != localFileCache.end()) {
+        isLocalFile = it.value();
+      } else {
+        isLocalFile = QFileInfo(actualPath).exists();
+        localFileCache.insert(actualPath, isLocalFile);
+      }
     }
 
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
@@ -168,24 +185,24 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QMenu menu(this);
 
   if (col == 1) {
+    auto setCheckStateForAll = [this](Qt::CheckState state) {
+      for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
+        QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
+        if (deleteItem != nullptr &&
+            ((deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U)) {
+          deleteItem->setCheckState(state);
+        }
+      }
+    };
+
     QAction *const selectAllAction = menu.addAction("Select All");
-    connect(selectAllAction, &QAction::triggered, this, [this]() {
-      for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-        QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
-          deleteItem->setCheckState(Qt::Checked);
-        }
-      }
-    });
+    connect(
+        selectAllAction, &QAction::triggered, this,
+        [this, setCheckStateForAll]() { setCheckStateForAll(Qt::Checked); });
     QAction *const selectNoneAction = menu.addAction("Select None");
-    connect(selectNoneAction, &QAction::triggered, this, [this]() {
-      for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-        QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
-          deleteItem->setCheckState(Qt::Unchecked);
-        }
-      }
-    });
+    connect(
+        selectNoneAction, &QAction::triggered, this,
+        [this, setCheckStateForAll]() { setCheckStateForAll(Qt::Unchecked); });
     menu.addSeparator();
   }
 

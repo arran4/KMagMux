@@ -5,113 +5,6 @@
 #include <QUrlQuery>
 #include <QVariantList>
 
-namespace {
-
-void extractTrackers(const QVariantMap &dict, TorrentInfo &info) {
-  // Extract announce
-  if (dict.contains("announce")) {
-    const QString announce = QString::fromUtf8(dict["announce"].toByteArray());
-    if (!info.trackers.contains(announce)) {
-      info.trackers.append(announce);
-    }
-  }
-
-  // Extract announce-list
-  if (dict.contains("announce-list")) {
-    const QVariantList announceList = dict["announce-list"].toList();
-    for (const QVariant &tierVar : announceList) {
-      if (tierVar.typeId() == QMetaType::QVariantList) {
-        const QVariantList tier = tierVar.toList();
-        for (const QVariant &trackerVar : tier) {
-          if (trackerVar.typeId() == QMetaType::QByteArray) {
-            const QString trackerUrl =
-                QString::fromUtf8(trackerVar.toByteArray());
-            if (!info.trackers.contains(trackerUrl)) {
-              info.trackers.append(trackerUrl);
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-void extractMetadata(const QVariantMap &dict, TorrentInfo &info) {
-  if (dict.contains("comment")) {
-    info.comment = QString::fromUtf8(dict["comment"].toByteArray());
-  }
-
-  if (dict.contains("created by")) {
-    info.createdBy = QString::fromUtf8(dict["created by"].toByteArray());
-  }
-
-  if (dict.contains("creation date")) {
-    const qint64 creationTs = dict["creation date"].toLongLong();
-    if (creationTs > 0) {
-      info.creationDate = QDateTime::fromSecsSinceEpoch(creationTs);
-    }
-  }
-}
-
-void extractInfoDictionary(const QVariantMap &dict, TorrentInfo &info) {
-  // Extract info dictionary values
-  if (dict.contains("info")) {
-    const QVariant infoVar = dict["info"];
-    if (infoVar.typeId() == QMetaType::QVariantMap) {
-      QVariantMap infoDict = infoVar.toMap();
-      if (infoDict.contains("name")) {
-        info.name = QString::fromUtf8(infoDict["name"].toByteArray());
-      }
-
-      if (infoDict.contains("length")) {
-        // Single file mode
-        TorrentFileInfo fileInfo;
-        fileInfo.path = info.name;
-        fileInfo.length = infoDict["length"].toLongLong();
-        info.files.append(fileInfo);
-        info.totalSize += fileInfo.length;
-      } else if (infoDict.contains("files")) {
-        // Multiple files mode
-        const QVariantList filesList = infoDict["files"].toList();
-        for (const QVariant &fileVar : filesList) {
-          if (fileVar.typeId() == QMetaType::QVariantMap) {
-            QVariantMap fileDict = fileVar.toMap();
-            TorrentFileInfo fileInfo;
-            fileInfo.length = fileDict["length"].toLongLong();
-
-            if (fileDict.contains("path")) {
-              const QVariantList pathList = fileDict["path"].toList();
-              QStringList pathParts;
-              for (const QVariant &part : pathList) {
-                QString partStr = QString::fromUtf8(part.toByteArray());
-                // Sanitize path component to prevent directory traversal
-                if (partStr == ".." || partStr == ".") {
-                  continue;
-                }
-                // Prevent embedded separators
-                partStr.replace("/", "_");
-                partStr.replace("\\", "_");
-                if (!partStr.isEmpty()) {
-                  pathParts.append(partStr);
-                }
-              }
-              fileInfo.path = pathParts.join("/");
-              if (fileInfo.path.isEmpty()) {
-                fileInfo.path = "unnamed_file";
-              }
-            }
-
-            info.files.append(fileInfo);
-            info.totalSize += fileInfo.length;
-          }
-        }
-      }
-    }
-  }
-}
-
-} // namespace
-
 TorrentInfo TorrentParser::parse(const QString &sourcePath) {
   if (sourcePath.startsWith("magnet:?")) {
     return parseMagnet(sourcePath);
@@ -196,14 +89,107 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   QVariantMap dict = parser.dictionary();
 
-  extractTrackers(dict, info);
-  extractMetadata(dict, info);
-  extractInfoDictionary(dict, info);
+  // Extract announce
+  if (dict.contains("announce")) {
+    const QString announce = QString::fromUtf8(dict["announce"].toByteArray());
+    if (!info.trackers.contains(announce)) {
+      info.trackers.append(announce);
+    }
+  }
+
+  // Extract announce-list
+  if (dict.contains("announce-list")) {
+    const QVariantList announceList = dict["announce-list"].toList();
+    for (const QVariant &tierVar : announceList) {
+      if (tierVar.typeId() == QMetaType::QVariantList) {
+        const QVariantList tier = tierVar.toList();
+        for (const QVariant &trackerVar : tier) {
+          if (trackerVar.typeId() == QMetaType::QByteArray) {
+            const QString trackerUrl =
+                QString::fromUtf8(trackerVar.toByteArray());
+            if (!info.trackers.contains(trackerUrl)) {
+              info.trackers.append(trackerUrl);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (dict.contains("comment")) {
+    info.comment = QString::fromUtf8(dict["comment"].toByteArray());
+  }
+
+  if (dict.contains("created by")) {
+    info.createdBy = QString::fromUtf8(dict["created by"].toByteArray());
+  }
+
+  if (dict.contains("creation date")) {
+    const qint64 creationTs = dict["creation date"].toLongLong();
+    if (creationTs > 0) {
+      info.creationDate = QDateTime::fromSecsSinceEpoch(creationTs);
+    }
+  }
+
+  // Extract info dictionary values
+  if (dict.contains("info")) {
+    const QVariant infoVar = dict["info"];
+    if (infoVar.typeId() == QMetaType::QVariantMap) {
+      QVariantMap infoDict = infoVar.toMap();
+      if (infoDict.contains("name")) {
+        info.name = QString::fromUtf8(infoDict["name"].toByteArray());
+      }
+
+      if (infoDict.contains("length")) {
+        // Single file mode
+        TorrentFileInfo fileInfo;
+        fileInfo.path = info.name;
+        fileInfo.length = infoDict["length"].toLongLong();
+        info.files.append(fileInfo);
+        info.totalSize += fileInfo.length;
+      } else if (infoDict.contains("files")) {
+        // Multiple files mode
+        const QVariantList filesList = infoDict["files"].toList();
+        for (const QVariant &fileVar : filesList) {
+          if (fileVar.typeId() == QMetaType::QVariantMap) {
+            QVariantMap fileDict = fileVar.toMap();
+            TorrentFileInfo fileInfo;
+            fileInfo.length = fileDict["length"].toLongLong();
+
+            if (fileDict.contains("path")) {
+              const QVariantList pathList = fileDict["path"].toList();
+              QStringList pathParts;
+              for (const QVariant &part : pathList) {
+                QString partStr = QString::fromUtf8(part.toByteArray());
+                // Sanitize path component to prevent directory traversal
+                if (partStr == ".." || partStr == ".") {
+                  continue;
+                }
+                // Prevent embedded separators
+                partStr.replace("/", "_");
+                partStr.replace("\\", "_");
+                if (!partStr.isEmpty()) {
+                  pathParts.append(partStr);
+                }
+              }
+              fileInfo.path = pathParts.join("/");
+              if (fileInfo.path.isEmpty()) {
+                fileInfo.path = "unnamed_file";
+              }
+            }
+
+            info.files.append(fileInfo);
+            info.totalSize += fileInfo.length;
+          }
+        }
+      }
+    }
+  }
 
   info.infoHash = parser.infoHash();
 
-  if (!dict.contains("info") || info.infoHash.isEmpty()) {
-    info.errorString = "No valid info dict found, cannot compute info hash";
+  if (info.infoHash.isEmpty()) {
+    info.errorString = "No info dict found, cannot compute info hash";
     return info;
   }
 
