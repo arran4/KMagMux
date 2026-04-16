@@ -168,23 +168,22 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QMenu menu(this);
 
   if (col == 1) {
-    QAction *const selectAllAction = menu.addAction("Select All");
-    connect(selectAllAction, &QAction::triggered, this, [this]() {
+    auto setCheckStateForAll = [this](Qt::CheckState state) {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
-          deleteItem->setCheckState(Qt::Checked);
+        if (deleteItem != nullptr && ((deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U)) {
+          deleteItem->setCheckState(state);
         }
       }
+    };
+
+    QAction *const selectAllAction = menu.addAction("Select All");
+    connect(selectAllAction, &QAction::triggered, this, [setCheckStateForAll]() {
+      setCheckStateForAll(Qt::Checked);
     });
     QAction *const selectNoneAction = menu.addAction("Select None");
-    connect(selectNoneAction, &QAction::triggered, this, [this]() {
-      for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-        QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem && (deleteItem->flags() & Qt::ItemIsUserCheckable)) {
-          deleteItem->setCheckState(Qt::Unchecked);
-        }
-      }
+    connect(selectNoneAction, &QAction::triggered, this, [setCheckStateForAll]() {
+      setCheckStateForAll(Qt::Unchecked);
     });
     menu.addSeparator();
   }
