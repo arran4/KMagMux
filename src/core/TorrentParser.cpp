@@ -111,7 +111,8 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 void TorrentParser::parseTrackers(const QVariantMap &dict, TorrentInfo &info) {
   // Extract announce
   if (dict.contains("announce")) {
-    const QString announce = QString::fromUtf8(dict.value("announce").toByteArray());
+    const QString announce =
+        QString::fromUtf8(dict.value("announce").toByteArray());
     if (!info.trackers.contains(announce)) {
       info.trackers.append(announce);
     }
