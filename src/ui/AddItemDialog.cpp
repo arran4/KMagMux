@@ -16,6 +16,7 @@
 #include "TorrentInfoDialog.h"
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QHash>
 #include <QLabel>
 
 AddItemDialog::AddItemDialog(const std::vector<Item> &items,
@@ -27,6 +28,8 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
 
   // Populate table
   m_itemsTable->setRowCount(m_items.size());
+  QHash<QString, bool> localFileCache;
+
   for (size_t i = 0; i < m_items.size(); ++i) {
     QTableWidgetItem *checkItem = new QTableWidgetItem();
     checkItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
@@ -35,11 +38,24 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
 
     bool isLocalFile = false;
     QString pathToCheck = m_items[i].sourcePath;
-    if (pathToCheck.startsWith("file://")) {
-      pathToCheck = QUrl(pathToCheck).toLocalFile();
-      isLocalFile = QFileInfo(pathToCheck).exists();
+
+    if (pathToCheck.startsWith("magnet:") ||
+        pathToCheck.startsWith("http://") ||
+        pathToCheck.startsWith("https://")) {
+      isLocalFile = false;
     } else {
-      isLocalFile = QFileInfo(pathToCheck).exists();
+      QString actualPath = pathToCheck;
+      if (pathToCheck.startsWith("file://")) {
+        actualPath = QUrl(pathToCheck).toLocalFile();
+      }
+
+      auto it = localFileCache.find(actualPath);
+      if (it != localFileCache.end()) {
+        isLocalFile = it.value();
+      } else {
+        isLocalFile = QFileInfo(actualPath).exists();
+        localFileCache.insert(actualPath, isLocalFile);
+      }
     }
 
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
