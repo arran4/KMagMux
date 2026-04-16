@@ -53,7 +53,7 @@ void extractMetadata(const QVariantMap &dict, TorrentInfo &info) {
   }
 }
 
-void extractFiles(const QVariantMap &dict, TorrentInfo &info) {
+void extractInfoDictionary(const QVariantMap &dict, TorrentInfo &info) {
   // Extract info dictionary values
   if (dict.contains("info")) {
     const QVariant infoVar = dict["info"];
@@ -198,12 +198,12 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   extractTrackers(dict, info);
   extractMetadata(dict, info);
-  extractFiles(dict, info);
+  extractInfoDictionary(dict, info);
 
   info.infoHash = parser.infoHash();
 
-  if (info.infoHash.isEmpty()) {
-    info.errorString = "No info dict found, cannot compute info hash";
+  if (!dict.contains("info") || info.infoHash.isEmpty()) {
+    info.errorString = "No valid info dict found, cannot compute info hash";
     return info;
   }
 
