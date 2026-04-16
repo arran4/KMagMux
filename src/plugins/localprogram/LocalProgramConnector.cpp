@@ -104,6 +104,14 @@ QString LocalProgramConnector::findExecutable(const QString &name) {
   return QString();
 }
 
+QString LocalProgramConnector::escapeShellArg(const QString &arg) {
+  if (arg.isEmpty())
+    return "''";
+  QString escaped = arg;
+  escaped.replace("'", "'\\''");
+  return "'" + escaped + "'";
+}
+
 QList<LocalClientConfig> LocalProgramConnector::discoverClients() {
   QStringList knownClients = {"qbittorrent",     "transmission-gtk",
                               "transmission-qt", "transmission-remote",
@@ -225,19 +233,22 @@ void LocalProgramConnector::dispatch(const Item &item) {
         commandArgs << "--";
       commandArgs << item.sourcePath;
 
-      QString commandString;
+      QStringList escapedArgs;
       for (const QString &arg : commandArgs) {
-        QString escaped = arg;
-        escaped.replace("'", "'\\''");
-        commandString += " '" + escaped + "'";
+        escapedArgs << escapeShellArg(arg);
       }
-      commandString = commandString.trimmed();
+      QString commandString = escapedArgs.join(" ");
+
+      QString shell = qEnvironmentVariable("SHELL");
+      if (shell.isEmpty()) {
+        shell = "sh";
+      }
 
       args.clear();
       if (termBaseName == "gnome-terminal") {
-        args << "--" << "sh" << "-c" << commandString;
+        args << "--" << shell << "-c" << commandString;
       } else {
-        args << "-e" << "sh" << "-c" << commandString;
+        args << "-e" << shell << "-c" << commandString;
       }
       program = terminal;
     } else {

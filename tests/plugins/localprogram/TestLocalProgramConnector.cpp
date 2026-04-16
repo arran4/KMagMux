@@ -25,6 +25,20 @@ private slots:
     // Just make sure it returns a list, can't guarantee what's installed on CI
     QVERIFY(clients.size() >= 0);
   }
+
+  void testEscapeShellArg() {
+    QCOMPARE(LocalProgramConnector::escapeShellArg(""), QString("''"));
+    QCOMPARE(LocalProgramConnector::escapeShellArg("normal_arg"),
+             QString("'normal_arg'"));
+    QCOMPARE(LocalProgramConnector::escapeShellArg("arg with spaces"),
+             QString("'arg with spaces'"));
+    QCOMPARE(LocalProgramConnector::escapeShellArg("arg'with'quotes"),
+             QString("'arg'\\''with'\\''quotes'"));
+    QCOMPARE(LocalProgramConnector::escapeShellArg("arg\"with\"double"),
+             QString("'arg\"with\"double'"));
+    QCOMPARE(LocalProgramConnector::escapeShellArg("arg$with$env"),
+             QString("'arg$with$env'"));
+  }
 };
 
 QTEST_MAIN(TestLocalProgramConnector)
