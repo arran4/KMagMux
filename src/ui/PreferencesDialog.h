@@ -40,7 +40,6 @@ private:
   QCheckBox *m_autoMoveInboxCb;
   QComboBox *m_autoMoveInboxCombo;
   QSpinBox *m_autoArchiveDays;
-  QCheckBox *m_allowPlaintextStorageCb;
 };
 
 #endif // PREFERENCESDIALOG_H

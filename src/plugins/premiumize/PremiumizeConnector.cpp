@@ -151,14 +151,6 @@ QWidget *PremiumizeConnector::createSettingsWidget(QWidget *parent) {
       SecureStorage::readPassword("Plugins/Premiumize", "apiKey"));
   configLayout->addRow(tr("API Key:"), tokenEdit);
 
-  const QSettings mainSettings;
-  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
-    QLabel *warningLabel = new QLabel(
-        tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
-    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
-    configLayout->addRow("", warningLabel);
-  }
-
   mainLayout->addWidget(configWidget);
   settings.endGroup();
 

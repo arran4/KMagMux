@@ -168,14 +168,6 @@ QWidget *TorBoxConnector::createSettingsWidget(QWidget *parent) {
   tokenEdit->setText(SecureStorage::readPassword("Plugins/TorBox", "apiToken"));
   configLayout->addRow(tr("API Token:"), tokenEdit);
 
-  const QSettings mainSettings;
-  if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
-    QLabel *warningLabel = new QLabel(
-        tr("⚠️ Warning: Data may be stored unencrypted based on preferences."));
-    warningLabel->setStyleSheet("color: #d9534f; font-size: 11px;");
-    configLayout->addRow("", warningLabel);
-  }
-
   mainLayout->addWidget(configWidget);
   settings.endGroup();
 

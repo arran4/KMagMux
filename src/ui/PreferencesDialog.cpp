@@ -58,8 +58,6 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
             settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
             settings.setValue("autoMoveInbox",
                               m_autoMoveInboxCombo->currentIndex());
-            settings.setValue("allowPlaintextStorage",
-                              m_allowPlaintextStorageCb->isChecked());
           });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
@@ -69,8 +67,6 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     settings.setValue("autoStart", m_autoStartCb->isChecked());
     settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
     settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
-    settings.setValue("allowPlaintextStorage",
-                      m_allowPlaintextStorageCb->isChecked());
     accept();
   });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -144,14 +140,6 @@ void PreferencesDialog::createGeneralPage() {
   autoMoveLayout->addWidget(m_autoMoveInboxCombo);
   autoMoveLayout->addStretch();
   layout->addLayout(autoMoveLayout);
-
-  m_allowPlaintextStorageCb =
-      new QCheckBox(tr("Allow plaintext password and API key storage (fallback "
-                       "if keychain fails)"),
-                    page);
-  m_allowPlaintextStorageCb->setChecked(
-      settings.value("allowPlaintextStorage", false).toBool());
-  layout->addWidget(m_allowPlaintextStorageCb);
 
   layout->addStretch();
   m_pagesWidget->addWidget(page);
