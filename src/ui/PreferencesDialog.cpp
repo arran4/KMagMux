@@ -49,24 +49,10 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
   horizontalLayout->addWidget(m_categoriesList);
   horizontalLayout->addWidget(m_pagesWidget, 1);
   connect(m_buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked,
-          this, [this]() {
-            QSettings settings;
-            settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
-            settings.setValue("minimizeToTray",
-                              m_minimizeToTrayCb->isChecked());
-            settings.setValue("autoStart", m_autoStartCb->isChecked());
-            settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
-            settings.setValue("autoMoveInbox",
-                              m_autoMoveInboxCombo->currentIndex());
-          });
+          this, &PreferencesDialog::saveGeneralSettings);
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
-    QSettings settings;
-    settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
-    settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
-    settings.setValue("autoStart", m_autoStartCb->isChecked());
-    settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
-    settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
+    saveGeneralSettings();
     accept();
   });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -77,6 +63,15 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
 }
 
 PreferencesDialog::~PreferencesDialog() {}
+
+void PreferencesDialog::saveGeneralSettings() {
+  QSettings settings;
+  settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
+  settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
+  settings.setValue("autoStart", m_autoStartCb->isChecked());
+  settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
+  settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
+}
 
 void PreferencesDialog::changePage(QListWidgetItem *current,
                                    QListWidgetItem *previous) {

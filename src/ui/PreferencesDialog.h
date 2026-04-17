@@ -24,6 +24,7 @@ private slots:
   void changePage(QListWidgetItem *current, QListWidgetItem *previous);
 
 private:
+  void saveGeneralSettings();
   void createGeneralPage();
   void createShortcutsPage();
   void createPluginsPage();
