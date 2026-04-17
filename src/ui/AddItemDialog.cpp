@@ -188,20 +188,21 @@ void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     auto setCheckStateForAll = [this](Qt::CheckState state) {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
-        if (deleteItem != nullptr && ((deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U)) {
+        if (deleteItem != nullptr &&
+            ((deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U)) {
           deleteItem->setCheckState(state);
         }
       }
     };
 
     QAction *const selectAllAction = menu.addAction("Select All");
-    connect(selectAllAction, &QAction::triggered, this, [setCheckStateForAll]() {
-      setCheckStateForAll(Qt::Checked);
-    });
+    connect(
+        selectAllAction, &QAction::triggered, this,
+        [this, setCheckStateForAll]() { setCheckStateForAll(Qt::Checked); });
     QAction *const selectNoneAction = menu.addAction("Select None");
-    connect(selectNoneAction, &QAction::triggered, this, [setCheckStateForAll]() {
-      setCheckStateForAll(Qt::Unchecked);
-    });
+    connect(
+        selectNoneAction, &QAction::triggered, this,
+        [this, setCheckStateForAll]() { setCheckStateForAll(Qt::Unchecked); });
     menu.addSeparator();
   }
 
