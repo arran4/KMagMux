@@ -24,8 +24,8 @@ ApiExplorerDialog::ApiExplorerDialog(Connector *connector, QWidget *parent)
   connect(m_networkManager, &QNetworkAccessManager::sslErrors, this,
           &ApiExplorerDialog::onSslErrors);
 
-  if (m_connector) {
-    m_endpoints = m_connector->getHttpApiEndpoints();
+  if (m_connector != nullptr) {
+    auto endpoints = m_connector->getHttpApiEndpoints();
     m_substitutions = m_connector->getApiSubstitutions();
   }
 
@@ -34,7 +34,7 @@ ApiExplorerDialog::ApiExplorerDialog(Connector *connector, QWidget *parent)
 }
 
 ApiExplorerDialog::~ApiExplorerDialog() {
-  if (m_currentReply) {
+  if (m_currentReply != nullptr) {
     m_currentReply->abort();
     m_currentReply->deleteLater();
     m_currentReply = nullptr;
@@ -42,8 +42,9 @@ ApiExplorerDialog::~ApiExplorerDialog() {
 }
 
 void ApiExplorerDialog::setupUi() {
-  setWindowTitle(QString("API Explorer - %1")
-                     .arg(m_connector ? m_connector->getName() : "Unknown"));
+  setWindowTitle(
+      QString("API Explorer - %1")
+          .arg(m_connector != nullptr ? m_connector->getName() : "Unknown"));
   resize(900, 600);
 
   QHBoxLayout *mainLayout = new QHBoxLayout(this);
@@ -293,7 +294,7 @@ void ApiExplorerDialog::onBrowseMultipartFile() {
 }
 
 void ApiExplorerDialog::onSendRequest() {
-  if (m_currentReply) {
+  if (m_currentReply != nullptr) {
     m_currentReply->abort();
     m_currentReply->deleteLater();
     m_currentReply = nullptr;
@@ -323,7 +324,8 @@ void ApiExplorerDialog::onSendRequest() {
   for (int i = 0; i < m_headersTable->rowCount(); ++i) {
     QTableWidgetItem *keyItem = m_headersTable->item(i, 0);
     QTableWidgetItem *valItem = m_headersTable->item(i, 1);
-    if (keyItem && valItem && !keyItem->text().isEmpty()) {
+    if (keyItem != nullptr && valItem != nullptr &&
+        !keyItem->text().isEmpty()) {
       request.setRawHeader(applySubstitutions(keyItem->text()).toUtf8(),
                            applySubstitutions(valItem->text()).toUtf8());
     }
@@ -347,7 +349,8 @@ void ApiExplorerDialog::onSendRequest() {
     for (int i = 0; i < m_multipartTable->rowCount(); ++i) {
       QTableWidgetItem *keyItem = m_multipartTable->item(i, 0);
       QTableWidgetItem *valItem = m_multipartTable->item(i, 1);
-      if (keyItem && valItem && !keyItem->text().isEmpty()) {
+      if (keyItem != nullptr && valItem != nullptr &&
+          !keyItem->text().isEmpty()) {
         QHttpPart part;
         QString key = applySubstitutions(keyItem->text());
         QString val = applySubstitutions(valItem->text());
@@ -367,7 +370,7 @@ void ApiExplorerDialog::onSendRequest() {
                                  "Failed to open file: " + filePath);
             file->deleteLater();
             file = nullptr;
-            if (multiPart) {
+            if (multiPart != nullptr) {
               multiPart->deleteLater();
               multiPart = nullptr;
             }
@@ -411,7 +414,7 @@ void ApiExplorerDialog::onSendRequest() {
 
 void ApiExplorerDialog::onNetworkReplyFinished() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  if (!reply)
+  if (reply == nullptr)
     return;
 
   m_urlEdit->setEnabled(true);

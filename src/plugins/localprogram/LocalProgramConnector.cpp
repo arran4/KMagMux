@@ -407,7 +407,7 @@ QWidget *LocalProgramConnector::createSettingsWidget(QWidget *parent) {
 }
 
 void LocalProgramConnector::saveSettings(QWidget *settingsWidget) {
-  if (!m_isFactory || !settingsWidget)
+  if (!m_isFactory || settingsWidget == nullptr)
     return;
 
   QCheckBox *enabledCheck =
@@ -418,13 +418,13 @@ void LocalProgramConnector::saveSettings(QWidget *settingsWidget) {
   QSettings settings;
   settings.beginGroup("Plugins/LocalProgram");
 
-  if (enabledCheck) {
+  if (enabledCheck != nullptr) {
     bool en = enabledCheck->isChecked();
     settings.setValue("enabled", en);
     m_enabled = en;
   }
 
-  if (table) {
+  if (table != nullptr) {
     settings.beginWriteArray("Clients");
     for (int i = 0; i < table->rowCount(); ++i) {
       settings.setArrayIndex(i);

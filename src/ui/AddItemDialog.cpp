@@ -91,7 +91,7 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
   // Check if any items are local files. If none are, hide the delete column.
   bool hasLocalFiles = false;
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-    if (m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) {
+    if ((m_itemsTable->item(i, 1)->flags() & Qt::ItemIsUserCheckable) != 0u) {
       hasLocalFiles = true;
       break;
     }

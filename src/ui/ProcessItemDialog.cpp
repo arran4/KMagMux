@@ -268,8 +268,8 @@ void ProcessItemDialog::onProcessClicked() {
         }
 
         QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
-        if (deleteWhenDoneItem &&
-            deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) {
+        if (deleteWhenDoneItem != nullptr &&
+            (deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
           if (deleteWhenDoneItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_once_submitted"] = true;

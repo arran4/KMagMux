@@ -145,7 +145,7 @@ void TorrentInfoDialog::setupTrackerSection(QVBoxLayout *mainLayout) {
 }
 
 void TorrentInfoDialog::setupHistorySection(QVBoxLayout *mainLayout) {
-  if (m_item && m_item->metadata.contains("history")) {
+  if (m_item != nullptr && m_item->metadata.contains("history")) {
     QLabel *historyLabel = new QLabel("<b>History:</b>", this);
     mainLayout->addWidget(historyLabel);
 

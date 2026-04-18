@@ -75,11 +75,11 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
-  if (m_trayIcon) {
+  if (m_trayIcon != nullptr) {
     m_trayIcon->hide();
     m_trayIcon->setContextMenu(nullptr); // detach the menu before destruction
   }
-  if (m_engine) {
+  if (m_engine != nullptr) {
     m_engine->stop();
     m_engine->deleteLater();
     m_engine = nullptr;
@@ -230,7 +230,7 @@ void MainWindow::setupActionsAndMenus() {
                                          QKeySequence::SelectAll);
   connect(m_selectAllAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
-    if (view) {
+    if (view != nullptr) {
       view->selectAll();
     }
   });
@@ -245,7 +245,7 @@ void MainWindow::setupActionsAndMenus() {
                                    tr("Process &All"), this);
   connect(m_processAllAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
-    if (view) {
+    if (view != nullptr) {
       view->selectAll();
       onProcessItem();
     }
@@ -266,10 +266,10 @@ void MainWindow::setupActionsAndMenus() {
   m_archiveAllAction = new QAction(tr("Archive &All"), this);
   connect(m_archiveAllAction, &QAction::triggered, this, [this]() {
     const QTableView *view = getCurrentView();
-    if (!view)
+    if (view == nullptr)
       return;
     const ItemModel *model = getCurrentModel();
-    if (!model)
+    if (model == nullptr)
       return;
 
     std::vector<Item> itemsToSave;
@@ -303,14 +303,14 @@ void MainWindow::setupActionsAndMenus() {
   actionCollection()->addAction("raw_results_item", m_rawResultsAction);
   connect(m_infoAction, &QAction::triggered, this, [this]() {
     QTableView *view = getCurrentView();
-    if (!view)
+    if (view == nullptr)
       return;
     const ItemModel *model = getCurrentModel();
-    if (!model)
+    if (model == nullptr)
       return;
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
-    if (!proxy)
+    if (proxy == nullptr)
       return;
     QModelIndexList selection = view->selectionModel()->selectedRows();
     if (selection.isEmpty())
@@ -353,7 +353,7 @@ void MainWindow::setupActionsAndMenus() {
     debugMenu = *it;
   }
 
-  if (debugMenu) {
+  if (debugMenu != nullptr) {
     setupPluginMenus(debugMenu);
   }
 }
@@ -598,7 +598,7 @@ void MainWindow::loadData() {
 
 QTableView *MainWindow::getCurrentView() const {
   QWidget *currentTab = m_tabWidget->currentWidget();
-  if (currentTab) {
+  if (currentTab != nullptr) {
     return currentTab->findChild<QTableView *>();
   }
   return nullptr;
@@ -606,10 +606,10 @@ QTableView *MainWindow::getCurrentView() const {
 
 ItemModel *MainWindow::getCurrentModel() const {
   const QTableView *view = getCurrentView();
-  if (view) {
+  if (view != nullptr) {
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
-    if (proxy) {
+    if (proxy != nullptr) {
       return qobject_cast<ItemModel *>(proxy->sourceModel());
     }
   }
@@ -618,7 +618,7 @@ ItemModel *MainWindow::getCurrentModel() const {
 
 void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (view == nullptr)
     return;
 
   QModelIndex index = view->indexAt(pos);
@@ -653,7 +653,7 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   if (view == m_errorView) {
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
-    if (proxy && index.isValid()) {
+    if (proxy != nullptr && index.isValid()) {
       QModelIndex sourceIndex = proxy->mapToSource(index);
       Item item = m_errorModel->getItem(sourceIndex.row());
       if (item.metadata.contains("raw_http")) {
@@ -680,10 +680,10 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
   if (index.isValid()) {
     ItemFilterProxyModel *proxy =
         qobject_cast<ItemFilterProxyModel *>(view->model());
-    if (proxy) {
+    if (proxy != nullptr) {
       QModelIndex sourceIndex = proxy->mapToSource(index);
       const ItemModel *model = getCurrentModel();
-      if (model) {
+      if (model != nullptr) {
         Item item = model->getItem(sourceIndex.row());
         if (item.metadata.contains("raw_response")) {
           menu.addAction(m_rawResultsAction);
@@ -699,12 +699,12 @@ void MainWindow::onCustomContextMenuRequested(const QPoint &pos) {
 
 void MainWindow::onViewRawProcessingResults() {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (view == nullptr)
     return;
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr)
     return;
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
@@ -713,7 +713,7 @@ void MainWindow::onViewRawProcessingResults() {
 
   QModelIndex sourceIndex = proxy->mapToSource(selection.first());
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr)
     return;
 
   Item item = model->getItem(sourceIndex.row());
@@ -750,12 +750,12 @@ void MainWindow::onViewRawProcessingResults() {
 
 void MainWindow::onViewRawHttp() {
   QTableView *view = getCurrentView();
-  if (!view || view != m_errorView)
+  if (view == nullptr || view != m_errorView)
     return;
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr)
     return;
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
@@ -773,16 +773,16 @@ void MainWindow::onViewRawHttp() {
 
 void MainWindow::onItemAction(ItemState newState) {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (view == nullptr)
     return;
 
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr)
     return;
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr)
     return;
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
@@ -824,16 +824,16 @@ void MainWindow::onItemsDeleted(const std::vector<QString> &ids) { loadData(); }
 
 void MainWindow::onDeleteItems() {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (view == nullptr)
     return;
 
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr)
     return;
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr)
     return;
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
@@ -999,11 +999,11 @@ void MainWindow::processAddedLines(const QStringList &lines) {
 
 void MainWindow::onProcessItem() {
   QTableView *view = getCurrentView();
-  if (!view)
+  if (view == nullptr)
     return;
 
   const ItemModel *model = getCurrentModel();
-  if (!model)
+  if (model == nullptr)
     return;
 
   QModelIndexList selection = view->selectionModel()->selectedRows();
@@ -1012,7 +1012,7 @@ void MainWindow::onProcessItem() {
 
   ItemFilterProxyModel *proxy =
       qobject_cast<ItemFilterProxyModel *>(view->model());
-  if (!proxy)
+  if (proxy == nullptr)
     return;
 
   std::vector<Item> selectedItems;
@@ -1096,80 +1096,80 @@ void MainWindow::onAbout() {
 
 void MainWindow::updateActionsState() {
   QTableView *view = getCurrentView();
-  if (!view) {
-    if (m_selectAllAction)
+  if (view == nullptr) {
+    if (m_selectAllAction != nullptr)
       m_selectAllAction->setEnabled(false);
-    if (m_processAction)
+    if (m_processAction != nullptr)
       m_processAction->setEnabled(false);
-    if (m_unprocessAction)
+    if (m_unprocessAction != nullptr)
       m_unprocessAction->setEnabled(false);
-    if (m_dismissAction)
+    if (m_dismissAction != nullptr)
       m_dismissAction->setEnabled(false);
-    if (m_archiveAction)
+    if (m_archiveAction != nullptr)
       m_archiveAction->setEnabled(false);
-    if (m_archiveAllAction)
+    if (m_archiveAllAction != nullptr)
       m_archiveAllAction->setEnabled(false);
-    if (m_deleteAction)
+    if (m_deleteAction != nullptr)
       m_deleteAction->setEnabled(false);
-    if (m_infoAction)
+    if (m_infoAction != nullptr)
       m_infoAction->setEnabled(false);
-    if (m_rawResultsAction)
+    if (m_rawResultsAction != nullptr)
       m_rawResultsAction->setEnabled(false);
     return;
   }
 
-  bool hasSelection =
-      view->selectionModel() && view->selectionModel()->hasSelection();
+  bool hasSelection = view->selectionModel() != nullptr &&
+                      view->selectionModel()->hasSelection();
 
-  if (m_selectAllAction)
+  if (m_selectAllAction != nullptr)
     m_selectAllAction->setEnabled(true);
 
-  if (m_processAction) {
+  if (m_processAction != nullptr) {
     m_processAction->setVisible(true);
     m_processAction->setEnabled(hasSelection);
   }
 
-  if (m_processAllAction) {
+  if (m_processAllAction != nullptr) {
     const ItemModel *model = getCurrentModel();
     m_processAllAction->setVisible(view == m_unprocessedView);
-    m_processAllAction->setEnabled(model && model->rowCount() > 0 &&
+    m_processAllAction->setEnabled(model != nullptr && model->rowCount() > 0 &&
                                    view == m_unprocessedView);
   }
 
-  if (m_unprocessAction) {
+  if (m_unprocessAction != nullptr) {
     m_unprocessAction->setVisible(view != m_unprocessedView);
     m_unprocessAction->setEnabled(hasSelection && view != m_unprocessedView);
   }
 
-  if (m_dismissAction) {
+  if (m_dismissAction != nullptr) {
     m_dismissAction->setVisible(view == m_errorView);
     m_dismissAction->setEnabled(hasSelection && view == m_errorView);
   }
 
-  if (m_archiveAction)
+  if (m_archiveAction != nullptr)
     m_archiveAction->setEnabled(hasSelection);
-  if (m_archiveAllAction) {
+  if (m_archiveAllAction != nullptr) {
     const ItemModel *model = getCurrentModel();
     m_archiveAllAction->setVisible(view == m_doneView || view == m_errorView);
-    m_archiveAllAction->setEnabled(model && model->rowCount() > 0 &&
+    m_archiveAllAction->setEnabled(model != nullptr && model->rowCount() > 0 &&
                                    (view == m_doneView || view == m_errorView));
   }
-  if (m_deleteAction)
+  if (m_deleteAction != nullptr)
     m_deleteAction->setEnabled(hasSelection);
-  if (m_infoAction) {
+  if (m_infoAction != nullptr) {
     QModelIndexList selection = view->selectionModel()->selectedRows();
     m_infoAction->setEnabled(hasSelection && selection.size() == 1);
   }
-  if (m_rawResultsAction) {
+  if (m_rawResultsAction != nullptr) {
     QModelIndexList selection = view->selectionModel()->selectedRows();
     bool rawEnabled = false;
     if (hasSelection && selection.size() == 1) {
       ItemFilterProxyModel *proxy =
           qobject_cast<ItemFilterProxyModel *>(view->model());
-      if (proxy) {
+      if (proxy != nullptr) {
         QModelIndex sourceIndex = proxy->mapToSource(selection.first());
         const ItemModel *model = getCurrentModel();
-        if (model) {
+        if (model != nullptr) {
           Item item = model->getItem(sourceIndex.row());
           if (item.metadata.contains("raw_response")) {
             rawEnabled = true;
@@ -1196,12 +1196,12 @@ void MainWindow::onOpenCacheDirectory() {
 }
 
 void MainWindow::setupPluginMenus(QMenu *helpMenu) {
-  if (!m_engine)
+  if (m_engine == nullptr)
     return;
 
   for (const QString &connectorId : m_engine->getAvailableConnectors()) {
     Connector *connector = m_engine->getConnector(connectorId);
-    if (connector && connector->hasDebugMenu()) {
+    if (connector != nullptr && connector->hasDebugMenu()) {
       QMenu *pluginMenu =
           helpMenu->addMenu(QString("%1 Debug").arg(connector->getName()));
 
@@ -1216,7 +1216,7 @@ void MainWindow::setupPluginMenus(QMenu *helpMenu) {
 }
 
 void MainWindow::onOpenApiExplorer(Connector *connector) {
-  if (!connector)
+  if (connector == nullptr)
     return;
 
   ApiExplorerDialog dialog(connector, this);

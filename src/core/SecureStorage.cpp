@@ -1,7 +1,8 @@
 #include "SecureStorage.h"
+#include <KWallet>
 #include <QDebug>
 #include <QSettings>
-#include <KWallet>
+#include <QtLogging>
 
 QString SecureStorage::readPassword(const QString &service,
                                     const QString &key) {
@@ -10,7 +11,7 @@ QString SecureStorage::readPassword(const QString &service,
       KWallet::Wallet::LocalWallet(), 0, KWallet::Wallet::Synchronous);
 
   bool readSuccess = false;
-  if (wallet && wallet->isOpen()) {
+  if (wallet != nullptr && wallet->isOpen()) {
     if (!wallet->hasFolder(service)) {
       wallet->createFolder(service);
     }
@@ -47,7 +48,7 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
       KWallet::Wallet::LocalWallet(), 0, KWallet::Wallet::Synchronous);
 
   bool writeSuccess = false;
-  if (wallet && wallet->isOpen()) {
+  if (wallet != nullptr && wallet->isOpen()) {
     if (!wallet->hasFolder(service)) {
       wallet->createFolder(service);
     }

@@ -221,20 +221,20 @@ void PreferencesDialog::createPluginsPage() {
     } else {
       for (const QString &id : connectors) {
         Connector *connector = m_engine->getConnector(id);
-        if (connector) {
+        if (connector != nullptr) {
           QGroupBox *groupBox =
               new QGroupBox(connector->getName(), scrollContent);
           QVBoxLayout *groupLayout = new QVBoxLayout(groupBox);
 
           if (connector->hasSettings()) {
             QWidget *settingsWidget = connector->createSettingsWidget(groupBox);
-            if (settingsWidget) {
+            if (settingsWidget != nullptr) {
               groupLayout->addWidget(settingsWidget);
 
               // We need to save settings when OK/Apply is clicked.
               // We can connect to the buttonBox accepted signal to call
               // saveSettings.
-              if (m_buttonBox) {
+              if (m_buttonBox != nullptr) {
                 connect(m_buttonBox, &QDialogButtonBox::accepted, this,
                         [connector, settingsWidget]() {
                           connector->saveSettings(settingsWidget);

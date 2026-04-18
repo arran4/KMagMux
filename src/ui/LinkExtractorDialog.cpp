@@ -62,7 +62,7 @@ void LinkExtractorDialog::closeEvent(QCloseEvent *event) {
 
 void LinkExtractorDialog::onCancelClicked() {
   m_cancelled = true;
-  if (m_currentReply) {
+  if (m_currentReply != nullptr) {
     m_currentReply->abort();
     m_currentReply->deleteLater();
     m_currentReply = nullptr;
@@ -146,7 +146,7 @@ void LinkExtractorDialog::onReplyFinished() {
   if (m_cancelled)
     return;
 
-  if (!m_currentReply) {
+  if (m_currentReply == nullptr) {
     QMetaObject::invokeMethod(this, "processNext", Qt::QueuedConnection);
     return;
   }
@@ -171,7 +171,7 @@ void LinkExtractorDialog::onReplyFinished() {
                   .arg(url.toString(), reply->errorString()));
   }
 
-  if (reply) {
+  if (reply != nullptr) {
     reply->deleteLater();
     reply = nullptr;
   }

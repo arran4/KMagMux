@@ -1,4 +1,5 @@
 #include "ItemParser.h"
+#include "core/Item.h"
 #include <QDateTime>
 #include <QDir>
 #include <QEventLoop>
@@ -9,6 +10,12 @@
 #include <QRegularExpression>
 #include <QTextStream>
 #include <QUrl>
+#include <qcontainerfwd.h>
+#include <qjsonobject.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qtypes.h>
+#include <vector>
 
 std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
   std::vector<Item> parsedItems;
@@ -47,8 +54,8 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
       loop.exec();
 
       if (reply->error() == QNetworkReply::NoError) {
-        QString tempPath = QDir::tempPath() + "/" + newItem.id + "_" +
-                           QFileInfo(QUrl(pathToCheck).path()).fileName();
+        QString const tempPath = QDir::tempPath() + "/" + newItem.id + "_" +
+                                 QFileInfo(QUrl(pathToCheck).path()).fileName();
         QFile file(tempPath);
         if (file.open(QIODevice::WriteOnly)) {
           file.write(reply->readAll());

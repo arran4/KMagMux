@@ -18,7 +18,7 @@ bool ItemFilterProxyModel::filterAcceptsRow(
     return true;
 
   const ItemModel *model = qobject_cast<ItemModel *>(sourceModel());
-  if (!model)
+  if (model == nullptr)
     return true;
 
   const Item &item = model->getItem(source_row);

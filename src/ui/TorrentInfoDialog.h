@@ -9,6 +9,8 @@
 #include <QTableWidget>
 #include <QTextEdit>
 
+class QVBoxLayout;
+
 class TorrentInfoDialog : public QDialog {
   Q_OBJECT
 

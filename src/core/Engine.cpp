@@ -156,7 +156,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
             m_connectors.insert(subConn->getId(), subConn);
 
             QObject *subPlugin = dynamic_cast<QObject *>(subConn);
-            if (subPlugin) {
+            if (subPlugin != nullptr) {
               // Connect to its signals via QObject cast
               connect(
                   subPlugin,
