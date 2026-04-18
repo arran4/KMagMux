@@ -1,24 +1,30 @@
 #include "SecureStorage.h"
 #include <QDebug>
-#include <QEventLoop>
 #include <QSettings>
-#include <qt6keychain/keychain.h>
+#include <KWallet>
 
 QString SecureStorage::readPassword(const QString &service,
                                     const QString &key) {
-  QKeychain::ReadPasswordJob job(service);
-  job.setKey(key);
-  job.setAutoDelete(false);
-
-  QEventLoop loop;
-  QObject::connect(&job, &QKeychain::Job::finished, &loop, &QEventLoop::quit);
-  job.start();
-  loop.exec();
-
   QString result;
-  if (job.error() == QKeychain::NoError) {
-    result = job.textData();
-  } else {
+  KWallet::Wallet *wallet = KWallet::Wallet::openWallet(
+      KWallet::Wallet::LocalWallet(), 0, KWallet::Wallet::Synchronous);
+
+  bool readSuccess = false;
+  if (wallet && wallet->isOpen()) {
+    if (!wallet->hasFolder(service)) {
+      wallet->createFolder(service);
+    }
+    wallet->setFolder(service);
+    if (wallet->readPassword(key, result) == 0) {
+      readSuccess = true;
+    } else {
+      qWarning() << "SecureStorage: Failed to read password for service"
+                 << service << "key" << key << "from KWallet";
+    }
+    delete wallet;
+  }
+
+  if (!readSuccess) {
     const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
@@ -28,7 +34,7 @@ QString SecureStorage::readPassword(const QString &service,
     } else {
       qWarning() << "SecureStorage: Failed to read password for service"
                  << service << "key" << key << ":"
-                 << qPrintable(job.errorString());
+                 << "KWallet not available or key not found";
     }
   }
 
@@ -37,17 +43,25 @@ QString SecureStorage::readPassword(const QString &service,
 
 void SecureStorage::writePassword(const QString &service, const QString &key,
                                   const QString &password) {
-  QKeychain::WritePasswordJob job(service);
-  job.setKey(key);
-  job.setTextData(password);
-  job.setAutoDelete(false);
+  KWallet::Wallet *wallet = KWallet::Wallet::openWallet(
+      KWallet::Wallet::LocalWallet(), 0, KWallet::Wallet::Synchronous);
 
-  QEventLoop loop;
-  QObject::connect(&job, &QKeychain::Job::finished, &loop, &QEventLoop::quit);
-  job.start();
-  loop.exec();
+  bool writeSuccess = false;
+  if (wallet && wallet->isOpen()) {
+    if (!wallet->hasFolder(service)) {
+      wallet->createFolder(service);
+    }
+    wallet->setFolder(service);
+    if (wallet->writePassword(key, password) == 0) {
+      writeSuccess = true;
+    } else {
+      qWarning() << "SecureStorage: Failed to write password for service"
+                 << service << "key" << key << "to KWallet";
+    }
+    delete wallet;
+  }
 
-  if (job.error() != QKeychain::NoError) {
+  if (!writeSuccess) {
     const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
@@ -57,7 +71,7 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
     } else {
       qWarning() << "SecureStorage: Failed to write password for service"
                  << service << "key" << key << ":"
-                 << qPrintable(job.errorString());
+                 << "KWallet not available or write failed";
     }
   }
 }

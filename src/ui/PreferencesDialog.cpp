@@ -147,7 +147,7 @@ void PreferencesDialog::createGeneralPage() {
 
   m_allowPlaintextStorageCb =
       new QCheckBox(tr("Allow plaintext password and API key storage (fallback "
-                       "if keychain fails)"),
+                       "if kwallet fails)"),
                     page);
   m_allowPlaintextStorageCb->setChecked(
       settings.value("allowPlaintextStorage", false).toBool());
