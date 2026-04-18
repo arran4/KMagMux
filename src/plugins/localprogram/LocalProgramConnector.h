@@ -49,6 +49,7 @@ private:
 public:
   static QList<LocalClientConfig> discoverClients();
   static QString findExecutable(const QString &name);
+  static QString escapeShellArg(const QString &arg);
 
 signals:
   void dispatchFinished(const QString &itemId, bool success,
