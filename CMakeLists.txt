@@ -62,6 +62,10 @@ add_subdirectory(src/plugins/premiumize)
 add_subdirectory(src/plugins/localprogram)
 add_subdirectory(src/plugins/realdebrid)
 
+add_custom_target(KMagMux_AllPlugins
+    DEPENDS qbittorrent torbox putio premiumize localprogram
+)
+
 include(CTest)
 if(BUILD_TESTING)
   add_subdirectory(tests)
