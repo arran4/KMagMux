@@ -91,9 +91,30 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   QVariantMap dict = parser.dictionary();
 
+  parseTrackers(dict, info);
+  parseMetadata(dict, info);
+  parseInfoDict(dict, info);
+
+  info.infoHash = parser.infoHash();
+
+  if (info.infoHash.isEmpty()) {
+    info.errorString = "No info dict found, cannot compute info hash";
+    return info;
+  }
+
+  if (info.name.isEmpty()) {
+    info.name = "Unknown Name";
+  }
+
+  info.valid = true;
+  return info;
+}
+
+void TorrentParser::parseTrackers(const QVariantMap &dict, TorrentInfo &info) {
   // Extract announce
   if (dict.contains("announce")) {
-    const QString announce = QString::fromUtf8(dict["announce"].toByteArray());
+    const QString announce =
+        QString::fromUtf8(dict.value("announce").toByteArray());
     if (!info.trackers.contains(announce)) {
       info.trackers.append(announce);
     }
@@ -101,7 +122,7 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
 
   // Extract announce-list
   if (dict.contains("announce-list")) {
-    const QVariantList announceList = dict["announce-list"].toList();
+    const QVariantList announceList = dict.value("announce-list").toList();
     for (const QVariant &tierVar : announceList) {
       if (tierVar.typeId() == QMetaType::QVariantList) {
         const QVariantList tier = tierVar.toList();
@@ -117,25 +138,29 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
       }
     }
   }
+}
 
+void TorrentParser::parseMetadata(const QVariantMap &dict, TorrentInfo &info) {
   if (dict.contains("comment")) {
-    info.comment = QString::fromUtf8(dict["comment"].toByteArray());
+    info.comment = QString::fromUtf8(dict.value("comment").toByteArray());
   }
 
   if (dict.contains("created by")) {
-    info.createdBy = QString::fromUtf8(dict["created by"].toByteArray());
+    info.createdBy = QString::fromUtf8(dict.value("created by").toByteArray());
   }
 
   if (dict.contains("creation date")) {
-    const qint64 creationTs = dict["creation date"].toLongLong();
+    const qint64 creationTs = dict.value("creation date").toLongLong();
     if (creationTs > 0) {
       info.creationDate = QDateTime::fromSecsSinceEpoch(creationTs);
     }
   }
+}
 
+void TorrentParser::parseInfoDict(const QVariantMap &dict, TorrentInfo &info) {
   // Extract info dictionary values
   if (dict.contains("info")) {
-    const QVariant infoVar = dict["info"];
+    const QVariant infoVar = dict.value("info");
     if (infoVar.typeId() == QMetaType::QVariantMap) {
       QVariantMap infoDict = infoVar.toMap();
       if (infoDict.contains("name")) {
@@ -187,18 +212,4 @@ TorrentInfo TorrentParser::parseTorrentFile(const QString &filePath) {
       }
     }
   }
-
-  info.infoHash = parser.infoHash();
-
-  if (info.infoHash.isEmpty()) {
-    info.errorString = "No info dict found, cannot compute info hash";
-    return info;
-  }
-
-  if (info.name.isEmpty()) {
-    info.name = "Unknown Name";
-  }
-
-  info.valid = true;
-  return info;
 }
