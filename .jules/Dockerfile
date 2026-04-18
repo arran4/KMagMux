@@ -11,7 +11,7 @@ RUN zypper install -y \
     cmake \
     gcc-c++ \
     make \
-    qtkeychain-qt6-devel
+    kf6-kwallet-devel
 
 WORKDIR /app
 COPY . /app

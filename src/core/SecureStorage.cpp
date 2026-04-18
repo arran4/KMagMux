@@ -1,7 +1,7 @@
 #include "SecureStorage.h"
 #include <QDebug>
 #include <QSettings>
-#include <kwallet.h>
+#include <KWallet>
 
 QString SecureStorage::readPassword(const QString &service,
                                     const QString &key) {
@@ -9,17 +9,22 @@ QString SecureStorage::readPassword(const QString &service,
   KWallet::Wallet *wallet = KWallet::Wallet::openWallet(
       KWallet::Wallet::LocalWallet(), 0, KWallet::Wallet::Synchronous);
 
+  bool readSuccess = false;
   if (wallet && wallet->isOpen()) {
-    if (!wallet->hasFolder("KMagMux")) {
-      wallet->createFolder("KMagMux");
+    if (!wallet->hasFolder(service)) {
+      wallet->createFolder(service);
     }
-    wallet->setFolder("KMagMux");
-    if (wallet->readPassword(service + "_" + key, result) != 0) {
+    wallet->setFolder(service);
+    if (wallet->readPassword(key, result) == 0) {
+      readSuccess = true;
+    } else {
       qWarning() << "SecureStorage: Failed to read password for service"
                  << service << "key" << key << "from KWallet";
     }
     delete wallet;
-  } else {
+  }
+
+  if (!readSuccess) {
     const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
@@ -29,7 +34,7 @@ QString SecureStorage::readPassword(const QString &service,
     } else {
       qWarning() << "SecureStorage: Failed to read password for service"
                  << service << "key" << key << ":"
-                 << "KWallet not available";
+                 << "KWallet not available or key not found";
     }
   }
 
@@ -41,17 +46,22 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
   KWallet::Wallet *wallet = KWallet::Wallet::openWallet(
       KWallet::Wallet::LocalWallet(), 0, KWallet::Wallet::Synchronous);
 
+  bool writeSuccess = false;
   if (wallet && wallet->isOpen()) {
-    if (!wallet->hasFolder("KMagMux")) {
-      wallet->createFolder("KMagMux");
+    if (!wallet->hasFolder(service)) {
+      wallet->createFolder(service);
     }
-    wallet->setFolder("KMagMux");
-    if (wallet->writePassword(service + "_" + key, password) != 0) {
+    wallet->setFolder(service);
+    if (wallet->writePassword(key, password) == 0) {
+      writeSuccess = true;
+    } else {
       qWarning() << "SecureStorage: Failed to write password for service"
                  << service << "key" << key << "to KWallet";
     }
     delete wallet;
-  } else {
+  }
+
+  if (!writeSuccess) {
     const QSettings mainSettings;
     if (mainSettings.value("allowPlaintextStorage", false).toBool()) {
       QSettings settings;
@@ -61,7 +71,7 @@ void SecureStorage::writePassword(const QString &service, const QString &key,
     } else {
       qWarning() << "SecureStorage: Failed to write password for service"
                  << service << "key" << key << ":"
-                 << "KWallet not available";
+                 << "KWallet not available or write failed";
     }
   }
 }
