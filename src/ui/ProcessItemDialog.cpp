@@ -26,9 +26,12 @@
 #include "MaxWidthDelegate.h"
 #include "TorrentInfoDialog.h"
 
+#include "core/Item.h"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QLabel>
+#include <QOverload>
+#include <QPoint>
 #include <QUuid>
 
 ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
@@ -206,7 +209,7 @@ void ProcessItemDialog::onProcessClicked() {
   std::vector<Item> processedItems;
 
   ItemState selectedState = ItemState::Queued;
-  QString stateStr = m_stateCombo->currentText();
+  const QString stateStr = m_stateCombo->currentText();
   if (stateStr == "Queue") {
     selectedState = ItemState::Queued;
   } else if (stateStr == "Hold") {
@@ -229,9 +232,9 @@ void ProcessItemDialog::onProcessClicked() {
   }
 
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
-    QTableWidgetItem *const checkItem = m_itemsTable->item(i, 0);
+    const QTableWidgetItem *const checkItem = m_itemsTable->item(i, 0);
     if (checkItem != nullptr && checkItem->checkState() == Qt::Checked) {
-      Item originalItem = m_items[i];
+      const Item originalItem = m_items[i];
 
       for (const QString &connectorId : selectedConnectors) {
         Item item = originalItem; // Duplicate the item for each connector
@@ -245,7 +248,7 @@ void ProcessItemDialog::onProcessClicked() {
           item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         }
 
-        QString oldState = item.stateToString();
+        const QString oldState = item.stateToString();
         item.state = selectedState;
         item.addHistory(
             QString("Processed and state set to %1").arg(item.stateToString()));
@@ -257,9 +260,9 @@ void ProcessItemDialog::onProcessClicked() {
               QDateTime(); // Clear scheduled time if not holding
         }
 
-        QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
+        const QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
         if (deleteItem != nullptr &&
-            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+            (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
           if (deleteItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_source_file"] = true;
@@ -267,9 +270,9 @@ void ProcessItemDialog::onProcessClicked() {
           }
         }
 
-        QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
+        const QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
         if (deleteWhenDoneItem != nullptr &&
-            (deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
+            (deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
           if (deleteWhenDoneItem->checkState() == Qt::Checked) {
             QJsonObject meta = item.metadata;
             meta["delete_once_submitted"] = true;
@@ -292,7 +295,7 @@ void ProcessItemDialog::onStateChanged(int index) {
 }
 
 void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
-  QTableWidgetItem *const item = m_itemsTable->itemAt(pos);
+  const QTableWidgetItem *const item = m_itemsTable->itemAt(pos);
   if (item == nullptr) {
     return;
   }
@@ -306,7 +309,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
   QMenu menu(this);
 
   if (col == 1) {
-    QAction *const selectAllAction = menu.addAction("Select All");
+    const QAction *const selectAllAction = menu.addAction("Select All");
     connect(selectAllAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
@@ -315,7 +318,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
         }
       }
     });
-    QAction *const selectNoneAction = menu.addAction("Select None");
+    const QAction *const selectNoneAction = menu.addAction("Select None");
     connect(selectNoneAction, &QAction::triggered, this, [this]() {
       for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
         QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
@@ -327,7 +330,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     menu.addSeparator();
   }
 
-  QAction *const copyAction = menu.addAction("Copy cell");
+  const QAction *const copyAction = menu.addAction("Copy cell");
   connect(copyAction, &QAction::triggered, this, [this, item, row, col]() {
     QString text;
     if (col == 3) {
@@ -341,7 +344,7 @@ void ProcessItemDialog::onCustomContextMenuRequested(const QPoint &pos) {
     QGuiApplication::clipboard()->setText(text);
   });
 
-  QAction *const infoAction = menu.addAction("Get Info");
+  const QAction *const infoAction = menu.addAction("Get Info");
   connect(infoAction, &QAction::triggered, this, [this, row]() {
     const QString sourcePath = m_items[row].sourcePath;
     if (sourcePath.startsWith("magnet:") || sourcePath.endsWith(".torrent")) {
