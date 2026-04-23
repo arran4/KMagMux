@@ -220,20 +220,20 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint) {
 }
 
 QString ApiExplorerDialog::applySubstitutions(const QString &text) const {
-  if (!text.contains(QStringLiteral("${"))) {
+  if (m_substitutions.isEmpty() || !text.contains(QStringLiteral("${"))) {
     return text;
   }
   QString result = text;
-  QMapIterator<QString, QString> i(m_substitutions);
-  while (i.hasNext()) {
-    i.next();
-    result.replace(QStringLiteral("${%1}").arg(i.key()), i.value());
+  for (auto it = m_substitutions.cbegin(), end = m_substitutions.cend();
+       it != end; ++it) {
+    result.replace(QLatin1String("${") + it.key() + QLatin1Char('}'),
+                   it.value());
   }
   return result;
 }
 
 QByteArray ApiExplorerDialog::applySubstitutions(const QByteArray &data) const {
-  if (!data.contains("${")) {
+  if (m_substitutions.isEmpty() || !data.contains("${")) {
     return data;
   }
   QString text = QString::fromUtf8(data);
