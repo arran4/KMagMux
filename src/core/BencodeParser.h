@@ -16,11 +16,11 @@ public:
   QString errorString() const;
 
 private:
-  QVariant parseElement(const QByteArray &data, int &pos);
+  QVariant parseElement(const QByteArray &data, int &pos, int depth);
   QVariant parseInteger(const QByteArray &data, int &pos);
   QByteArray parseByteString(const QByteArray &data, int &pos);
-  QVariant parseList(const QByteArray &data, int &pos);
-  QVariant parseDictionary(const QByteArray &data, int &pos);
+  QVariant parseList(const QByteArray &data, int &pos, int depth);
+  QVariant parseDictionary(const QByteArray &data, int &pos, int depth);
 
   QVariantMap m_dictionary;
   QByteArray m_infoHash;

@@ -14,7 +14,7 @@ bool BencodeParser::parse(const QByteArray &data) {
   m_dataPtr = &data;
 
   int pos = 0;
-  const QVariant root = parseElement(data, pos);
+  const QVariant root = parseElement(data, pos, 0);
 
   if (pos != data.size() && m_errorString.isEmpty()) {
     // Allow trailing garbage? Often best not to, but sometimes exists.
@@ -40,7 +40,12 @@ QByteArray BencodeParser::infoHash() const { return m_infoHash; }
 
 QString BencodeParser::errorString() const { return m_errorString; }
 
-QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
+QVariant BencodeParser::parseElement(const QByteArray &data, int &pos, int depth) {
+  if (depth > 50) {
+    m_errorString = "Recursion depth limit exceeded";
+    return QVariant();
+  }
+
   if (pos >= data.size()) {
     m_errorString = "Unexpected end of data";
     return QVariant();
@@ -51,10 +56,10 @@ QVariant BencodeParser::parseElement(const QByteArray &data, int &pos) {
     return parseInteger(data, pos);
   }
   if (chr == 'l') {
-    return parseList(data, pos);
+    return parseList(data, pos, depth);
   }
   if (chr == 'd') {
-    return parseDictionary(data, pos);
+    return parseDictionary(data, pos, depth);
   }
   if (chr >= '0' && chr <= '9') {
     return parseByteString(data, pos);
@@ -109,11 +114,11 @@ QByteArray BencodeParser::parseByteString(const QByteArray &data, int &pos) {
   return str;
 }
 
-QVariant BencodeParser::parseList(const QByteArray &data, int &pos) {
+QVariant BencodeParser::parseList(const QByteArray &data, int &pos, int depth) {
   pos++; // skip 'l'
   QVariantList list;
   while (pos < data.size() && data[pos] != 'e') {
-    const QVariant val = parseElement(data, pos);
+    const QVariant val = parseElement(data, pos, depth + 1);
     if (!m_errorString.isEmpty()) {
       return QVariant();
     }
@@ -129,7 +134,7 @@ QVariant BencodeParser::parseList(const QByteArray &data, int &pos) {
   return list;
 }
 
-QVariant BencodeParser::parseDictionary(const QByteArray &data, int &pos) {
+QVariant BencodeParser::parseDictionary(const QByteArray &data, int &pos, int depth) {
   pos++; // skip 'd'
   QVariantMap dict;
 
@@ -149,7 +154,7 @@ QVariant BencodeParser::parseDictionary(const QByteArray &data, int &pos) {
     const bool isInfoDict = (key == "info");
     const int infoStart = pos;
 
-    const QVariant val = parseElement(data, pos);
+    const QVariant val = parseElement(data, pos, depth + 1);
     if (!m_errorString.isEmpty()) {
       return QVariant();
     }

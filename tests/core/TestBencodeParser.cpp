@@ -59,6 +59,21 @@ private slots:
     data = "i42e"; // Root is not a dictionary
     QVERIFY(!parser.parse(data));
   }
+
+  void testRecursionLimit() {
+    BencodeParser parser;
+    // Create a deeply nested list: 60 levels deep
+    QByteArray data;
+    for (int i = 0; i < 60; ++i) {
+      data.append('l');
+    }
+    for (int i = 0; i < 60; ++i) {
+      data.append('e');
+    }
+
+    QVERIFY(!parser.parse(data));
+    QCOMPARE(parser.errorString(), QString("Recursion depth limit exceeded"));
+  }
 };
 
 QTEST_MAIN(TestBencodeParser)
