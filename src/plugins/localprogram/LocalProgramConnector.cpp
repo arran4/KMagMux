@@ -150,27 +150,7 @@ QList<LocalClientConfig> LocalProgramConnector::discoverClients() {
   return discovered;
 }
 
-void LocalProgramConnector::dispatch(const Item &item) {
-  if (m_programPath.isEmpty()) {
-    emit dispatchFinished(item.id, false, "Program path is not configured.");
-    return;
-  }
-
-  QStringList userCommand = QProcess::splitCommand(m_programPath);
-  if (userCommand.isEmpty()) {
-    emit dispatchFinished(item.id, false, "Invalid program path configured.");
-    return;
-  }
-
-  QString program = userCommand.takeFirst();
-  QStringList args = userCommand; // Any remaining args from the user config
-
-  // Security enhancement: Validate executable and arguments
-  QString baseName = QFileInfo(program).fileName().toLower();
-  if (baseName.endsWith(".exe")) {
-    baseName.chop(4);
-  }
-
+bool LocalProgramConnector::validateSecurity(const QString &baseName, const QStringList &args, QString &errorMessage) const {
   static const QStringList allowedPrograms = {
       "qbittorrent",     "transmission-gtk",
       "transmission-qt", "transmission-remote",
@@ -183,14 +163,10 @@ void LocalProgramConnector::dispatch(const Item &item) {
       "aria2c",          "xdg-open"};
 
   if (!allowedPrograms.contains(baseName)) {
-    emit dispatchFinished(item.id, false,
-                          "Security Alert: Program '" + baseName +
-                              "' is not in the allowed list of applications.");
-    return;
+    errorMessage = "Security Alert: Program '" + baseName + "' is not in the allowed list of applications.";
+    return false;
   }
 
-  // Prevent argument injection (e.g., executing arbitrary scripts via client
-  // flags)
   static const QStringList dangerousFlags = {"--torrent-done-script",
                                              "-S",
                                              "--on-download-complete",
@@ -209,14 +185,15 @@ void LocalProgramConnector::dispatch(const Item &item) {
   });
 
   if (it != args.end()) {
-    emit dispatchFinished(item.id, false,
-                          "Security Alert: Dangerous argument '" + *it +
-                              "' is not allowed.");
-    return;
+    errorMessage = "Security Alert: Dangerous argument '" + *it + "' is not allowed.";
+    return false;
   }
 
+  return true;
+}
+
+void LocalProgramConnector::prepareCommand(QString &program, QStringList &args, const QString &baseName, const QString &sourcePath) const {
   if (m_useTerminal) {
-    // Launch via terminal (e.g. xterm -e program args)
     QString terminal = findExecutable("xterm");
     if (terminal.isEmpty())
       terminal = findExecutable("gnome-terminal");
@@ -231,7 +208,7 @@ void LocalProgramConnector::dispatch(const Item &item) {
       commandArgs << args;
       if (baseName != "xdg-open")
         commandArgs << "--";
-      commandArgs << item.sourcePath;
+      commandArgs << sourcePath;
 
       QStringList escapedArgs;
       for (const QString &arg : commandArgs) {
@@ -256,26 +233,58 @@ void LocalProgramConnector::dispatch(const Item &item) {
           << "Requested terminal execution, but no terminal emulator found.";
       if (baseName != "xdg-open")
         args.append("--");
-      args << item.sourcePath;
+      args << sourcePath;
     }
   } else {
     if (baseName != "xdg-open")
       args.append("--");
-    args << item.sourcePath;
+    args << sourcePath;
   }
+}
 
+void LocalProgramConnector::executeProcess(const QString &program, const QStringList &args, const QString &itemId) {
   qDebug() << "Launching local program:" << program
            << "with arguments:" << args;
 
   bool success = QProcess::startDetached(program, args);
   if (success) {
-    emit dispatchFinished(item.id, true,
+    emit dispatchFinished(itemId, true,
                           "Dispatched successfully to local program (" +
                               program + ").");
   } else {
-    emit dispatchFinished(item.id, false,
+    emit dispatchFinished(itemId, false,
                           "Failed to launch local program: " + program);
   }
+}
+
+void LocalProgramConnector::dispatch(const Item &item) {
+  if (m_programPath.isEmpty()) {
+    emit dispatchFinished(item.id, false, "Program path is not configured.");
+    return;
+  }
+
+  QStringList userCommand = QProcess::splitCommand(m_programPath);
+  if (userCommand.isEmpty()) {
+    emit dispatchFinished(item.id, false, "Invalid program path configured.");
+    return;
+  }
+
+  QString program = userCommand.takeFirst();
+  QStringList args = userCommand;
+
+  QString baseName = QFileInfo(program).fileName().toLower();
+  if (baseName.endsWith(".exe")) {
+    baseName.chop(4);
+  }
+
+  QString errorMessage;
+  if (!validateSecurity(baseName, args, errorMessage)) {
+    emit dispatchFinished(item.id, false, errorMessage);
+    return;
+  }
+
+  prepareCommand(program, args, baseName, item.sourcePath);
+  executeProcess(program, args, item.id);
 }
 
 bool LocalProgramConnector::hasSettings() const { return m_isFactory; }
