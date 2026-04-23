@@ -10,6 +10,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRegularExpression>
+#include <QSslConfiguration>
 #include <QTextStream>
 #include <QUrl>
 #include <qcontainerfwd.h>
@@ -49,7 +50,8 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
       QHostInfo info = QHostInfo::fromName(host);
 
       bool isSafe = false;
-      if (info.error() == QHostInfo::NoError) {
+      QHostAddress safeAddr;
+      if (info.error() == QHostInfo::NoError && !info.addresses().isEmpty()) {
         isSafe = true;
         for (const QHostAddress &addr : info.addresses()) {
           if (addr.isLoopback() || addr.isMulticast() || addr.isBroadcast() ||
@@ -99,6 +101,9 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
             }
           }
         }
+        if (isSafe) {
+          safeAddr = info.addresses().first();
+        }
       }
 
       if (!isSafe) {
@@ -108,8 +113,23 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
         return; // Skip this line completely
       }
 
+      // Reconstruct URL with IP to prevent DNS rebinding attacks
+      QUrl safeUrl = url;
+      if (safeAddr.protocol() == QAbstractSocket::IPv6Protocol) {
+        safeUrl.setHost("[" + safeAddr.toString() + "]");
+      } else {
+        safeUrl.setHost(safeAddr.toString());
+      }
+
       QNetworkAccessManager manager;
-      QNetworkRequest request((QUrl(pathToCheck)));
+      QNetworkRequest request(safeUrl);
+      request.setRawHeader("Host", host.toUtf8());
+
+      // Set PeerVerifyName for SNI/HTTPS when connecting by IP
+      QSslConfiguration sslConfig = request.sslConfiguration();
+      sslConfig.setPeerVerifyName(host);
+      request.setSslConfiguration(sslConfig);
+
       request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                            QNetworkRequest::NoLessSafeRedirectPolicy);
 
