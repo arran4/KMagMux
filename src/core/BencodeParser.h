@@ -16,6 +16,8 @@ public:
   QString errorString() const;
 
 private:
+  static constexpr int MaxRecursionDepth = 50;
+
   QVariant parseElement(const QByteArray &data, int &pos, int depth);
   QVariant parseInteger(const QByteArray &data, int &pos);
   QByteArray parseByteString(const QByteArray &data, int &pos);

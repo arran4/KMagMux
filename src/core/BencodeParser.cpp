@@ -41,7 +41,7 @@ QByteArray BencodeParser::infoHash() const { return m_infoHash; }
 QString BencodeParser::errorString() const { return m_errorString; }
 
 QVariant BencodeParser::parseElement(const QByteArray &data, int &pos, int depth) {
-  if (depth > 50) {
+  if (depth > MaxRecursionDepth) {
     m_errorString = "Recursion depth limit exceeded";
     return QVariant();
   }
