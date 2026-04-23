@@ -3,13 +3,13 @@
 
 #include "HttpApiEndpoint.h"
 #include "Item.h"
+#include <QJsonObject>
 #include <QList>
 #include <QMap>
-#include <QNetworkRequest>
 #include <QNetworkReply>
-#include <QJsonObject>
-#include <functional>
+#include <QNetworkRequest>
 #include <QString>
+#include <functional>
 
 class Connector {
 public:
@@ -97,7 +97,9 @@ public:
         callback(itemId, true, "Dispatched successfully.", extraMeta);
       }
     } else {
-      callback(itemId, false, "Network error: " + reply->errorString() + apiCallLog, QJsonObject());
+      callback(itemId, false,
+               "Network error: " + reply->errorString() + apiCallLog,
+               QJsonObject());
     }
   }
 };
