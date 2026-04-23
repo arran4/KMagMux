@@ -12,6 +12,8 @@
 #include <QPlainTextEdit>
 #include <QTableWidget>
 
+class QSplitter;
+
 class ApiExplorerDialog : public QDialog {
   Q_OBJECT
 
@@ -32,6 +34,9 @@ private slots:
 
 private:
   void setupUi();
+  void setupEndpointsList(QSplitter *splitter);
+  void setupRequestGroup(QSplitter *rightSplitter);
+  void setupResponseGroup(QSplitter *rightSplitter);
   void loadEndpoints();
   void populateForm(const HttpApiEndpoint &endpoint);
   QString applySubstitutions(QString text) const;
