@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include <QSpinBox>
+#include <QStringList>
+#include <QWidget>
 
 class QCheckBox;
 class QComboBox;

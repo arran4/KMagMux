@@ -6,6 +6,7 @@
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDialogButtonBox>
+#include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -207,7 +208,7 @@ void PreferencesDialog::createPluginsPage() {
   QVBoxLayout *scrollLayout = new QVBoxLayout(scrollContent);
 
   if (m_engine != nullptr) {
-    QStringList connectors = m_engine->getAllConnectors();
+    const QStringList connectors = m_engine->getAllConnectors();
     if (connectors.isEmpty()) {
       QLabel *noPluginsLabel = new QLabel(
           tr("No plugins found. Ensure plugins are compiled into the 'plugins' "
@@ -219,8 +220,8 @@ void PreferencesDialog::createPluginsPage() {
       noPluginsLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
       scrollLayout->addWidget(noPluginsLabel);
     } else {
-      for (const QString &id : connectors) {
-        Connector *connector = m_engine->getConnector(id);
+      for (const QString &connectorId : connectors) {
+        Connector *connector = m_engine->getConnector(connectorId);
         if (connector != nullptr) {
           QGroupBox *groupBox =
               new QGroupBox(connector->getName(), scrollContent);
