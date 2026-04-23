@@ -89,10 +89,9 @@ public:
       extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
       emitDispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
     } else {
-      emitDispatchFinished(itemId, false,
-                           "Network error: " + reply->errorString() +
-                               apiCallLog,
-                           QJsonObject());
+      emitDispatchFinished(
+          itemId, false, "Network error: " + reply->errorString() + apiCallLog,
+          QJsonObject());
     }
 
     reply->deleteLater();
