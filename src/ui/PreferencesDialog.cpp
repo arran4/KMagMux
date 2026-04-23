@@ -10,6 +10,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QIcon>
 #include <QLabel>
 #include <QListWidget>
 #include <QPushButton>
@@ -18,6 +19,7 @@
 #include <QStackedWidget>
 #include <QTableWidget>
 #include <QVBoxLayout>
+#include <QVariant>
 
 PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     : QDialog(parent), m_engine(engine) {
@@ -117,7 +119,8 @@ void PreferencesDialog::createGeneralPage() {
   QLabel *autoArchiveLabel =
       new QLabel(tr("Auto Archive 'Done' items after (days):"), page);
   m_autoArchiveDays = new QSpinBox(page);
-  m_autoArchiveDays->setRange(0, 3650);
+  constexpr int maxArchiveDays = 3650;
+  m_autoArchiveDays->setRange(0, maxArchiveDays);
   m_autoArchiveDays->setSpecialValueText(tr("Disabled"));
   m_autoArchiveDays->setValue(settings.value("autoArchiveDays", 0).toInt());
   autoArchiveLayout->addWidget(autoArchiveLabel);
@@ -135,7 +138,7 @@ void PreferencesDialog::createGeneralPage() {
   m_autoMoveInboxCombo->addItem(tr("Move (delete source) to managed storage"));
 
   // Backwards compatibility with boolean
-  QVariant savedValue = settings.value("autoMoveInbox", 0);
+  const QVariant savedValue = settings.value("autoMoveInbox", 0);
   if (savedValue.typeId() == QMetaType::Bool) {
     m_autoMoveInboxCombo->setCurrentIndex(savedValue.toBool() ? 2 : 0);
   } else {
