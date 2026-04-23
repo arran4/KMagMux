@@ -85,17 +85,11 @@ void PutIoConnector::onAddTorrentReply() {
     return;
   }
 
-  const QString itemId = reply->property("itemId").toString();
-  const QString apiCallLog = reply->property("apiCallLog").toString();
-
-  if (reply->error() == QNetworkReply::NoError) {
-    QJsonObject extraMeta;
-    extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
-    emit dispatchFinished(itemId, true, "Dispatched successfully.", extraMeta);
-  } else {
-    emit dispatchFinished(
-        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
-  }
+  Connector::handleStandardDispatchReply(
+      reply, [this](const QString &itemId, bool success, const QString &message,
+                    const QJsonObject &metadata) {
+        emit dispatchFinished(itemId, success, message, metadata);
+      });
 
   reply->deleteLater();
 }

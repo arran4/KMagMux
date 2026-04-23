@@ -6,6 +6,9 @@
 #include <QList>
 #include <QMap>
 #include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonObject>
+#include <functional>
 #include <QString>
 
 class Connector {
@@ -68,8 +71,34 @@ public:
         log += "Body: <multipart/form-data omitted>\n";
       }
     }
+
     log += "----------------\n";
     return log;
+  }
+
+  static void handleStandardDispatchReply(
+      QNetworkReply *reply,
+      const std::function<void(const QString &itemId, bool success,
+                               const QString &message,
+                               const QJsonObject &metadata)> &callback,
+      const std::function<bool(const QString &response, QString &errorMessage)>
+          &successValidator = nullptr) {
+    const QString itemId = reply->property("itemId").toString();
+    const QString apiCallLog = reply->property("apiCallLog").toString();
+
+    if (reply->error() == QNetworkReply::NoError) {
+      const QString response = QString::fromUtf8(reply->readAll());
+      QString errorMessage;
+      if (successValidator && !successValidator(response, errorMessage)) {
+        callback(itemId, false, errorMessage + apiCallLog, QJsonObject());
+      } else {
+        QJsonObject extraMeta;
+        extraMeta["raw_response"] = response;
+        callback(itemId, true, "Dispatched successfully.", extraMeta);
+      }
+    } else {
+      callback(itemId, false, "Network error: " + reply->errorString() + apiCallLog, QJsonObject());
+    }
   }
 };
 
