@@ -51,7 +51,20 @@ void ApiExplorerDialog::setupUi() {
   QSplitter *splitter = new QSplitter(Qt::Horizontal, this);
   mainLayout->addWidget(splitter);
 
-  // LHS: Endpoints List
+  setupEndpointsList(splitter);
+
+  // RHS: Form and Response
+  QSplitter *rightSplitter = new QSplitter(Qt::Vertical, splitter);
+
+  setupRequestGroup(rightSplitter);
+  setupResponseGroup(rightSplitter);
+
+  splitter->addWidget(rightSplitter);
+  splitter->setStretchFactor(0, 1);
+  splitter->setStretchFactor(1, 3);
+}
+
+void ApiExplorerDialog::setupEndpointsList(QSplitter *splitter) {
   QWidget *leftWidget = new QWidget(splitter);
   QVBoxLayout *leftLayout = new QVBoxLayout(leftWidget);
   leftLayout->addWidget(new QLabel("Endpoints"));
@@ -61,11 +74,9 @@ void ApiExplorerDialog::setupUi() {
   connect(m_endpointList, &QListWidget::currentRowChanged, this,
           &ApiExplorerDialog::onEndpointSelected);
   splitter->addWidget(leftWidget);
+}
 
-  // RHS: Form and Response
-  QSplitter *rightSplitter = new QSplitter(Qt::Vertical, splitter);
-
-  // Request Group
+void ApiExplorerDialog::setupRequestGroup(QSplitter *rightSplitter) {
   QGroupBox *requestGroup = new QGroupBox("Request", rightSplitter);
   QVBoxLayout *requestLayout = new QVBoxLayout(requestGroup);
 
@@ -143,8 +154,9 @@ void ApiExplorerDialog::setupUi() {
   m_isMultipartCurrent = false;
 
   rightSplitter->addWidget(requestGroup);
+}
 
-  // Response Group
+void ApiExplorerDialog::setupResponseGroup(QSplitter *rightSplitter) {
   QGroupBox *responseGroup = new QGroupBox("Response", rightSplitter);
   QVBoxLayout *responseLayout = new QVBoxLayout(responseGroup);
 
@@ -155,10 +167,6 @@ void ApiExplorerDialog::setupUi() {
   m_responseEdit->setReadOnly(true);
   responseLayout->addWidget(m_responseEdit);
   rightSplitter->addWidget(responseGroup);
-
-  splitter->addWidget(rightSplitter);
-  splitter->setStretchFactor(0, 1);
-  splitter->setStretchFactor(1, 3);
 }
 
 void ApiExplorerDialog::loadEndpoints() {
