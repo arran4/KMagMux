@@ -40,6 +40,11 @@ target_link_libraries(TestTorrentParser PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
 target_include_directories(TestTorrentParser PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 add_test(NAME TestTorrentParser COMMAND TestTorrentParser)
 
+add_executable(TestItemParser TestItemParser.cpp)
+target_link_libraries(TestItemParser PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
+target_include_directories(TestItemParser PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+add_test(NAME TestItemParser COMMAND TestItemParser)
+
 add_executable(benchmark benchmark.cpp)
 target_link_libraries(benchmark PRIVATE KMagMuxCore Qt6::Core Qt6::Test)
 target_include_directories(benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
