@@ -150,7 +150,9 @@ QList<LocalClientConfig> LocalProgramConnector::discoverClients() {
   return discovered;
 }
 
-bool LocalProgramConnector::validateSecurity(const QString &baseName, const QStringList &args, QString &errorMessage) const {
+bool LocalProgramConnector::validateSecurity(const QString &baseName,
+                                             const QStringList &args,
+                                             QString &errorMessage) const {
   static const QStringList allowedPrograms = {
       "qbittorrent",     "transmission-gtk",
       "transmission-qt", "transmission-remote",
@@ -163,7 +165,8 @@ bool LocalProgramConnector::validateSecurity(const QString &baseName, const QStr
       "aria2c",          "xdg-open"};
 
   if (!allowedPrograms.contains(baseName)) {
-    errorMessage = "Security Alert: Program '" + baseName + "' is not in the allowed list of applications.";
+    errorMessage = "Security Alert: Program '" + baseName +
+                   "' is not in the allowed list of applications.";
     return false;
   }
 
@@ -185,14 +188,17 @@ bool LocalProgramConnector::validateSecurity(const QString &baseName, const QStr
   });
 
   if (it != args.end()) {
-    errorMessage = "Security Alert: Dangerous argument '" + *it + "' is not allowed.";
+    errorMessage =
+        "Security Alert: Dangerous argument '" + *it + "' is not allowed.";
     return false;
   }
 
   return true;
 }
 
-void LocalProgramConnector::prepareCommand(QString &program, QStringList &args, const QString &baseName, const QString &sourcePath) const {
+void LocalProgramConnector::prepareCommand(QString &program, QStringList &args,
+                                           const QString &baseName,
+                                           const QString &sourcePath) const {
   if (m_useTerminal) {
     QString terminal = findExecutable("xterm");
     if (terminal.isEmpty())
@@ -242,7 +248,9 @@ void LocalProgramConnector::prepareCommand(QString &program, QStringList &args, 
   }
 }
 
-void LocalProgramConnector::executeProcess(const QString &program, const QStringList &args, const QString &itemId) {
+void LocalProgramConnector::executeProcess(const QString &program,
+                                           const QStringList &args,
+                                           const QString &itemId) {
   qDebug() << "Launching local program:" << program
            << "with arguments:" << args;
 

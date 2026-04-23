@@ -45,9 +45,12 @@ private:
   bool m_isFactory;
 
   QList<LocalClientConfig> loadClientConfigs() const;
-  bool validateSecurity(const QString &baseName, const QStringList &args, QString &errorMessage) const;
-  void prepareCommand(QString &program, QStringList &args, const QString &baseName, const QString &sourcePath) const;
-  void executeProcess(const QString &program, const QStringList &args, const QString &itemId);
+  bool validateSecurity(const QString &baseName, const QStringList &args,
+                        QString &errorMessage) const;
+  void prepareCommand(QString &program, QStringList &args,
+                      const QString &baseName, const QString &sourcePath) const;
+  void executeProcess(const QString &program, const QStringList &args,
+                      const QString &itemId);
 
 public:
   static QList<LocalClientConfig> discoverClients();
