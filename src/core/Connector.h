@@ -85,21 +85,22 @@ public:
           &successValidator = nullptr) {
     const QString itemId = reply->property("itemId").toString();
     const QString apiCallLog = reply->property("apiCallLog").toString();
+    const QString response = QString::fromUtf8(reply->readAll());
+
+    QJsonObject extraMeta;
+    extraMeta["raw_response"] = response;
 
     if (reply->error() == QNetworkReply::NoError) {
-      const QString response = QString::fromUtf8(reply->readAll());
       QString errorMessage;
       if (successValidator && !successValidator(response, errorMessage)) {
-        callback(itemId, false, errorMessage + apiCallLog, QJsonObject());
+        callback(itemId, false, errorMessage + apiCallLog, extraMeta);
       } else {
-        QJsonObject extraMeta;
-        extraMeta["raw_response"] = response;
         callback(itemId, true, "Dispatched successfully.", extraMeta);
       }
     } else {
       callback(itemId, false,
                "Network error: " + reply->errorString() + apiCallLog,
-               QJsonObject());
+               extraMeta);
     }
   }
 };

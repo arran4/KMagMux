@@ -239,7 +239,7 @@ void QBittorrentConnector::onAddTorrentReply() {
         emit dispatchFinished(itemId, success, message, metadata);
       },
       [](const QString &response, QString &errorMessage) -> bool {
-        if (response.toLower().contains("fail")) {
+        if (response.trimmed().toLower() == "fails.") {
           errorMessage = "qBittorrent API returned failure: " + response;
           return false;
         }
