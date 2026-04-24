@@ -64,9 +64,32 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
           }
           bool ok = false;
           quint32 ipv4 = addr.toIPv4Address(&ok);
-          if (ok && (ipv4 & 0xFF000000) == 0x00000000) {
-            isSafe = false;
-            break;
+          if (ok) {
+            // 10.0.0.0/8
+            if ((ipv4 & 0xFF000000) == 0x0A000000) {
+              isSafe = false;
+              break;
+            }
+            // 172.16.0.0/12
+            if ((ipv4 & 0xFFF00000) == 0xAC100000) {
+              isSafe = false;
+              break;
+            }
+            // 192.168.0.0/16
+            if ((ipv4 & 0xFFFF0000) == 0xC0A80000) {
+              isSafe = false;
+              break;
+            }
+            // 169.254.0.0/16
+            if ((ipv4 & 0xFFFF0000) == 0xA9FE0000) {
+              isSafe = false;
+              break;
+            }
+            // 0.0.0.0/8
+            if ((ipv4 & 0xFF000000) == 0x00000000) {
+              isSafe = false;
+              break;
+            }
           }
         }
         if (isSafe) {
