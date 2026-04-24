@@ -8,6 +8,9 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QTableWidget>
+#include <QTextEdit>
 #include <QVBoxLayout>
 
 TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath,
@@ -80,7 +83,8 @@ void TorrentInfoDialog::setupBasicInfoSection(QVBoxLayout *mainLayout) {
   }
 
   if (m_info.totalSize > 0) {
-    double sizeMb = static_cast<double>(m_info.totalSize) / (1024.0 * 1024.0);
+    const double sizeMb =
+        static_cast<double>(m_info.totalSize) / (1024.0 * 1024.0);
     infoLayout->addRow(
         new QLabel("<b>Total Size:</b>"),
         createReadOnlyField(QString::number(sizeMb, 'f', 2) + " MB"));
@@ -106,7 +110,7 @@ void TorrentInfoDialog::setupFilesSection(QVBoxLayout *mainLayout) {
 
     for (int i = 0; i < m_info.files.size(); ++i) {
       filesTable->setItem(i, 0, new QTableWidgetItem(m_info.files[i].path));
-      double fileMb =
+      const double fileMb =
           static_cast<double>(m_info.files[i].length) / (1024.0 * 1024.0);
       QTableWidgetItem *sizeItem =
           new QTableWidgetItem(QString::number(fileMb, 'f', 2));
@@ -159,13 +163,14 @@ void TorrentInfoDialog::setupHistorySection(QVBoxLayout *mainLayout) {
     historyTable->setShowGrid(false);
 
     QJsonArray history = m_item->metadata["history"].toArray();
-    historyTable->setRowCount(history.size());
+    historyTable->setRowCount(static_cast<int>(history.size()));
     for (int i = 0; i < history.size(); ++i) {
       QJsonObject entry = history[i].toObject();
-      QDateTime dt =
+      const QDateTime dateTime =
           QDateTime::fromString(entry["timestamp"].toString(), Qt::ISODate);
-      QString timeStr = dt.isValid() ? dt.toString(Qt::TextDate)
-                                     : entry["timestamp"].toString();
+      const QString timeStr = dateTime.isValid()
+                                  ? dateTime.toString(Qt::TextDate)
+                                  : entry["timestamp"].toString();
       historyTable->setItem(i, 0, new QTableWidgetItem(timeStr));
       historyTable->setItem(i, 1,
                             new QTableWidgetItem(entry["message"].toString()));
@@ -277,7 +282,7 @@ void TorrentInfoDialog::processNextTracker() {
     return;
   }
 
-  QString trackerUrl = m_info.trackers[m_currentTrackerIndex];
+  const QString trackerUrl = m_info.trackers[m_currentTrackerIndex];
   m_trackerTable->item(m_currentTrackerIndex, 1)->setText("Querying...");
   m_logView->append(QString("Querying %1 ...").arg(trackerUrl));
 

@@ -4,10 +4,13 @@
 #include <QDir>
 #include <QEventLoop>
 #include <QFileInfo>
+#include <QHostAddress>
+#include <QHostInfo>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRegularExpression>
+#include <QSslConfiguration>
 #include <QTextStream>
 #include <QUrl>
 #include <qcontainerfwd.h>
@@ -21,6 +24,8 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
   std::vector<Item> parsedItems;
   const qint64 now = QDateTime::currentMSecsSinceEpoch();
   int idx = 0;
+
+  QNetworkAccessManager manager; // Reused across lines for efficiency
 
   auto processLine = [&](QString line) {
     line = line.trimmed();
@@ -42,8 +47,77 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
          pathToCheck.startsWith("https://", Qt::CaseInsensitive)) &&
         pathToCheck.endsWith(".torrent", Qt::CaseInsensitive)) {
 
-      QNetworkAccessManager manager;
-      QNetworkRequest request((QUrl(pathToCheck)));
+      QUrl url(pathToCheck);
+      QString host = url.host();
+      QHostInfo info = QHostInfo::fromName(host);
+
+      bool isSafe = false;
+      QHostAddress safeAddr;
+      if (info.error() == QHostInfo::NoError && !info.addresses().isEmpty()) {
+        isSafe = true;
+        for (const QHostAddress &addr : info.addresses()) {
+          if (addr.isLoopback() || addr.isMulticast() || addr.isBroadcast() ||
+              addr.isLinkLocal() || addr.isSiteLocal() ||
+              addr.isUniqueLocalUnicast()) {
+            isSafe = false;
+            break;
+          }
+          bool ok = false;
+          quint32 ipv4 = addr.toIPv4Address(&ok);
+          if (ok) {
+            // 10.0.0.0/8
+            if ((ipv4 & 0xFF000000) == 0x0A000000) {
+              isSafe = false;
+              break;
+            }
+            // 172.16.0.0/12
+            if ((ipv4 & 0xFFF00000) == 0xAC100000) {
+              isSafe = false;
+              break;
+            }
+            // 192.168.0.0/16
+            if ((ipv4 & 0xFFFF0000) == 0xC0A80000) {
+              isSafe = false;
+              break;
+            }
+            // 169.254.0.0/16
+            if ((ipv4 & 0xFFFF0000) == 0xA9FE0000) {
+              isSafe = false;
+              break;
+            }
+            // 0.0.0.0/8
+            if ((ipv4 & 0xFF000000) == 0x00000000) {
+              isSafe = false;
+              break;
+            }
+          }
+        }
+        if (isSafe) {
+          safeAddr = info.addresses().first();
+        }
+      }
+
+      if (!isSafe) {
+        qWarning() << "ItemParser: Blocked potentially unsafe torrent URL "
+                      "(SSRF prevention):"
+                   << pathToCheck;
+        return; // Skip this line completely
+      }
+
+      // Reconstruct URL with IP to prevent DNS rebinding attacks
+      QUrl safeUrl = url;
+      if (safeAddr.protocol() == QAbstractSocket::IPv6Protocol) {
+        safeUrl.setHost("[" + safeAddr.toString() + "]");
+      } else {
+        safeUrl.setHost(safeAddr.toString());
+      }
+
+      QNetworkRequest request(safeUrl);
+      request.setRawHeader("Host", host.toUtf8());
+
+      // Set PeerVerifyName for SNI/HTTPS when connecting by IP
+      request.setPeerVerifyName(host);
+
       request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                            QNetworkRequest::NoLessSafeRedirectPolicy);
 
