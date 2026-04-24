@@ -3,8 +3,11 @@
 
 #include "HttpApiEndpoint.h"
 #include "Item.h"
+#include <QCoreApplication>
+#include <QJsonObject>
 #include <QList>
 #include <QMap>
+#include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QString>
 
@@ -70,6 +73,34 @@ public:
     }
     log += "----------------\n";
     return log;
+  }
+
+  template <typename Func>
+  static void handleBasicAddTorrentReply(QNetworkReply *reply,
+                                         Func &&emitDispatchFinished) {
+    if (reply == nullptr) {
+      return;
+    }
+
+    // Requires the derived Connector to set the 'itemId' and 'apiCallLog'
+    // properties on the QNetworkReply before submission.
+    const QString itemId = reply->property("itemId").toString();
+    const QString apiCallLog = reply->property("apiCallLog").toString();
+
+    if (reply->error() == QNetworkReply::NoError) {
+      QJsonObject extraMeta;
+      extraMeta["raw_response"] = QString::fromUtf8(reply->readAll());
+      emitDispatchFinished(
+          itemId, true,
+          QCoreApplication::translate("Connector", "Dispatched successfully."),
+          extraMeta);
+    } else {
+      emitDispatchFinished(
+          itemId, false, "Network error: " + reply->errorString() + apiCallLog,
+          QJsonObject());
+    }
+
+    reply->deleteLater();
   }
 };
 
