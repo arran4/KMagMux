@@ -39,8 +39,8 @@ private:
   void setupResponseGroup(QSplitter *rightSplitter);
   void loadEndpoints();
   void populateForm(const HttpApiEndpoint &endpoint);
-  QString applySubstitutions(QString text) const;
-  QByteArray applySubstitutions(QByteArray data) const;
+  QString applySubstitutions(const QString &text) const;
+  QByteArray applySubstitutions(const QByteArray &data) const;
 
   Connector *m_connector;
   QList<HttpApiEndpoint> m_endpoints;

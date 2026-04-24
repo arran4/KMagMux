@@ -227,16 +227,23 @@ void ApiExplorerDialog::populateForm(const HttpApiEndpoint &endpoint) {
   m_statusLabel->setText("Status: ");
 }
 
-QString ApiExplorerDialog::applySubstitutions(QString text) const {
-  auto subKeys = m_substitutions.keys();
-  for (const QString &key : subKeys) {
-    QString val = m_substitutions.value(key);
-    text.replace(QString("${%1}").arg(key), val);
+QString ApiExplorerDialog::applySubstitutions(const QString &text) const {
+  if (m_substitutions.isEmpty() || !text.contains(QStringLiteral("${"))) {
+    return text;
   }
-  return text;
+  QString result = text;
+  for (auto it = m_substitutions.cbegin(), end = m_substitutions.cend();
+       it != end; ++it) {
+    result.replace(QLatin1String("${") + it.key() + QLatin1Char('}'),
+                   it.value());
+  }
+  return result;
 }
 
-QByteArray ApiExplorerDialog::applySubstitutions(QByteArray data) const {
+QByteArray ApiExplorerDialog::applySubstitutions(const QByteArray &data) const {
+  if (m_substitutions.isEmpty() || !data.contains("${")) {
+    return data;
+  }
   QString text = QString::fromUtf8(data);
   text = applySubstitutions(text);
   return text.toUtf8();
