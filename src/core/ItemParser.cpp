@@ -93,9 +93,7 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
       request.setRawHeader("Host", host.toUtf8());
 
       // Set PeerVerifyName for SNI/HTTPS when connecting by IP
-      QSslConfiguration sslConfig = request.sslConfiguration();
-      sslConfig.setPeerVerifyName(host);
-      request.setSslConfiguration(sslConfig);
+      request.setPeerVerifyName(host);
 
       request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                            QNetworkRequest::NoLessSafeRedirectPolicy);
