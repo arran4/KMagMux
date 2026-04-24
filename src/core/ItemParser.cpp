@@ -25,6 +25,8 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
   const qint64 now = QDateTime::currentMSecsSinceEpoch();
   int idx = 0;
 
+  QNetworkAccessManager manager; // Reused across lines for efficiency
+
   auto processLine = [&](QString line) {
     line = line.trimmed();
     if (line.isEmpty()) {
@@ -60,45 +62,11 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
             isSafe = false;
             break;
           }
-          bool hasIpv4 = false;
-          quint32 ipv4 = 0;
-          if (addr.protocol() == QAbstractSocket::IPv4Protocol) {
-            ipv4 = addr.toIPv4Address();
-            hasIpv4 = true;
-          } else if (addr.protocol() == QAbstractSocket::IPv6Protocol) {
-            bool ok = false;
-            ipv4 = addr.toIPv4Address(&ok);
-            if (ok) {
-              hasIpv4 = true;
-            }
-          }
-
-          if (hasIpv4) {
-            // 10.0.0.0/8
-            if ((ipv4 & 0xFF000000) == 0x0A000000) {
-              isSafe = false;
-              break;
-            }
-            // 172.16.0.0/12
-            if ((ipv4 & 0xFFF00000) == 0xAC100000) {
-              isSafe = false;
-              break;
-            }
-            // 192.168.0.0/16
-            if ((ipv4 & 0xFFFF0000) == 0xC0A80000) {
-              isSafe = false;
-              break;
-            }
-            // 169.254.0.0/16
-            if ((ipv4 & 0xFFFF0000) == 0xA9FE0000) {
-              isSafe = false;
-              break;
-            }
-            // 0.0.0.0/8
-            if ((ipv4 & 0xFF000000) == 0x00000000) {
-              isSafe = false;
-              break;
-            }
+          bool ok = false;
+          quint32 ipv4 = addr.toIPv4Address(&ok);
+          if (ok && (ipv4 & 0xFF000000) == 0x00000000) {
+            isSafe = false;
+            break;
           }
         }
         if (isSafe) {
@@ -121,7 +89,6 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
         safeUrl.setHost(safeAddr.toString());
       }
 
-      QNetworkAccessManager manager;
       QNetworkRequest request(safeUrl);
       request.setRawHeader("Host", host.toUtf8());
 
