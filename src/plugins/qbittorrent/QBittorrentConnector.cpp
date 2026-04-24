@@ -228,7 +228,11 @@ void QBittorrentConnector::onAddTorrentReply() {
       m_isLoggingIn = true;
       login();
     }
-    reply->deleteLater();
+
+    if (reply) {
+      reply->deleteLater();
+      reply = nullptr;
+    }
     return;
   }
 
@@ -245,8 +249,6 @@ void QBittorrentConnector::onAddTorrentReply() {
         }
         return true;
       });
-
-  reply->deleteLater();
 }
 
 bool QBittorrentConnector::hasSettings() const { return true; }

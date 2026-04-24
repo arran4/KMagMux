@@ -111,6 +111,14 @@ public:
                                const QJsonObject &metadata)> &callback,
       const std::function<bool(const QString &response, QString &errorMessage)>
           &successValidator = nullptr) {
+    if (reply == nullptr || !callback) {
+      if (reply) {
+        reply->deleteLater();
+        reply = nullptr;
+      }
+      return;
+    }
+
     const QString itemId = reply->property("itemId").toString();
     const QString apiCallLog = reply->property("apiCallLog").toString();
     const QString response = QString::fromUtf8(reply->readAll());
@@ -123,12 +131,20 @@ public:
       if (successValidator && !successValidator(response, errorMessage)) {
         callback(itemId, false, errorMessage + apiCallLog, extraMeta);
       } else {
-        callback(itemId, true, "Dispatched successfully.", extraMeta);
+        callback(itemId, true,
+                 QCoreApplication::translate("Connector",
+                                             "Dispatched successfully."),
+                 extraMeta);
       }
     } else {
       callback(itemId, false,
                "Network error: " + reply->errorString() + apiCallLog,
                extraMeta);
+    }
+
+    if (reply) {
+      reply->deleteLater();
+      reply = nullptr;
     }
   }
 };
