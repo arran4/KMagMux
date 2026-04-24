@@ -216,11 +216,8 @@ void QBittorrentConnector::onAddTorrentReply() {
   }
 
   const Item item = reply->property("item").value<Item>();
-  const QString itemId = reply->property("itemId").toString();
   const int statusCode =
       reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-
-  const QString apiCallLog = reply->property("apiCallLog").toString();
 
   const int httpUnauth = 401;
   const int httpForbidden = 403;
@@ -231,22 +228,23 @@ void QBittorrentConnector::onAddTorrentReply() {
       m_isLoggingIn = true;
       login();
     }
-  } else if (reply->error() == QNetworkReply::NoError) {
-    const QString response = reply->readAll();
-    if (response.toLower().contains("fail")) {
-      emit dispatchFinished(itemId, false,
-                            "qBittorrent API returned failure: " + response +
-                                apiCallLog);
-    } else {
-      QJsonObject extraMeta;
-      extraMeta["raw_response"] = response;
-      emit dispatchFinished(itemId, true, "Dispatched successfully.",
-                            extraMeta);
-    }
-  } else {
-    emit dispatchFinished(
-        itemId, false, "Network error: " + reply->errorString() + apiCallLog);
+    reply->deleteLater();
+    return;
   }
+
+  Connector::handleStandardDispatchReply(
+      reply,
+      [this](const QString &itemId, bool success, const QString &message,
+             const QJsonObject &metadata) {
+        emit dispatchFinished(itemId, success, message, metadata);
+      },
+      [](const QString &response, QString &errorMessage) -> bool {
+        if (response.trimmed().toLower() == "fails.") {
+          errorMessage = "qBittorrent API returned failure: " + response;
+          return false;
+        }
+        return true;
+      });
 
   reply->deleteLater();
 }

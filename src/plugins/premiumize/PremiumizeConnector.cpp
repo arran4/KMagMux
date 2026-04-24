@@ -107,11 +107,17 @@ void PremiumizeConnector::dispatch(const Item &item) {
 
 void PremiumizeConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  Connector::handleBasicAddTorrentReply(
+  if (reply == nullptr) {
+    return;
+  }
+
+  Connector::handleStandardDispatchReply(
       reply, [this](const QString &itemId, bool success, const QString &message,
                     const QJsonObject &metadata) {
         emit dispatchFinished(itemId, success, message, metadata);
       });
+
+  reply->deleteLater();
 }
 
 bool PremiumizeConnector::hasSettings() const { return true; }

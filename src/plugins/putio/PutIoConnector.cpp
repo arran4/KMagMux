@@ -81,11 +81,17 @@ void PutIoConnector::dispatch(const Item &item) {
 
 void PutIoConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  Connector::handleBasicAddTorrentReply(
+  if (reply == nullptr) {
+    return;
+  }
+
+  Connector::handleStandardDispatchReply(
       reply, [this](const QString &itemId, bool success, const QString &message,
                     const QJsonObject &metadata) {
         emit dispatchFinished(itemId, success, message, metadata);
       });
+
+  reply->deleteLater();
 }
 
 bool PutIoConnector::hasSettings() const { return true; }

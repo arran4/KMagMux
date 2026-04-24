@@ -10,6 +10,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QString>
+#include <functional>
 
 class Connector {
 public:
@@ -101,6 +102,34 @@ public:
     }
 
     reply->deleteLater();
+  }
+
+  static void handleStandardDispatchReply(
+      QNetworkReply *reply,
+      const std::function<void(const QString &itemId, bool success,
+                               const QString &message,
+                               const QJsonObject &metadata)> &callback,
+      const std::function<bool(const QString &response, QString &errorMessage)>
+          &successValidator = nullptr) {
+    const QString itemId = reply->property("itemId").toString();
+    const QString apiCallLog = reply->property("apiCallLog").toString();
+    const QString response = QString::fromUtf8(reply->readAll());
+
+    QJsonObject extraMeta;
+    extraMeta["raw_response"] = response;
+
+    if (reply->error() == QNetworkReply::NoError) {
+      QString errorMessage;
+      if (successValidator && !successValidator(response, errorMessage)) {
+        callback(itemId, false, errorMessage + apiCallLog, extraMeta);
+      } else {
+        callback(itemId, true, "Dispatched successfully.", extraMeta);
+      }
+    } else {
+      callback(itemId, false,
+               "Network error: " + reply->errorString() + apiCallLog,
+               extraMeta);
+    }
   }
 };
 
