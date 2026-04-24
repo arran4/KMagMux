@@ -27,7 +27,6 @@ private slots:
   void onCancelQuery();
   void onScrapeFinished(const TrackerStats &stats);
 
-private:
   void setupUi();
   void setupBasicInfoSection(QVBoxLayout *mainLayout);
   void setupFilesSection(QVBoxLayout *mainLayout);

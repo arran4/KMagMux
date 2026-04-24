@@ -8,6 +8,9 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QTableWidget>
+#include <QTextEdit>
 #include <QVBoxLayout>
 
 TorrentInfoDialog::TorrentInfoDialog(const QString &sourcePath,
@@ -160,7 +163,7 @@ void TorrentInfoDialog::setupHistorySection(QVBoxLayout *mainLayout) {
     historyTable->setShowGrid(false);
 
     QJsonArray history = m_item->metadata["history"].toArray();
-    historyTable->setRowCount(history.size());
+    historyTable->setRowCount(static_cast<int>(history.size()));
     for (int i = 0; i < history.size(); ++i) {
       QJsonObject entry = history[i].toObject();
       const QDateTime dateTime =
