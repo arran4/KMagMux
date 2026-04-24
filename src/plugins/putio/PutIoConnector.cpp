@@ -81,7 +81,7 @@ void PutIoConnector::dispatch(const Item &item) {
 
 void PutIoConnector::onAddTorrentReply() {
   QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-  Connector::handleBasicAddTorrentReply(
+  Connector::handleStandardDispatchReply(
       reply, [this](const QString &itemId, bool success, const QString &message,
                     const QJsonObject &metadata) {
         emit dispatchFinished(itemId, success, message, metadata);
