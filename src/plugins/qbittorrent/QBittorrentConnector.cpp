@@ -229,10 +229,7 @@ void QBittorrentConnector::onAddTorrentReply() {
       login();
     }
 
-    if (reply) {
-      reply->deleteLater();
-      reply = nullptr;
-    }
+    reply->deleteLater();
     return;
   }
 

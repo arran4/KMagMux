@@ -114,7 +114,6 @@ public:
     if (reply == nullptr || !callback) {
       if (reply) {
         reply->deleteLater();
-        reply = nullptr;
       }
       return;
     }
@@ -144,7 +143,6 @@ public:
 
     if (reply) {
       reply->deleteLater();
-      reply = nullptr;
     }
   }
 };
