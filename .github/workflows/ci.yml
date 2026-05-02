@@ -263,7 +263,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
-        run: zypper --no-gpg-checks refresh && zypper install -y cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
+        run: zypper --no-gpg-checks refresh && zypper install -y --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
       - name: Configure CMake for compile_commands.json
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Lint style and static checks
@@ -283,7 +283,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
-        run: zypper --no-gpg-checks refresh && zypper install -y cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
+        run: zypper --no-gpg-checks refresh && zypper install -y --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
       - name: Configure CMake for compile_commands.json
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Build
@@ -305,7 +305,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
-        run: zypper --no-gpg-checks refresh && zypper install -y cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
+        run: zypper --no-gpg-checks refresh && zypper install -y --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -330,7 +330,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install formatting and linting tools
         run: |
-          zypper --no-gpg-checks refresh && zypper install -y cmake gcc-c++ make clang-tools git kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel jq
+          zypper --no-gpg-checks refresh && zypper install -y --allow-vendor-change cmake gcc-c++ make clang-tools git kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel jq
       - name: Setup Git safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Run autofix formatters
@@ -380,7 +380,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
-        run: zypper --no-gpg-checks refresh && zypper install -y cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
+        run: zypper --no-gpg-checks refresh && zypper install -y --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel
       - name: Configure CMake
         run: cmake -B build
       - name: Build release
