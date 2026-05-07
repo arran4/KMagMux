@@ -46,4 +46,4 @@ General settings allow you to customize application behavior such as minimizing 
 
 ## Architecture
 
-KMagMux is built with C++ and Qt6/KF6, ensuring deep integration with the KDE Plasma desktop while remaining cross-platform compatible. Passwords and sensitive data are stored securely using KWallet.
+KMagMux is built with C++ and Qt6/KF6, ensuring deep integration with the KDE Plasma desktop while remaining cross-platform compatible. Passwords and sensitive data are stored securely using KWallet (with a plaintext fallback via QSettings if explicitly enabled by the user).
