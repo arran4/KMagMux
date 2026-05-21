@@ -258,7 +258,7 @@ jobs:
     if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
     container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611@sha256:08b46f1ef3c0da4b7eb7107b654c82b5c93d264e983e355a08a9dc6a5906fafe
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
       options: --user root
     steps:
       - uses: actions/checkout@v6
@@ -278,7 +278,7 @@ jobs:
     if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
     container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611@sha256:08b46f1ef3c0da4b7eb7107b654c82b5c93d264e983e355a08a9dc6a5906fafe
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
       options: --user root
     steps:
       - uses: actions/checkout@v6
@@ -300,7 +300,7 @@ jobs:
     if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
     container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611@sha256:08b46f1ef3c0da4b7eb7107b654c82b5c93d264e983e355a08a9dc6a5906fafe
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
       options: --user root
     steps:
       - uses: actions/checkout@v6
@@ -324,7 +324,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'lint-fix' && inputs.allow_prs == true }}
     runs-on: ubuntu-latest
     container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611@sha256:08b46f1ef3c0da4b7eb7107b654c82b5c93d264e983e355a08a9dc6a5906fafe
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
       options: --user root
     steps:
       - uses: actions/checkout@v6
@@ -375,7 +375,7 @@ jobs:
     if: ${{ !failure() && !cancelled() && needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_release == 'true' }}
     runs-on: ubuntu-latest
     container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611@sha256:08b46f1ef3c0da4b7eb7107b654c82b5c93d264e983e355a08a9dc6a5906fafe
+      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
       options: --user root
     steps:
       - uses: actions/checkout@v6
