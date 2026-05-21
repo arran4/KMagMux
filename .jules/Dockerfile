@@ -1,4 +1,4 @@
-FROM invent-registry.kde.org/sysadmin/ci-images/suse-qt610:latest
+FROM invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
 
 ENV TZ=Etc/UTC
 
