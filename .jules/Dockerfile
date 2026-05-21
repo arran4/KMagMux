@@ -1,4 +1,4 @@
-FROM invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
+FROM invent-registry.kde.org/sysadmin/ci-images/suse-qt611@sha256:08b46f1ef3c0da4b7eb7107b654c82b5c93d264e983e355a08a9dc6a5906fafe
 
 ENV TZ=Etc/UTC
 
