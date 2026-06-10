@@ -61,7 +61,7 @@ Engine::Engine(StorageManager *storage, QObject *parent)
   struct PluginInfo {
     QString filePath;
     QVersionNumber version;
-    bool isDevelopment;
+    bool isDevelopment = false;
   };
 
   QMap<QString, PluginInfo> bestPlugins;
