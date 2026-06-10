@@ -9,8 +9,8 @@
 struct LocalClientConfig {
   QString name;
   QString path;
-  bool enabled;
-  bool useTerminal;
+  bool enabled = false;
+  bool useTerminal = false;
 };
 
 class LocalProgramConnector : public QObject, public Connector {
