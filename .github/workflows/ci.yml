@@ -266,7 +266,7 @@ jobs:
           dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true
+          docker-images: false
           swap-storage: true
       - uses: actions/checkout@v6
       - name: Run commands in container
@@ -295,7 +295,7 @@ jobs:
           dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true
+          docker-images: false
           swap-storage: true
       - uses: actions/checkout@v6
       - name: Run commands in container
@@ -327,7 +327,7 @@ jobs:
           dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true
+          docker-images: false
           swap-storage: true
       - uses: actions/checkout@v6
       - name: Download build artifacts
@@ -361,7 +361,7 @@ jobs:
           dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true
+          docker-images: false
           swap-storage: true
       - uses: actions/checkout@v6
       - name: Run commands in container
@@ -418,7 +418,7 @@ jobs:
           dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true
+          docker-images: false
           swap-storage: true
       - uses: actions/checkout@v6
       - name: Run commands in container
