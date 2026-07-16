@@ -257,109 +257,126 @@ jobs:
     needs: [route, discover]
     if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
-    container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
-      options: --user root
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - uses: actions/checkout@v6
-      - name: Install dependencies
-        run: |
-          for i in {1..3}; do
-            zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || {
-              if [ $i -lt 3 ]; then sleep 5; else exit 1; fi
-            }
-          done
-      - name: Configure CMake for compile_commands.json
-        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-      - name: Lint style and static checks
-        run: |
-          find src \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' \) -print0 | xargs -0 -r clang-format --dry-run --Werror
-          cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=unknownMacro --suppress=unmatchedSuppression --check-level=exhaustive -I src/ src/ -Dslots= -Dsignals=protected -DQ_SIGNALS=protected -DQ_SLOTS= -DQ_OBJECT= -DQ_DECLARE_METATYPE\(x\)= -Demit= -DQ_PLUGIN_METADATA\(x\)=
-          find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/
-
+      - name: Run commands in container
+        uses: addnab/docker-run-action@v3
+        with:
+          image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
+          options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
+          run: |
+            set -e
+            for i in {1..3}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || { if [ $i -lt 3 ]; then sleep 5; else exit 1; fi; }; done
+            cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            find src \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' \) -print0 | xargs -0 -r clang-format --dry-run --Werror
+            cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=unknownMacro --suppress=unmatchedSuppression --check-level=exhaustive -I src/ src/ -Dslots= -Dsignals=protected -DQ_SIGNALS=protected -DQ_SLOTS= -DQ_OBJECT= -DQ_DECLARE_METATYPE\(x\)= -Demit= -DQ_PLUGIN_METADATA\(x\)=
+            find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/
   cpp-qt-build:
     name: Qt/C++ build
     needs: [route, discover, cpp-qt-lint]
     if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
-    container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
-      options: --user root
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - uses: actions/checkout@v6
-      - name: Install dependencies
-        run: |
-          for i in {1..3}; do
-            zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || {
-              if [ $i -lt 3 ]; then sleep 5; else exit 1; fi
-            }
-          done
-      - name: Configure CMake for compile_commands.json
-        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-      - name: Build
-        run: cmake --build build -j$(nproc)
+      - name: Run commands in container
+        uses: addnab/docker-run-action@v3
+        with:
+          image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
+          options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
+          run: |
+            set -e
+            for i in {1..3}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || { if [ $i -lt 3 ]; then sleep 5; else exit 1; fi; }; done
+            cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            cmake --build build -j$(nproc)
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: build/
-
   cpp-qt-test:
     name: Qt/C++ test
     needs: [route, discover, cpp-qt-build]
     if: ${{ needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_code_checks == 'true' }}
     runs-on: ubuntu-latest
-    container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
-      options: --user root
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - uses: actions/checkout@v6
-      - name: Install dependencies
-        run: |
-          for i in {1..3}; do
-            zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || {
-              if [ $i -lt 3 ]; then sleep 5; else exit 1; fi
-            }
-          done
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: build/
-      - name: Test
-        run: |
-          cd build
-          chmod +x tests/core/* || true
-          chmod +x tests/plugins/localprogram/* || true
-          QT_QPA_PLATFORM=offscreen ctest --output-on-failure
-
+      - name: Run commands in container
+        uses: addnab/docker-run-action@v3
+        with:
+          image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
+          options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
+          run: |
+            set -e
+            for i in {1..3}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || { if [ $i -lt 3 ]; then sleep 5; else exit 1; fi; }; done
+            cd build
+            chmod +x tests/core/* || true
+            chmod +x tests/plugins/localprogram/* || true
+            QT_QPA_PLATFORM=offscreen ctest --output-on-failure
   autofix:
     name: Auto-format and open PR
     needs: [route, discover]
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'lint-fix' && inputs.allow_prs == true }}
     runs-on: ubuntu-latest
-    container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
-      options: --user root
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - uses: actions/checkout@v6
-      - name: Install formatting and linting tools
-        run: |
-          for i in {1..3}; do
-            zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make clang-tools git kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel jq && break || {
-              if [ $i -lt 3 ]; then sleep 5; else exit 1; fi
-            }
-          done
-      - name: Setup Git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Run autofix formatters
-        shell: bash
-        run: |
-          set -euo pipefail
-          cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format -i || true
-          find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/ --fix-errors || true
-          find src -type f -exec sed -i 's/const const/const/g' {} + || true
+      - name: Run commands in container
+        uses: addnab/docker-run-action@v3
+        with:
+          image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
+          options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
+          run: |
+            set -e
+            for i in {1..3}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make clang-tools git kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel jq && break || { if [ $i -lt 3 ]; then sleep 5; else exit 1; fi; }; done
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-format -i || true
+            find src -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | xargs -r clang-tidy -p build/ --fix-errors || true
+            find src -type f -exec sed -i 's/const const/const/g' {} + || true
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
@@ -368,7 +385,6 @@ jobs:
           body: "Automated changes applied by clang-format and clang-tidy."
           branch: "chore/auto-fixes-${{ github.run_id }}"
           base: ${{ github.ref_name }}
-
   cleanup-autofix-prs:
     name: Cleanup autofix PRs on parent close
     needs: [route]
@@ -393,28 +409,33 @@ jobs:
     needs: [route, discover, cpp-qt-test]
     if: ${{ !failure() && !cancelled() && needs.discover.outputs.has_qt_cpp == 'true' && needs.route.outputs.run_release == 'true' }}
     runs-on: ubuntu-latest
-    container:
-      image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
-      options: --user root
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - uses: actions/checkout@v6
-      - name: Install dependencies
-        run: |
-          for i in {1..3}; do
-            zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel && break || {
-              if [ $i -lt 3 ]; then sleep 5; else exit 1; fi
-            }
-          done
-      - name: Configure CMake
-        run: cmake -B build
-      - name: Build release
-        run: cmake --build build --config Release -j$(nproc)
+      - name: Run commands in container
+        uses: addnab/docker-run-action@v3
+        with:
+          image: invent-registry.kde.org/sysadmin/ci-images/suse-qt611:latest
+          options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
+          run: |
+            set -e
+            for i in {1..3}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel && break || { if [ $i -lt 3 ]; then sleep 5; else exit 1; fi; }; done
+            cmake -B build
+            cmake --build build --config Release -j$(nproc)
       - uses: actions/upload-artifact@v4
         with:
           name: kmagmux-release
           retention-days: 1
           path: build/KMagMux
-
   manual-gh-release:
     name: Manual release creation
     needs: [prepare-release-tag, cpp-qt-release]
