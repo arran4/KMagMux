@@ -21,4 +21,4 @@ RUN chown -R root:root /app
 
 RUN cmake -B build -DBUILD_TESTING=ON && cmake --build build -j$(nproc)
 
-CMD ["/app/build/KMagMux"]
+CMD ["/app/build/kmagmux"]

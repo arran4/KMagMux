@@ -431,7 +431,7 @@ jobs:
         with:
           name: kmagmux-release
           retention-days: 1
-          path: build/KMagMux
+          path: build/kmagmux
   manual-gh-release:
     name: Manual release creation
     needs: [prepare-release-tag, cpp-qt-release]
