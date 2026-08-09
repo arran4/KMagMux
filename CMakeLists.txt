@@ -55,6 +55,8 @@ add_executable(KMagMux
 
 target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::XmlGui KF6::I18n KF6::CoreAddons)
 
+set_target_properties(KMagMux PROPERTIES OUTPUT_NAME kmagmux)
+
 add_subdirectory(src/plugins/qbittorrent)
 add_subdirectory(src/plugins/torbox)
 add_subdirectory(src/plugins/putio)
@@ -71,7 +73,14 @@ if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
-install(TARGETS KMagMux KMagMuxCore DESTINATION bin)
+install(TARGETS KMagMux
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(TARGETS KMagMuxCore
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 install(FILES org.kde.kmagmux.desktop DESTINATION share/applications)
 install(FILES org.kde.kmagmux.metainfo.xml DESTINATION share/metainfo)
 

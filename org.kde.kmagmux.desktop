@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=KMagMux
 Comment=Torrent and Magnet link router and manager
-Exec=KMagMux %u
+Exec=kmagmux %u
 Icon=kmagmux
 Type=Application
 Terminal=false
