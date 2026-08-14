@@ -1,13 +1,32 @@
-## Building and Testing with Docker
+## Building and Testing
 
-Since the standard Ubuntu LTS environments used in typical sandboxes do not include up-to-date KDE Frameworks 6 packages (`kf6-kxmlgui-dev`), you should build and test the project using the provided Docker container.
+Docker must not be used for the development/test environment. Instead, this repository uses a shared public KDE/Qt Debian rootfs provided by `kde-dev-rootfs`.
 
-To build and run tests using Docker with Arch Linux and the latest Qt6/KF6 dependencies, execute the following script from the root of the repository:
+To set up the environment, run the bootstrap script:
 ```bash
-./.jules/build-docker.sh
+./.jules/bootstrap.sh
+```
+This script downloads and provisions the shared KDE development rootfs.
+
+To run build and test commands, prefix them with `./.jules/run.sh` to execute them within the chroot environment.
+
+Here are the standard commands for building and testing the repository:
+
+Configure with CMake:
+```bash
+./.jules/run.sh cmake -S . -B build -G Ninja -DBUILD_TESTING=ON
+```
+*(Note: Use Ninja if installed in the rootfs, or omit `-G Ninja` for standard make).*
+
+Build:
+```bash
+./.jules/run.sh cmake --build build -j$(nproc)
 ```
 
-If you need to make changes to the `Dockerfile`, you can find it at `.jules/Dockerfile`.
+Run tests:
+```bash
+./.jules/run.sh ctest --test-dir build --output-on-failure
+```
 
 ## Null Safety Policy
 - When a `deleteLater()` call is made on an object, wrap it with a null pointer check, then execute the deletion, then set the pointer to `nullptr`. (The "free then null" pattern).
