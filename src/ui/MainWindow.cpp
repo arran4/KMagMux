@@ -8,6 +8,7 @@
 #include "ProcessItemDialog.h"
 #include "TorrentInfoDialog.h"
 #include <QApplication>
+#include <QClipboard>
 #include <QCloseEvent>
 #include <QDateTime>
 #include <QDebug>
@@ -22,9 +23,8 @@
 #include <QFutureWatcher>
 #include <QHeaderView>
 #include <QInputDialog>
-#include <QLineEdit>
-#include <QClipboard>
 #include <QKeyEvent>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPlainTextEdit>
