@@ -8,6 +8,7 @@
 #include "ProcessItemDialog.h"
 #include "TorrentInfoDialog.h"
 #include <QApplication>
+#include <QClipboard>
 #include <QCloseEvent>
 #include <QDateTime>
 #include <QDebug>
@@ -22,6 +23,7 @@
 #include <QFutureWatcher>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QKeyEvent>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
@@ -115,6 +117,19 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
   if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
     event->acceptProposedAction();
   }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+  if (event->matches(QKeySequence::Paste)) {
+    QClipboard *clipboard = QApplication::clipboard();
+    if (clipboard && !clipboard->text().isEmpty()) {
+      QStringList lines = clipboard->text().split('\n', Qt::SkipEmptyParts);
+      processAddedLines(lines);
+      event->accept();
+      return;
+    }
+  }
+  KXmlGuiWindow::keyPressEvent(event);
 }
 
 void MainWindow::dropEvent(QDropEvent *event) {
