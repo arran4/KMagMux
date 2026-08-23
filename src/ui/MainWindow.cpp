@@ -23,6 +23,8 @@
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QClipboard>
+#include <QKeyEvent>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPlainTextEdit>
@@ -115,6 +117,19 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
   if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
     event->acceptProposedAction();
   }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+  if (event->matches(QKeySequence::Paste)) {
+    QClipboard *clipboard = QApplication::clipboard();
+    if (clipboard && !clipboard->text().isEmpty()) {
+      QStringList lines = clipboard->text().split('\n', Qt::SkipEmptyParts);
+      processAddedLines(lines);
+      event->accept();
+      return;
+    }
+  }
+  KXmlGuiWindow::keyPressEvent(event);
 }
 
 void MainWindow::dropEvent(QDropEvent *event) {
