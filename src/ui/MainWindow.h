@@ -62,6 +62,9 @@ private slots:
   void onOpenApiExplorer(Connector *connector);
   void updateActionsState();
 
+public slots:
+  void processAddedLines(const QStringList &lines);
+
 private:
   StorageManager *m_storage;
   Engine *m_engine;
@@ -109,7 +112,6 @@ private:
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
-  void processAddedLines(const QStringList &lines);
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
   void saveItemsFromDialog(std::vector<Item> updatedItems);

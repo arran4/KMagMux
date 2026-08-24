@@ -83,15 +83,14 @@ void setupLocalServer(QLocalServer &server, const QString &serverName) {
   }
 }
 
-void setupIpcHandler(QLocalServer &server, StorageManager &storage,
-                     MainWindow *window) {
+void setupIpcHandler(QLocalServer &server, MainWindow *window) {
   // Handle incoming connections from new instances
   const QPointer<MainWindow> windowPtr(window);
   QObject::connect(
-      &server, &QLocalServer::newConnection, [&storage, &server, windowPtr]() {
+      &server, &QLocalServer::newConnection, [&server, windowPtr]() {
         QLocalSocket *client = server.nextPendingConnection();
         QObject::connect(
-            client, &QLocalSocket::readyRead, [&storage, client, windowPtr]() {
+            client, &QLocalSocket::readyRead, [client, windowPtr]() {
               QDataStream dataStream(client);
               dataStream.startTransaction();
               QStringList passedArgs;
@@ -100,28 +99,18 @@ void setupIpcHandler(QLocalServer &server, StorageManager &storage,
                 return; // Wait for more data
               }
 
+              QStringList validLines;
+              QStringList invalidLines;
+
               for (int i = 0; i < passedArgs.size(); ++i) {
                 const QString &arg = passedArgs[i];
                 if (!isValidInput(arg)) {
                   qWarning()
                       << "Invalid input received from IPC, ignoring:" << arg;
+                  invalidLines.append(arg);
                   continue;
                 }
-
-                Item newItem;
-                newItem.id =
-                    QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
-                    QString::number(i) + "_remote"; // To avoid collision
-                newItem.state = ItemState::Unprocessed;
-                newItem.sourcePath = arg;
-                newItem.createdTime = QDateTime::currentDateTime();
-
-                if (storage.saveItem(newItem)) {
-                  qDebug() << "Imported item from new instance:" << arg;
-                } else {
-                  qWarning()
-                      << "Failed to import item from new instance:" << arg;
-                }
+                validLines.append(arg);
               }
 
               // Bring window to front
@@ -129,6 +118,14 @@ void setupIpcHandler(QLocalServer &server, StorageManager &storage,
                 windowPtr->show();
                 windowPtr->raise();
                 windowPtr->activateWindow();
+
+                if (!validLines.isEmpty()) {
+                  windowPtr->processAddedLines(validLines);
+                }
+                if (!invalidLines.isEmpty()) {
+                  QMessageBox::warning(windowPtr, "Invalid Input",
+                                       "The following inputs were invalid and contained no torrents:\n\n" + invalidLines.join("\n"));
+                }
               }
             });
         QObject::connect(client, &QLocalSocket::disconnected, client,
@@ -136,27 +133,29 @@ void setupIpcHandler(QLocalServer &server, StorageManager &storage,
       });
 }
 
-void processCliArgs(const QStringList &args, StorageManager &storage) {
+void processCliArgs(const QStringList &args, MainWindow *windowPtr) {
   // Handle CLI arguments (Files/URLs) from the FIRST instance
+  QStringList validLines;
+  QStringList invalidLines;
   for (int i = 1; i < args.size(); ++i) {
     const QString &arg = args[i];
 
     if (!isValidInput(arg)) {
       qWarning() << "Invalid input received from CLI, ignoring:" << arg;
+      invalidLines.append(arg);
       continue;
     }
 
-    Item newItem;
-    newItem.id = QString::number(QDateTime::currentMSecsSinceEpoch()) + "_" +
-                 QString::number(i);
-    newItem.state = ItemState::Unprocessed;
-    newItem.sourcePath = arg;
-    newItem.createdTime = QDateTime::currentDateTime();
+    validLines.append(arg);
+  }
 
-    if (storage.saveItem(newItem)) {
-      qDebug() << "Imported item from CLI:" << arg;
-    } else {
-      qWarning() << "Failed to import item from CLI:" << arg;
+  if (windowPtr) {
+    if (!validLines.isEmpty()) {
+      windowPtr->processAddedLines(validLines);
+    }
+    if (!invalidLines.isEmpty()) {
+      QMessageBox::warning(windowPtr, "Invalid Input",
+                           "The following inputs were invalid and contained no torrents:\n\n" + invalidLines.join("\n"));
     }
   }
 }
@@ -190,8 +189,8 @@ int main(int argc, char *argv[]) {
 
   MainWindow *window = new MainWindow(&storage);
   window->setObjectName("KMagMuxMainWindow");
-  setupIpcHandler(server, storage, window);
-  processCliArgs(args, storage);
+  setupIpcHandler(server, window);
+  processCliArgs(args, window);
 
   window->show();
 
