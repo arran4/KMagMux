@@ -68,35 +68,36 @@ void setupIpcHandler(QLocalServer &server, MainWindow *window) {
   QObject::connect(
       &server, &QLocalServer::newConnection, [&server, windowPtr]() {
         QLocalSocket *client = server.nextPendingConnection();
-        QObject::connect(
-            client, &QLocalSocket::readyRead, [client, windowPtr]() {
-              QDataStream dataStream(client);
-              dataStream.startTransaction();
-              QStringList passedArgs;
-              dataStream >> passedArgs;
-              if (!dataStream.commitTransaction()) {
-                return; // Wait for more data
-              }
+        QObject::connect(client, &QLocalSocket::readyRead,
+                         [client, windowPtr]() {
+                           QDataStream dataStream(client);
+                           dataStream.startTransaction();
+                           QStringList passedArgs;
+                           dataStream >> passedArgs;
+                           if (!dataStream.commitTransaction()) {
+                             return; // Wait for more data
+                           }
 
-              // Delegate all argument parsing to processAddedLines
-              // which uses ItemParser as the single source of truth
-              QStringList validLines;
+                           // Delegate all argument parsing to processAddedLines
+                           // which uses ItemParser as the single source of
+                           // truth
+                           QStringList validLines;
 
-              for (int i = 0; i < passedArgs.size(); ++i) {
-                validLines.append(passedArgs[i]);
-              }
+                           for (int i = 0; i < passedArgs.size(); ++i) {
+                             validLines.append(passedArgs[i]);
+                           }
 
-              // Bring window to front
-              if (windowPtr) {
-                windowPtr->show();
-                windowPtr->raise();
-                windowPtr->activateWindow();
+                           // Bring window to front
+                           if (windowPtr) {
+                             windowPtr->show();
+                             windowPtr->raise();
+                             windowPtr->activateWindow();
 
-                if (!validLines.isEmpty()) {
-                  windowPtr->processAddedLines(validLines);
-                }
-              }
-            });
+                             if (!validLines.isEmpty()) {
+                               windowPtr->processAddedLines(validLines);
+                             }
+                           }
+                         });
         QObject::connect(client, &QLocalSocket::disconnected, client,
                          &QLocalSocket::deleteLater);
       });
