@@ -124,7 +124,9 @@ void setupIpcHandler(QLocalServer &server, MainWindow *window) {
                 }
                 if (!invalidLines.isEmpty()) {
                   QMessageBox::warning(windowPtr, "Invalid Input",
-                                       "The following inputs were invalid and contained no torrents:\n\n" + invalidLines.join("\n"));
+                                       "The following inputs were invalid and "
+                                       "contained no torrents:\n\n" +
+                                           invalidLines.join("\n"));
                 }
               }
             });
@@ -154,8 +156,10 @@ void processCliArgs(const QStringList &args, MainWindow *windowPtr) {
       windowPtr->processAddedLines(validLines);
     }
     if (!invalidLines.isEmpty()) {
-      QMessageBox::warning(windowPtr, "Invalid Input",
-                           "The following inputs were invalid and contained no torrents:\n\n" + invalidLines.join("\n"));
+      QMessageBox::warning(
+          windowPtr, "Invalid Input",
+          "The following inputs were invalid and contained no torrents:\n\n" +
+              invalidLines.join("\n"));
     }
   }
 }
