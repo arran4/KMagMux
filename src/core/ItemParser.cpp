@@ -20,8 +20,8 @@
 #include <qtypes.h>
 #include <vector>
 
-std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
-  std::vector<Item> parsedItems;
+ParseResult ItemParser::parseLines(const QStringList &lines) {
+  ParseResult result;
   const qint64 now = QDateTime::currentMSecsSinceEpoch();
   int idx = 0;
 
@@ -37,6 +37,23 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
     if (line.startsWith("file://")) {
       const int filePrefixLen = 7;
       pathToCheck = line.mid(filePrefixLen);
+    }
+
+    bool isMagnet = pathToCheck.startsWith("magnet:?");
+    const int magnetPrefixLen = 7;
+    bool isShortMagnet = pathToCheck.startsWith("magnet:") &&
+                         pathToCheck.length() > magnetPrefixLen;
+    const QUrl url(pathToCheck);
+    bool isHttp =
+        url.isValid() && (url.scheme() == "http" || url.scheme() == "https");
+    bool isLocalFile =
+        QFileInfo(pathToCheck).exists() && QFileInfo(pathToCheck).isFile();
+
+    if (!isMagnet && !isShortMagnet && !isHttp && !isLocalFile) {
+      result.rejectedInputs.push_back(
+          {line, "Invalid input: neither magnet, http/https URL, nor existing "
+                 "local file."});
+      return;
     }
 
     Item newItem;
@@ -101,6 +118,9 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
         qWarning() << "ItemParser: Blocked potentially unsafe torrent URL "
                       "(SSRF prevention):"
                    << pathToCheck;
+        result.rejectedInputs.push_back(
+            {pathToCheck,
+             "Blocked potentially unsafe torrent URL (SSRF prevention)"});
         return; // Skip this line completely
       }
 
@@ -146,12 +166,12 @@ std::vector<Item> ItemParser::parseLines(const QStringList &lines) {
 
     newItem.sourcePath = pathToCheck;
     newItem.createdTime = QDateTime::currentDateTime();
-    parsedItems.push_back(newItem);
+    result.items.push_back(newItem);
   };
 
   for (const QString &line : lines) {
     processLine(line);
   }
 
-  return parsedItems;
+  return result;
 }

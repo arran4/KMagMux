@@ -14,27 +14,6 @@
 
 namespace {
 
-bool isValidInput(const QString &arg) {
-  if (arg.startsWith("magnet:?")) {
-    return true;
-  }
-  const int magnetPrefixLen = 7;
-  if (arg.startsWith("magnet:") && arg.length() > magnetPrefixLen) {
-    return true;
-  }
-  const QUrl url(arg);
-  if (url.isValid() && (url.scheme() == "http" || url.scheme() == "https")) {
-    return true;
-  }
-
-  QString pathToCheck = arg;
-  if (arg.startsWith("file://")) {
-    pathToCheck = QUrl(arg).toLocalFile();
-  }
-  const QFileInfo fileInfo(pathToCheck);
-  return fileInfo.exists() && fileInfo.isFile();
-}
-
 QString setupApplication(QApplication &app) {
   QApplication::setApplicationName("KMagMux");
   QApplication::setOrganizationName("KMagMux");
@@ -99,18 +78,12 @@ void setupIpcHandler(QLocalServer &server, MainWindow *window) {
                 return; // Wait for more data
               }
 
+              // Delegate all argument parsing to processAddedLines
+              // which uses ItemParser as the single source of truth
               QStringList validLines;
-              QStringList invalidLines;
 
               for (int i = 0; i < passedArgs.size(); ++i) {
-                const QString &arg = passedArgs[i];
-                if (!isValidInput(arg)) {
-                  qWarning()
-                      << "Invalid input received from IPC, ignoring:" << arg;
-                  invalidLines.append(arg);
-                  continue;
-                }
-                validLines.append(arg);
+                validLines.append(passedArgs[i]);
               }
 
               // Bring window to front
@@ -122,12 +95,6 @@ void setupIpcHandler(QLocalServer &server, MainWindow *window) {
                 if (!validLines.isEmpty()) {
                   windowPtr->processAddedLines(validLines);
                 }
-                if (!invalidLines.isEmpty()) {
-                  QMessageBox::warning(windowPtr, "Invalid Input",
-                                       "The following inputs were invalid and "
-                                       "contained no torrents:\n\n" +
-                                           invalidLines.join("\n"));
-                }
               }
             });
         QObject::connect(client, &QLocalSocket::disconnected, client,
@@ -138,28 +105,13 @@ void setupIpcHandler(QLocalServer &server, MainWindow *window) {
 void processCliArgs(const QStringList &args, MainWindow *windowPtr) {
   // Handle CLI arguments (Files/URLs) from the FIRST instance
   QStringList validLines;
-  QStringList invalidLines;
   for (int i = 1; i < args.size(); ++i) {
-    const QString &arg = args[i];
-
-    if (!isValidInput(arg)) {
-      qWarning() << "Invalid input received from CLI, ignoring:" << arg;
-      invalidLines.append(arg);
-      continue;
-    }
-
-    validLines.append(arg);
+    validLines.append(args[i]);
   }
 
   if (windowPtr) {
     if (!validLines.isEmpty()) {
       windowPtr->processAddedLines(validLines);
-    }
-    if (!invalidLines.isEmpty()) {
-      QMessageBox::warning(
-          windowPtr, "Invalid Input",
-          "The following inputs were invalid and contained no torrents:\n\n" +
-              invalidLines.join("\n"));
     }
   }
 }
