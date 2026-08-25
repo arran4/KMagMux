@@ -64,7 +64,7 @@ bool StartupCoordinator::handleClientRequest(
   // We might have just spawned the primary, so give it some time to start the
   // server.
   int retries = 10;
-  ClientResult result;
+  ClientResult result{ClientResultCode::RequestRejected, ""};
 
   while (retries > 0) {
     result = client.sendRequest(request, 1000, 5000);
