@@ -28,8 +28,12 @@ add_library(KMagMuxCore SHARED
     src/core/BencodeParser.cpp
     src/core/TorrentParser.cpp
     src/core/TrackerClient.cpp
+    src/core/ipc/SingleInstanceClient.cpp
+    src/core/ipc/SingleInstanceServer.cpp
+    src/core/ipc/StartupCoordinator.cpp
+    src/core/ipc/ApplicationRequestDispatcher.cpp
 )
-target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::Wallet)
+target_link_libraries(KMagMuxCore PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::Wallet KF6::XmlGui)
 target_include_directories(KMagMuxCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 file(RELATIVE_PATH REL_PLUGIN_DIR
