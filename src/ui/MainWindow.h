@@ -65,6 +65,9 @@ private slots:
 public slots:
   void processAddedLines(const QStringList &lines);
 
+signals:
+  void processingCompleted();
+
 private:
   StorageManager *m_storage;
   Engine *m_engine;

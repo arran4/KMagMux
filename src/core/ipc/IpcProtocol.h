@@ -8,6 +8,8 @@
 namespace IpcProtocol {
 
 const quint32 MAGIC = 0x4B4D474D; // KMGm
+const quint32 MAX_FRAME_SIZE = 10 * 1024 * 1024; // 10 MB
+
 const quint16 VERSION = 1;
 
 enum class RequestType : quint16 { ActivateWindow = 1, AddInputs = 2 };
@@ -39,6 +41,11 @@ struct Response {
 };
 
 // Serialization
+inline void setupStream(QDataStream &stream) {
+  stream.setVersion(QDataStream::Qt_6_5);
+  stream.setByteOrder(QDataStream::BigEndian);
+}
+
 inline QDataStream &operator<<(QDataStream &out, const Request &req) {
   out << MAGIC << req.version << req.requestId << static_cast<quint16>(req.type)
       << req.payload;

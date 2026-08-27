@@ -1000,8 +1000,10 @@ void MainWindow::onAddItems() {
 }
 
 void MainWindow::processAddedLines(const QStringList &lines) {
-  if (lines.isEmpty())
+  if (lines.isEmpty()) {
+    emit processingCompleted();
     return;
+  }
 
   // Offload parsing to a background thread
   auto *watcher = new QFutureWatcher<ParseResult>(this);
@@ -1021,6 +1023,7 @@ void MainWindow::processAddedLines(const QStringList &lines) {
                                messages.join("\n"));
         }
         watcher->deleteLater();
+        emit processingCompleted();
       });
 
   QFuture<ParseResult> future = QtConcurrent::run(

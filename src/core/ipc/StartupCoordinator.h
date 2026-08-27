@@ -2,23 +2,34 @@
 #define STARTUPCOORDINATOR_H
 
 #include "IpcProtocol.h"
+#include <QLockFile>
 #include <QString>
 #include <QStringList>
 
+enum class CoordinatorAction {
+  BecomePrimary,
+  RequestDelivered,
+  RequestFailed,
+  UserCancelled,
+  SpawnFailed
+};
+
+struct CoordinatorResult {
+  CoordinatorAction action;
+  QLockFile *primaryLock = nullptr;
+};
+
 class StartupCoordinator {
 public:
-  StartupCoordinator(const QString &serverName);
+  explicit StartupCoordinator(const QString &serverName);
 
-  // Returns true if this process should run as the primary application,
-  // or false if this process was a client/launcher and has completed its job
-  // (or failed).
-  bool coordinate(const QStringList &args);
+  CoordinatorResult coordinate(const QStringList &args);
 
 private:
   QString m_serverName;
 
-  bool handleClientRequest(const IpcProtocol::Request &request);
-  void spawnCleanPrimary();
+  CoordinatorAction handleClientRequest(const IpcProtocol::Request &request);
+  static bool spawnCleanPrimary();
 };
 
 #endif // STARTUPCOORDINATOR_H

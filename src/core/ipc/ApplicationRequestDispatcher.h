@@ -13,6 +13,9 @@ public:
 
   IpcProtocol::ResponseStatus dispatch(const IpcProtocol::Request &request);
 
+public slots:
+  void completeCurrentProcessing();
+
 private slots:
   void processNext();
 
@@ -20,10 +23,18 @@ private:
   QQueue<QStringList> m_addInputsQueue;
   bool m_isProcessing;
 
-  // Simplistic duplicate cache
-  QStringList m_recentRequestIds;
-  void addRecentRequest(const QString &id);
-  bool isRecentRequest(const QString &id) const;
+  struct CachedResult {
+    QString requestId;
+    QString fingerprint;
+    IpcProtocol::ResponseStatus status;
+  };
+
+  QList<CachedResult> m_recentResults;
+  void addRecentResult(const QString &id, const QString &fingerprint,
+                       IpcProtocol::ResponseStatus status);
+  bool checkRecentResult(const QString &id, const QString &fingerprint,
+                         IpcProtocol::ResponseStatus &outStatus) const;
+  QString calculateFingerprint(const IpcProtocol::Request &request) const;
 
 signals:
   void activateWindowRequested();

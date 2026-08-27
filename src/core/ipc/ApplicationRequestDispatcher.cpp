@@ -1,19 +1,44 @@
 #include "ApplicationRequestDispatcher.h"
+#include <QCryptographicHash>
 #include <QDebug>
-#include <QTimer>
 
 ApplicationRequestDispatcher::ApplicationRequestDispatcher(QObject *parent)
     : QObject(parent), m_isProcessing(false) {}
 
-void ApplicationRequestDispatcher::addRecentRequest(const QString &id) {
-  m_recentRequestIds.append(id);
-  if (m_recentRequestIds.size() > 50) {
-    m_recentRequestIds.removeFirst();
+void ApplicationRequestDispatcher::addRecentResult(
+    const QString &id, const QString &fingerprint,
+    IpcProtocol::ResponseStatus status) {
+  m_recentResults.append({id, fingerprint, status});
+  if (m_recentResults.size() > 50) {
+    m_recentResults.removeFirst();
   }
 }
 
-bool ApplicationRequestDispatcher::isRecentRequest(const QString &id) const {
-  return m_recentRequestIds.contains(id);
+QString ApplicationRequestDispatcher::calculateFingerprint(
+    const IpcProtocol::Request &request) const {
+  QCryptographicHash hash(QCryptographicHash::Sha256);
+  hash.addData(QByteArray::number(request.version));
+  hash.addData(QByteArray::number(static_cast<int>(request.type)));
+  for (const QString &s : request.payload) {
+    hash.addData(s.toUtf8());
+  }
+  return QString::fromLatin1(hash.result().toHex());
+}
+
+bool ApplicationRequestDispatcher::checkRecentResult(
+    const QString &id, const QString &fingerprint,
+    IpcProtocol::ResponseStatus &outStatus) const {
+  for (const auto &cached : m_recentResults) {
+    if (cached.requestId == id) {
+      if (cached.fingerprint != fingerprint) {
+        outStatus = IpcProtocol::ResponseStatus::MalformedRequest; // Collision
+      } else {
+        outStatus = cached.status;
+      }
+      return true;
+    }
+  }
+  return false;
 }
 
 IpcProtocol::ResponseStatus
@@ -22,28 +47,31 @@ ApplicationRequestDispatcher::dispatch(const IpcProtocol::Request &request) {
     return IpcProtocol::ResponseStatus::MalformedRequest;
   }
 
-  if (isRecentRequest(request.requestId)) {
-    // Idempotency: Already processed this, so just return Accepted
-    return IpcProtocol::ResponseStatus::Accepted;
+  QString fingerprint = calculateFingerprint(request);
+  IpcProtocol::ResponseStatus status;
+  if (checkRecentResult(request.requestId, fingerprint, status)) {
+    return status; // Return the cached status exactly (e.g. if it was an error, return error)
   }
-
-  addRecentRequest(request.requestId);
 
   if (request.type == IpcProtocol::RequestType::ActivateWindow) {
     emit activateWindowRequested();
-    return IpcProtocol::ResponseStatus::Accepted;
+    status = IpcProtocol::ResponseStatus::Accepted;
   } else if (request.type == IpcProtocol::RequestType::AddInputs) {
     emit activateWindowRequested();
 
     m_addInputsQueue.enqueue(request.payload);
 
     if (!m_isProcessing) {
-      QTimer::singleShot(0, this, &ApplicationRequestDispatcher::processNext);
+      m_isProcessing = true;
+      processNext();
     }
-    return IpcProtocol::ResponseStatus::Accepted;
+    status = IpcProtocol::ResponseStatus::Accepted;
+  } else {
+    status = IpcProtocol::ResponseStatus::UnknownRequestType;
   }
 
-  return IpcProtocol::ResponseStatus::UnknownRequestType;
+  addRecentResult(request.requestId, fingerprint, status);
+  return status;
 }
 
 void ApplicationRequestDispatcher::processNext() {
@@ -51,20 +79,14 @@ void ApplicationRequestDispatcher::processNext() {
     m_isProcessing = false;
     return;
   }
-
-  m_isProcessing = true;
   QStringList nextPayload = m_addInputsQueue.dequeue();
-
   emit processAddedLinesRequested(nextPayload);
+}
 
-  // We rely on the fact that processAddedLines opens a modal dialog
-  // (ProcessItemDialog/AddItemDialog) The modal dialog will block the event
-  // loop, so the next queue item won't be processed until we get back here, but
-  // we should make sure we only queue the next one after the UI has completed.
-  m_isProcessing = false;
+void ApplicationRequestDispatcher::completeCurrentProcessing() {
   if (!m_addInputsQueue.isEmpty()) {
-    QTimer::singleShot(
-        500, this,
-        &ApplicationRequestDispatcher::processNext); // basic debounce
+    processNext();
+  } else {
+    m_isProcessing = false;
   }
 }

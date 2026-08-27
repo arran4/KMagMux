@@ -3,21 +3,26 @@
 #include "SingleInstanceServer.h"
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
+#include <QLockFile>
 #include <QMessageBox>
 #include <QProcess>
+#include <QStandardPaths>
 #include <QThread>
 #include <QUuid>
 
 StartupCoordinator::StartupCoordinator(const QString &serverName)
     : m_serverName(serverName) {}
 
-bool StartupCoordinator::coordinate(const QStringList &args) {
+CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   IpcProtocol::Request request;
   request.requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
   QStringList inputs;
   for (int i = 1; i < args.size(); ++i) {
-    inputs.append(args[i]);
+    if (!args[i].startsWith("-")) {
+      inputs.append(args[i]);
+    }
   }
 
   if (inputs.isEmpty()) {
@@ -27,48 +32,84 @@ bool StartupCoordinator::coordinate(const QStringList &args) {
     request.payload = inputs;
   }
 
-  SingleInstanceServer tempServer(m_serverName, nullptr);
-  bool isPrimary = tempServer.tryAcquire();
-
-  if (isPrimary) {
-    // We are the primary!
-    if (inputs.isEmpty()) {
-      return true; // Just run normally.
-    } else {
-      // We are the first instance, but we were launched WITH arguments.
-      // Requirement 4: "WHEN NO PRIMARY EXISTS, START A CLEAN PRIMARY"
-      // "The spawned process must be clean/argument-free"
-      qDebug()
-          << "We are first, but we have arguments. Spawning clean primary...";
-      spawnCleanPrimary();
-
-      // Now we act as a client and wait for the clean primary to become ready.
-      return handleClientRequest(request);
-    }
-  } else {
-    // Primary already exists. We are a client.
-    return handleClientRequest(request);
+  QString runtimePath =
+      QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+  if (runtimePath.isEmpty()) {
+    runtimePath = QDir::tempPath();
   }
+
+  // Election lock is used to serialize multiple concurrent launchers.
+  QString electionFilePath = QDir(runtimePath).filePath(m_serverName + "_election.lock");
+  QLockFile electionLock(electionFilePath);
+  electionLock.setStaleLockTime(0);
+
+  // Persistent primary ownership lock.
+  QString primaryFilePath = QDir(runtimePath).filePath(m_serverName + ".lock");
+
+  if (inputs.isEmpty()) {
+    // We are a no-arg launcher. Try to become the primary immediately.
+    auto *primaryLock = new QLockFile(primaryFilePath);
+    primaryLock->setStaleLockTime(0);
+    if (primaryLock->tryLock(0)) {
+        return {CoordinatorAction::BecomePrimary, primaryLock};
+    }
+    delete primaryLock;
+    // Primary exists, act as a client to activate window.
+    return {handleClientRequest(request), nullptr};
+  }
+
+  // We have arguments. We must ensure only ONE launcher spawns a primary.
+  if (electionLock.tryLock(5000)) {
+      // We hold the election lock. Check if a primary already exists.
+      auto *tempPrimaryLock = new QLockFile(primaryFilePath);
+      tempPrimaryLock->setStaleLockTime(0);
+      bool primaryExists = !tempPrimaryLock->tryLock(0);
+
+      if (!primaryExists) {
+          // No primary exists. We held the lock momentarily to check.
+          tempPrimaryLock->unlock();
+          delete tempPrimaryLock;
+
+          qDebug() << "We are an action-bearing launcher and no primary exists. Spawning clean primary...";
+          if (!spawnCleanPrimary()) {
+              electionLock.unlock();
+              return {CoordinatorAction::SpawnFailed, nullptr};
+          }
+      } else {
+          delete tempPrimaryLock;
+      }
+
+      // We spawned it or it already existed.
+      // Act as client. We keep the election lock until the client request finishes or times out
+      // to ensure concurrent launchers wait for our newly spawned primary to become ready.
+      CoordinatorAction action = handleClientRequest(request);
+      electionLock.unlock();
+      return {action, nullptr};
+  }
+
+  // Could not get election lock. Another launcher is likely spawning the primary.
+  // Just act as a client.
+  return {handleClientRequest(request), nullptr};
 }
 
-void StartupCoordinator::spawnCleanPrimary() {
+bool StartupCoordinator::spawnCleanPrimary() {
   QString program = QCoreApplication::applicationFilePath();
   qDebug() << "Spawning clean primary:" << program;
-  QProcess::startDetached(program, QStringList());
+  return QProcess::startDetached(program, QStringList());
 }
 
-bool StartupCoordinator::handleClientRequest(
+CoordinatorAction StartupCoordinator::handleClientRequest(
     const IpcProtocol::Request &request) {
   SingleInstanceClient client(m_serverName);
 
   // We might have just spawned the primary, so give it some time to start the
   // server.
-  int retries = 10;
+  int retries = 20; // Up to 4 seconds
   ClientResult result{ClientResultCode::RequestRejected, ""};
 
   while (retries > 0) {
     result = client.sendRequest(request, 1000, 5000);
-    if (result.code == ClientResultCode::ConnectFailed) {
+    if (result.code == ClientResultCode::ConnectFailed || result.code == ClientResultCode::ConnectionClosed) {
       QThread::msleep(200); // Wait and retry connecting
       retries--;
     } else {
@@ -76,7 +117,7 @@ bool StartupCoordinator::handleClientRequest(
     }
   }
 
-  if (!result.isSuccess()) {
+  while (!result.isSuccess()) {
     qWarning() << "IPC Request Failed:" << result.diagnostic;
 
     // Requirement 21: "NON-RESPONSIVE PRIMARY RECOVERY UX"
@@ -89,13 +130,13 @@ bool StartupCoordinator::handleClientRequest(
         QMessageBox::Retry | QMessageBox::Cancel);
 
     if (reply == QMessageBox::Retry) {
-      return handleClientRequest(
-          request); // Recurse to retry with SAME request ID
+      result = client.sendRequest(request, 1000, 5000);
+    } else {
+      return CoordinatorAction::UserCancelled;
     }
-  } else {
-    qDebug() << "IPC Request Success:" << result.diagnostic;
   }
 
-  // Client job is done, whether successful or failed.
-  return false;
+  qDebug() << "IPC Request Success:" << result.diagnostic;
+
+  return CoordinatorAction::RequestDelivered;
 }

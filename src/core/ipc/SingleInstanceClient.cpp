@@ -20,9 +20,16 @@ SingleInstanceClient::sendRequest(const IpcProtocol::Request &request,
             "Could not connect to primary instance."};
   }
 
+  QByteArray payload;
+  QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+  IpcProtocol::setupStream(payloadOut);
+  payloadOut << request;
+
   QByteArray block;
   QDataStream out(&block, QIODevice::WriteOnly);
-  out << request;
+  IpcProtocol::setupStream(out);
+  out << static_cast<quint32>(payload.size());
+  block.append(payload);
 
   if (socket.write(block) == -1 ||
       !socket.waitForBytesWritten(connectTimeoutMs)) {
@@ -44,16 +51,28 @@ SingleInstanceClient::sendRequest(const IpcProtocol::Request &request,
   IpcProtocol::Response response;
   bool responseReceived = false;
 
+  quint32 expectedSize = 0;
   while (timer.isActive() && socket.state() == QLocalSocket::ConnectedState) {
-    if (socket.bytesAvailable() > 0) {
+    if (expectedSize == 0 && socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
       QDataStream in(&socket);
-      in.startTransaction();
-      in >> response;
-      if (in.commitTransaction()) {
-        responseReceived = true;
-        break;
+      IpcProtocol::setupStream(in);
+      in >> expectedSize;
+
+      if (expectedSize == 0 || expectedSize > IpcProtocol::MAX_FRAME_SIZE) {
+          qWarning() << "Invalid frame size received from server:" << expectedSize;
+          break;
       }
-    } else {
+    }
+
+    if (expectedSize > 0 && socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+      QDataStream in(&socket);
+      IpcProtocol::setupStream(in);
+      in >> response;
+      responseReceived = true;
+      break;
+    }
+
+    if (!responseReceived) {
       loop.exec();
     }
   }

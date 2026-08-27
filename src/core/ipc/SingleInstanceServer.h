@@ -1,31 +1,33 @@
 #ifndef SINGLEINSTANCESERVER_H
 #define SINGLEINSTANCESERVER_H
 
-#include "IpcProtocol.h"
-#include <QLocalServer>
 #include <QLockFile>
+#include <QLocalServer>
 #include <QObject>
+#include <QString>
 
 class ApplicationRequestDispatcher;
 
 class SingleInstanceServer : public QObject {
   Q_OBJECT
+
 public:
-  explicit SingleInstanceServer(const QString &serverName,
-                                ApplicationRequestDispatcher *dispatcher,
-                                QObject *parent = nullptr);
+  SingleInstanceServer(const QString &serverName,
+                       ApplicationRequestDispatcher *dispatcher,
+                       QObject *parent = nullptr);
   ~SingleInstanceServer();
 
-  bool tryAcquire();
+  bool tryAcquire(QLockFile *existingLock = nullptr);
 
 private slots:
   void handleNewConnection();
+  static void disconnectClient(QLocalSocket *client);
 
 private:
   QString m_serverName;
   QLocalServer m_server;
-  QLockFile *m_lockFile;
   ApplicationRequestDispatcher *m_dispatcher;
+  QLockFile *m_lockFile;
 };
 
 #endif // SINGLEINSTANCESERVER_H

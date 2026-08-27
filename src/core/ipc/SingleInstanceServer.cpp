@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QLocalSocket>
 #include <QStandardPaths>
+#include <QTimer>
 
 SingleInstanceServer::SingleInstanceServer(
     const QString &serverName, ApplicationRequestDispatcher *dispatcher,
@@ -20,23 +21,27 @@ SingleInstanceServer::~SingleInstanceServer() {
   }
 }
 
-bool SingleInstanceServer::tryAcquire() {
-  QString runtimePath =
-      QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
-  if (runtimePath.isEmpty()) {
-    runtimePath = QDir::tempPath();
-  }
-  QString lockFilePath = QDir(runtimePath).filePath(m_serverName + ".lock");
+bool SingleInstanceServer::tryAcquire(QLockFile *existingLock) {
+  if (existingLock) {
+    m_lockFile = existingLock;
+  } else {
+    QString runtimePath =
+        QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    if (runtimePath.isEmpty()) {
+      runtimePath = QDir::tempPath();
+    }
+    QString lockFilePath = QDir(runtimePath).filePath(m_serverName + ".lock");
 
-  m_lockFile = new QLockFile(lockFilePath);
-  m_lockFile->setStaleLockTime(0); // Only considered stale if process is dead
+    m_lockFile = new QLockFile(lockFilePath);
+    m_lockFile->setStaleLockTime(0); // Only considered stale if process is dead
 
-  if (!m_lockFile->tryLock(100)) { // wait up to 100ms
-    qDebug() << "Could not acquire primary lock. Another instance is likely "
-                "running.";
-    delete m_lockFile;
-    m_lockFile = nullptr;
-    return false;
+    if (!m_lockFile->tryLock(0)) {
+      qDebug() << "Could not acquire primary lock. Another instance is likely "
+                  "running.";
+      delete m_lockFile;
+      m_lockFile = nullptr;
+      return false;
+    }
   }
 
   // We acquired the lock. Now start the local server.
@@ -54,44 +59,88 @@ bool SingleInstanceServer::tryAcquire() {
   return true;
 }
 
+void SingleInstanceServer::disconnectClient(QLocalSocket *client) {
+    if (client) {
+        client->disconnectFromServer();
+        client->deleteLater();
+    }
+}
+
 void SingleInstanceServer::handleNewConnection() {
   QLocalSocket *client = m_server.nextPendingConnection();
-  connect(client, &QLocalSocket::readyRead, this, [this, client]() {
-    QDataStream dataStream(client);
-    dataStream.startTransaction();
 
-    IpcProtocol::Request request;
-    dataStream >> request;
+  // Track expected size per client connection using a dynamic property
+  client->setProperty("expectedSize", 0);
 
-    if (!dataStream.commitTransaction()) {
-      return; // Wait for more data
-    }
+  // Set a strict 5 second timeout to prevent hung clients
+  QTimer *timeoutTimer = new QTimer(client);
+  timeoutTimer->setSingleShot(true);
+  timeoutTimer->start(5000);
 
-    IpcProtocol::Response response;
-    response.requestId = request.requestId;
+  connect(timeoutTimer, &QTimer::timeout, this, [this, client]() {
+      qWarning() << "Client connection timed out while reading.";
+      disconnectClient(client);
+  });
 
-    if (!request.isValid()) {
-      response.status = IpcProtocol::ResponseStatus::MalformedRequest;
-      response.errorMessage = "Malformed request";
-    } else if (m_dispatcher) {
-      response.status = m_dispatcher->dispatch(request);
-      if (response.status != IpcProtocol::ResponseStatus::Accepted) {
-        response.errorMessage = "Failed to dispatch request";
+  connect(client, &QLocalSocket::readyRead, this, [this, client, timeoutTimer]() {
+    quint32 expectedSize = client->property("expectedSize").toUInt();
+
+    if (expectedSize == 0 && client->bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+      QDataStream in(client);
+      IpcProtocol::setupStream(in);
+      in >> expectedSize;
+
+      // Basic sanity check on frame size to prevent massive allocations (e.g. 10MB limit)
+      if (expectedSize == 0 || expectedSize > IpcProtocol::MAX_FRAME_SIZE) {
+          qWarning() << "Invalid frame size received:" << expectedSize;
+          disconnectClient(client);
+          return;
       }
-    } else {
-      response.status = IpcProtocol::ResponseStatus::InternalError;
-      response.errorMessage = "No dispatcher available";
+
+      client->setProperty("expectedSize", expectedSize);
     }
 
-    QByteArray block;
-    QDataStream out(&block, QIODevice::WriteOnly);
-    out << response;
-    client->write(block);
-    client->waitForBytesWritten(1000);
+    if (expectedSize > 0 && client->bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+      timeoutTimer->stop(); // Read finished
 
-    // Since we got a full request and responded, we can disconnect.
-    // The client will read the response and close its end.
-    client->disconnectFromServer();
+      QDataStream in(client);
+      IpcProtocol::setupStream(in);
+      IpcProtocol::Request request;
+      in >> request;
+
+      IpcProtocol::Response response;
+      response.requestId = request.requestId;
+
+      if (!request.isValid()) {
+        response.status = IpcProtocol::ResponseStatus::MalformedRequest;
+        response.errorMessage = "Malformed request";
+      } else if (m_dispatcher) {
+        response.status = m_dispatcher->dispatch(request);
+        if (response.status != IpcProtocol::ResponseStatus::Accepted) {
+          response.errorMessage = "Failed to dispatch request";
+        }
+      } else {
+        response.status = IpcProtocol::ResponseStatus::InternalError;
+        response.errorMessage = "No dispatcher available";
+      }
+
+      QByteArray payload;
+      QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+      IpcProtocol::setupStream(payloadOut);
+      payloadOut << response;
+
+      QByteArray block;
+      QDataStream out(&block, QIODevice::WriteOnly);
+      IpcProtocol::setupStream(out);
+      out << static_cast<quint32>(payload.size());
+      block.append(payload);
+
+      client->write(block);
+      client->waitForBytesWritten(1000);
+
+      // We handled one request on this connection.
+      disconnectClient(client);
+    }
   });
 
   connect(client, &QLocalSocket::disconnected, client,

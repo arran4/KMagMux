@@ -41,9 +41,19 @@ int main(int argc, char *argv[]) {
   const QStringList args = QApplication::arguments();
 
   StartupCoordinator coordinator(serverName);
-  if (!coordinator.coordinate(args)) {
-    // We were a client/launcher and have completed our job.
-    return 0;
+  CoordinatorResult coordResult = coordinator.coordinate(args);
+
+  switch(coordResult.action) {
+      case CoordinatorAction::BecomePrimary:
+          break; // Continue initialization
+      case CoordinatorAction::RequestDelivered:
+          return 0;
+      case CoordinatorAction::UserCancelled:
+          return 130;
+      case CoordinatorAction::RequestFailed:
+      case CoordinatorAction::SpawnFailed:
+      default:
+          return 1;
   }
 
   // Initialize Core Storage
@@ -68,10 +78,14 @@ int main(int argc, char *argv[]) {
   QObject::connect(&dispatcher,
                    &ApplicationRequestDispatcher::processAddedLinesRequested,
                    window, &MainWindow::processAddedLines);
+  QObject::connect(window,
+                   &MainWindow::processingCompleted,
+                   &dispatcher,
+                   &ApplicationRequestDispatcher::completeCurrentProcessing);
 
   SingleInstanceServer server(serverName, &dispatcher);
 
-  if (!server.tryAcquire()) {
+  if (!server.tryAcquire(coordResult.primaryLock)) {
     qWarning() << "Failed to acquire lock as primary after coordination.";
     return 1;
   }
