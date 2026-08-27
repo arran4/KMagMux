@@ -1,9 +1,11 @@
 #include "ApplicationRequestDispatcher.h"
 #include <QCryptographicHash>
 #include <QDebug>
+#include <QIODevice>
+#include <QUuid>
 
 ApplicationRequestDispatcher::ApplicationRequestDispatcher(QObject *parent)
-    : QObject(parent), m_isProcessing(false) {}
+    : QObject(parent), m_isProcessing(false), m_currentTokenId() {}
 
 void ApplicationRequestDispatcher::addRecentResult(
     const QString &id, const QString &fingerprint,
@@ -17,11 +19,12 @@ void ApplicationRequestDispatcher::addRecentResult(
 QString ApplicationRequestDispatcher::calculateFingerprint(
     const IpcProtocol::Request &request) const {
   QCryptographicHash hash(QCryptographicHash::Sha256);
-  hash.addData(QByteArray::number(request.version));
-  hash.addData(QByteArray::number(static_cast<int>(request.type)));
-  for (const QString &s : request.payload) {
-    hash.addData(s.toUtf8());
-  }
+  QByteArray canonical;
+  QDataStream out(&canonical, QIODevice::WriteOnly);
+  IpcProtocol::setupStream(out);
+  out << request.version << static_cast<quint16>(request.type)
+      << request.payload;
+  hash.addData(canonical);
   return QString::fromLatin1(hash.result().toHex());
 }
 
@@ -50,7 +53,8 @@ ApplicationRequestDispatcher::dispatch(const IpcProtocol::Request &request) {
   QString fingerprint = calculateFingerprint(request);
   IpcProtocol::ResponseStatus status;
   if (checkRecentResult(request.requestId, fingerprint, status)) {
-    return status; // Return the cached status exactly (e.g. if it was an error, return error)
+    return status; // Return the cached status exactly (e.g. if it was an error,
+                   // return error)
   }
 
   if (request.type == IpcProtocol::RequestType::ActivateWindow) {
@@ -77,16 +81,24 @@ ApplicationRequestDispatcher::dispatch(const IpcProtocol::Request &request) {
 void ApplicationRequestDispatcher::processNext() {
   if (m_addInputsQueue.isEmpty()) {
     m_isProcessing = false;
+    m_currentTokenId.clear();
     return;
   }
   QStringList nextPayload = m_addInputsQueue.dequeue();
-  emit processAddedLinesRequested(nextPayload);
+  m_currentTokenId = QUuid::createUuid().toString();
+  emit processAddedLinesRequested(nextPayload, m_currentTokenId);
 }
 
-void ApplicationRequestDispatcher::completeCurrentProcessing() {
+void ApplicationRequestDispatcher::completeCurrentProcessing(
+    const QString &tokenId) {
+  if (tokenId != m_currentTokenId) {
+    return; // Ignore unrelated local processing completion
+  }
+
   if (!m_addInputsQueue.isEmpty()) {
     processNext();
   } else {
     m_isProcessing = false;
+    m_currentTokenId.clear();
   }
 }

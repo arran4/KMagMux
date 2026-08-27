@@ -63,10 +63,11 @@ private slots:
   void updateActionsState();
 
 public slots:
-  void processAddedLines(const QStringList &lines);
+  void processAddedLines(const QStringList &lines,
+                         const QString &tokenId = QString());
 
 signals:
-  void processingCompleted();
+  void processingCompleted(const QString &tokenId = QString());
 
 private:
   StorageManager *m_storage;

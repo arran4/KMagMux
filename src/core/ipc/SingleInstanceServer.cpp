@@ -60,10 +60,10 @@ bool SingleInstanceServer::tryAcquire(QLockFile *existingLock) {
 }
 
 void SingleInstanceServer::disconnectClient(QLocalSocket *client) {
-    if (client) {
-        client->disconnectFromServer();
-        client->deleteLater();
-    }
+  if (client) {
+    client->disconnectFromServer();
+    client->deleteLater();
+  }
 }
 
 void SingleInstanceServer::handleNewConnection() {
@@ -78,70 +78,89 @@ void SingleInstanceServer::handleNewConnection() {
   timeoutTimer->start(5000);
 
   connect(timeoutTimer, &QTimer::timeout, this, [this, client]() {
-      qWarning() << "Client connection timed out while reading.";
-      disconnectClient(client);
+    qWarning() << "Client connection timed out while reading.";
+    disconnectClient(client);
   });
 
-  connect(client, &QLocalSocket::readyRead, this, [this, client, timeoutTimer]() {
-    quint32 expectedSize = client->property("expectedSize").toUInt();
+  connect(
+      client, &QLocalSocket::readyRead, this, [this, client, timeoutTimer]() {
+        quint32 expectedSize = client->property("expectedSize").toUInt();
 
-    if (expectedSize == 0 && client->bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
-      QDataStream in(client);
-      IpcProtocol::setupStream(in);
-      in >> expectedSize;
+        if (expectedSize == 0 &&
+            client->bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+          QDataStream in(client);
+          IpcProtocol::setupStream(in);
+          in >> expectedSize;
 
-      // Basic sanity check on frame size to prevent massive allocations (e.g. 10MB limit)
-      if (expectedSize == 0 || expectedSize > IpcProtocol::MAX_FRAME_SIZE) {
-          qWarning() << "Invalid frame size received:" << expectedSize;
-          disconnectClient(client);
-          return;
-      }
+          // Basic sanity check on frame size to prevent massive allocations
+          // (e.g. 10MB limit)
+          if (expectedSize == 0 || expectedSize > IpcProtocol::MAX_FRAME_SIZE) {
+            qWarning() << "Invalid frame size received:" << expectedSize;
+            disconnectClient(client);
+            return;
+          }
 
-      client->setProperty("expectedSize", expectedSize);
-    }
-
-    if (expectedSize > 0 && client->bytesAvailable() >= static_cast<qint64>(expectedSize)) {
-      timeoutTimer->stop(); // Read finished
-
-      QDataStream in(client);
-      IpcProtocol::setupStream(in);
-      IpcProtocol::Request request;
-      in >> request;
-
-      IpcProtocol::Response response;
-      response.requestId = request.requestId;
-
-      if (!request.isValid()) {
-        response.status = IpcProtocol::ResponseStatus::MalformedRequest;
-        response.errorMessage = "Malformed request";
-      } else if (m_dispatcher) {
-        response.status = m_dispatcher->dispatch(request);
-        if (response.status != IpcProtocol::ResponseStatus::Accepted) {
-          response.errorMessage = "Failed to dispatch request";
+          client->setProperty("expectedSize", expectedSize);
         }
-      } else {
-        response.status = IpcProtocol::ResponseStatus::InternalError;
-        response.errorMessage = "No dispatcher available";
-      }
 
-      QByteArray payload;
-      QDataStream payloadOut(&payload, QIODevice::WriteOnly);
-      IpcProtocol::setupStream(payloadOut);
-      payloadOut << response;
+        if (expectedSize > 0 &&
+            client->bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+          timeoutTimer->stop(); // Read finished
 
-      QByteArray block;
-      QDataStream out(&block, QIODevice::WriteOnly);
-      IpcProtocol::setupStream(out);
-      out << static_cast<quint32>(payload.size());
-      block.append(payload);
+          QByteArray frame = client->read(expectedSize);
+          QDataStream in(&frame, QIODevice::ReadOnly);
+          IpcProtocol::setupStream(in);
+          IpcProtocol::Request request;
+          in >> request;
 
-      client->write(block);
-      client->waitForBytesWritten(1000);
+          // Ensure reading succeeded fully and exactly to the end of the frame
+          if (in.status() != QDataStream::Ok || !in.atEnd()) {
+            request.version = 0; // invalidate
+          }
 
-      // We handled one request on this connection.
-      disconnectClient(client);
-    }
-  });
+          IpcProtocol::Response response;
+          response.requestId = request.requestId;
+
+          if (!request.isValid()) {
+            if (request.version != IpcProtocol::VERSION) {
+              response.status = IpcProtocol::ResponseStatus::UnsupportedVersion;
+              response.errorMessage = "Unsupported protocol version";
+            } else {
+              response.status = IpcProtocol::ResponseStatus::MalformedRequest;
+              response.errorMessage = "Malformed request";
+            }
+          } else if (request.type != IpcProtocol::RequestType::ActivateWindow &&
+                     request.type != IpcProtocol::RequestType::AddInputs) {
+            response.status = IpcProtocol::ResponseStatus::UnknownRequestType;
+            response.errorMessage = "Unknown request type";
+          } else if (m_dispatcher) {
+            response.status = m_dispatcher->dispatch(request);
+            if (response.status != IpcProtocol::ResponseStatus::Accepted) {
+              response.errorMessage = "Failed to dispatch request";
+            }
+          } else {
+            response.status = IpcProtocol::ResponseStatus::InternalError;
+            response.errorMessage = "No dispatcher available";
+          }
+
+          QByteArray payload;
+          QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+          IpcProtocol::setupStream(payloadOut);
+          payloadOut << response;
+
+          QByteArray block;
+          QDataStream out(&block, QIODevice::WriteOnly);
+          IpcProtocol::setupStream(out);
+          out << static_cast<quint32>(payload.size());
+          block.append(payload);
+
+          client->write(block);
+          client->waitForBytesWritten(1000);
+
+          // We handled one request on this connection.
+          disconnectClient(client);
+        }
+      });
 
   connect(client, &QLocalSocket::disconnected, client,
           &QLocalSocket::deleteLater);

@@ -43,17 +43,17 @@ int main(int argc, char *argv[]) {
   StartupCoordinator coordinator(serverName);
   CoordinatorResult coordResult = coordinator.coordinate(args);
 
-  switch(coordResult.action) {
-      case CoordinatorAction::BecomePrimary:
-          break; // Continue initialization
-      case CoordinatorAction::RequestDelivered:
-          return 0;
-      case CoordinatorAction::UserCancelled:
-          return 130;
-      case CoordinatorAction::RequestFailed:
-      case CoordinatorAction::SpawnFailed:
-      default:
-          return 1;
+  switch (coordResult.action) {
+  case CoordinatorAction::BecomePrimary:
+    break; // Continue initialization
+  case CoordinatorAction::RequestDelivered:
+    return 0;
+  case CoordinatorAction::UserCancelled:
+    return 130;
+  case CoordinatorAction::RequestFailed:
+  case CoordinatorAction::SpawnFailed:
+  default:
+    return 1;
   }
 
   // Initialize Core Storage
@@ -78,9 +78,7 @@ int main(int argc, char *argv[]) {
   QObject::connect(&dispatcher,
                    &ApplicationRequestDispatcher::processAddedLinesRequested,
                    window, &MainWindow::processAddedLines);
-  QObject::connect(window,
-                   &MainWindow::processingCompleted,
-                   &dispatcher,
+  QObject::connect(window, &MainWindow::processingCompleted, &dispatcher,
                    &ApplicationRequestDispatcher::completeCurrentProcessing);
 
   SingleInstanceServer server(serverName, &dispatcher);

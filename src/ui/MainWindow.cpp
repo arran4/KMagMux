@@ -999,7 +999,8 @@ void MainWindow::onAddItems() {
   }
 }
 
-void MainWindow::processAddedLines(const QStringList &lines) {
+void MainWindow::processAddedLines(const QStringList &lines,
+                                   const QString &tokenId) {
   if (lines.isEmpty()) {
     emit processingCompleted();
     return;

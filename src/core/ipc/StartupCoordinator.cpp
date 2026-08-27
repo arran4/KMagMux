@@ -39,7 +39,8 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   }
 
   // Election lock is used to serialize multiple concurrent launchers.
-  QString electionFilePath = QDir(runtimePath).filePath(m_serverName + "_election.lock");
+  QString electionFilePath =
+      QDir(runtimePath).filePath(m_serverName + "_election.lock");
   QLockFile electionLock(electionFilePath);
   electionLock.setStaleLockTime(0);
 
@@ -51,7 +52,7 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
     auto *primaryLock = new QLockFile(primaryFilePath);
     primaryLock->setStaleLockTime(0);
     if (primaryLock->tryLock(0)) {
-        return {CoordinatorAction::BecomePrimary, primaryLock};
+      return {CoordinatorAction::BecomePrimary, primaryLock};
     }
     delete primaryLock;
     // Primary exists, act as a client to activate window.
@@ -60,35 +61,37 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
 
   // We have arguments. We must ensure only ONE launcher spawns a primary.
   if (electionLock.tryLock(5000)) {
-      // We hold the election lock. Check if a primary already exists.
-      auto *tempPrimaryLock = new QLockFile(primaryFilePath);
-      tempPrimaryLock->setStaleLockTime(0);
-      bool primaryExists = !tempPrimaryLock->tryLock(0);
+    // We hold the election lock. Check if a primary already exists.
+    auto *tempPrimaryLock = new QLockFile(primaryFilePath);
+    tempPrimaryLock->setStaleLockTime(0);
+    bool primaryExists = !tempPrimaryLock->tryLock(0);
 
-      if (!primaryExists) {
-          // No primary exists. We held the lock momentarily to check.
-          tempPrimaryLock->unlock();
-          delete tempPrimaryLock;
+    if (!primaryExists) {
+      // No primary exists. We held the lock momentarily to check.
+      tempPrimaryLock->unlock();
+      delete tempPrimaryLock;
 
-          qDebug() << "We are an action-bearing launcher and no primary exists. Spawning clean primary...";
-          if (!spawnCleanPrimary()) {
-              electionLock.unlock();
-              return {CoordinatorAction::SpawnFailed, nullptr};
-          }
-      } else {
-          delete tempPrimaryLock;
+      qDebug() << "We are an action-bearing launcher and no primary exists. "
+                  "Spawning clean primary...";
+      if (!spawnCleanPrimary()) {
+        electionLock.unlock();
+        return {CoordinatorAction::SpawnFailed, nullptr};
       }
+    } else {
+      delete tempPrimaryLock;
+    }
 
-      // We spawned it or it already existed.
-      // Act as client. We keep the election lock until the client request finishes or times out
-      // to ensure concurrent launchers wait for our newly spawned primary to become ready.
-      CoordinatorAction action = handleClientRequest(request);
-      electionLock.unlock();
-      return {action, nullptr};
+    // We spawned it or it already existed.
+    // Act as client. We keep the election lock until the client request
+    // finishes or times out to ensure concurrent launchers wait for our newly
+    // spawned primary to become ready.
+    CoordinatorAction action = handleClientRequest(request);
+    electionLock.unlock();
+    return {action, nullptr};
   }
 
-  // Could not get election lock. Another launcher is likely spawning the primary.
-  // Just act as a client.
+  // Could not get election lock. Another launcher is likely spawning the
+  // primary. Just act as a client.
   return {handleClientRequest(request), nullptr};
 }
 
@@ -98,8 +101,8 @@ bool StartupCoordinator::spawnCleanPrimary() {
   return QProcess::startDetached(program, QStringList());
 }
 
-CoordinatorAction StartupCoordinator::handleClientRequest(
-    const IpcProtocol::Request &request) {
+CoordinatorAction
+StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
   SingleInstanceClient client(m_serverName);
 
   // We might have just spawned the primary, so give it some time to start the
@@ -109,7 +112,8 @@ CoordinatorAction StartupCoordinator::handleClientRequest(
 
   while (retries > 0) {
     result = client.sendRequest(request, 1000, 5000);
-    if (result.code == ClientResultCode::ConnectFailed || result.code == ClientResultCode::ConnectionClosed) {
+    if (result.code == ClientResultCode::ConnectFailed ||
+        result.code == ClientResultCode::ConnectionClosed) {
       QThread::msleep(200); // Wait and retry connecting
       retries--;
     } else {

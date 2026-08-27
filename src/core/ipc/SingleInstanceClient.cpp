@@ -53,22 +53,36 @@ SingleInstanceClient::sendRequest(const IpcProtocol::Request &request,
 
   quint32 expectedSize = 0;
   while (timer.isActive() && socket.state() == QLocalSocket::ConnectedState) {
-    if (expectedSize == 0 && socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+    if (expectedSize == 0 &&
+        socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
       QDataStream in(&socket);
       IpcProtocol::setupStream(in);
       in >> expectedSize;
 
       if (expectedSize == 0 || expectedSize > IpcProtocol::MAX_FRAME_SIZE) {
-          qWarning() << "Invalid frame size received from server:" << expectedSize;
-          break;
+        qWarning() << "Invalid frame size received from server:"
+                   << expectedSize;
+        break;
       }
     }
 
-    if (expectedSize > 0 && socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
-      QDataStream in(&socket);
+    if (expectedSize > 0 &&
+        socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+      QByteArray frame = socket.read(expectedSize);
+      QDataStream in(&frame, QIODevice::ReadOnly);
       IpcProtocol::setupStream(in);
       in >> response;
-      responseReceived = true;
+
+      if (in.status() == QDataStream::Ok && in.atEnd()) {
+        responseReceived = true;
+      } else {
+        // Frame was malformed
+        response.status = IpcProtocol::ResponseStatus::MalformedRequest;
+        response.version = 0;
+        // Keep loop running to fail with timeout/disconnect, or break.
+        // Since frame is malformed, we can't reliably read more.
+        break;
+      }
       break;
     }
 

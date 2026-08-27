@@ -7,7 +7,7 @@
 
 namespace IpcProtocol {
 
-const quint32 MAGIC = 0x4B4D474D; // KMGm
+const quint32 MAGIC = 0x4B4D474D;                // KMGm
 const quint32 MAX_FRAME_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const quint16 VERSION = 1;
@@ -27,7 +27,7 @@ enum class ResponseStatus : quint16 {
 struct Request {
   quint16 version = VERSION;
   QString requestId;
-  RequestType type;
+  RequestType type = RequestType::ActivateWindow;
   QStringList payload;
 
   bool isValid() const { return version == VERSION && !requestId.isEmpty(); }
@@ -36,7 +36,7 @@ struct Request {
 struct Response {
   quint16 version = VERSION;
   QString requestId;
-  ResponseStatus status;
+  ResponseStatus status = ResponseStatus::MalformedRequest;
   QString errorMessage;
 };
 

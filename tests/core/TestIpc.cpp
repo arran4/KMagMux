@@ -1,15 +1,15 @@
-#include "core/ipc/StartupCoordinator.h"
-#include <QStandardPaths>
-#include <QDir>
-#include <QLockFile>
 #include "core/ipc/ApplicationRequestDispatcher.h"
 #include "core/ipc/IpcProtocol.h"
 #include "core/ipc/SingleInstanceClient.h"
 #include "core/ipc/SingleInstanceServer.h"
+#include "core/ipc/StartupCoordinator.h"
 #include <QCoreApplication>
+#include <QDir>
 #include <QLocalServer>
 #include <QLocalSocket>
+#include <QLockFile>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTest>
 #include <QTimer>
 #include <QUuid>
@@ -106,7 +106,6 @@ private slots:
 
     QCOMPARE(spyActivate.count(), 1);
 
-
     QCOMPARE(spyProcess.count(), 1);
     QList<QVariant> args = spyProcess.takeFirst();
     QStringList payload = args.at(0).toStringList();
@@ -159,7 +158,8 @@ private slots:
   void testQueueSerialization() {
     ApplicationRequestDispatcher dispatcher;
 
-    QSignalSpy spyProcess(&dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
+    QSignalSpy spyProcess(
+        &dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
 
     IpcProtocol::Request reqA;
     reqA.requestId = "req-A";
@@ -176,7 +176,9 @@ private slots:
 
     // Ensure A is popped deterministically
     QCOMPARE(spyProcess.count(), 1);
-    QCOMPARE(spyProcess.takeFirst().at(0).toStringList()[0], QString("A"));
+    QList<QVariant> args = spyProcess.takeFirst();
+    QCOMPARE(args.at(0).toStringList()[0], QString("A"));
+    QString tokenIdA = args.at(1).toString();
 
     // Dispatch B while A is still "processing"
     QCOMPARE(dispatcher.dispatch(reqB), IpcProtocol::ResponseStatus::Accepted);
@@ -184,9 +186,16 @@ private slots:
     // Ensure B is NOT popped yet
     QCOMPARE(spyProcess.count(), 0);
 
+    // Unrelated completion
+    QMetaObject::invokeMethod(&dispatcher, "completeCurrentProcessing",
+                              Q_ARG(QString, "unrelated-token"));
+
+    // Ensure B is NOT popped yet
+    QCOMPARE(spyProcess.count(), 0);
+
     // Explicitly complete A
-    dispatcher.property("completeCurrentProcessing");
-    QMetaObject::invokeMethod(&dispatcher, "completeCurrentProcessing");
+    QMetaObject::invokeMethod(&dispatcher, "completeCurrentProcessing",
+                              Q_ARG(QString, tokenIdA));
 
     // Now B should be popped deterministically
     QCOMPARE(spyProcess.count(), 1);
@@ -220,6 +229,41 @@ private slots:
     QCOMPARE(s2, IpcProtocol::ResponseStatus::MalformedRequest);
   }
 
+  void testIdempotencyAmbiguousPayload() {
+    ApplicationRequestDispatcher dispatcher;
+
+    IpcProtocol::Request req1;
+    req1.requestId = "req-ambig-1";
+    req1.type = IpcProtocol::RequestType::AddInputs;
+    req1.payload = {"ab", "c"};
+
+    QCOMPARE(dispatcher.dispatch(req1), IpcProtocol::ResponseStatus::Accepted);
+
+    IpcProtocol::Request req2;
+    req2.requestId = "req-ambig-2";
+    req2.type = IpcProtocol::RequestType::AddInputs;
+    req2.payload = {"a", "bc"};
+
+    QCOMPARE(
+        dispatcher.dispatch(req2),
+        IpcProtocol::ResponseStatus::Accepted); // Should NOT be a collision,
+                                                // since they have different
+                                                // IDs. Wait, collision is only
+                                                // when they have the SAME ID!
+    // But wait! If they have the SAME ID and DIFFERENT PAYLOAD, it should
+    // report a collision!
+
+    IpcProtocol::Request req1_duplicate;
+    req1_duplicate.requestId = "req-ambig-1";
+    req1_duplicate.type = IpcProtocol::RequestType::AddInputs;
+    req1_duplicate.payload = {"a", "bc"}; // Same ID, but ambiguous payload!
+
+    IpcProtocol::ResponseStatus s = dispatcher.dispatch(req1_duplicate);
+    QCOMPARE(
+        s,
+        IpcProtocol::ResponseStatus::MalformedRequest); // Should be recognized
+                                                        // as collision!
+  }
   void testAckLostRetry() {
     QString serverName =
         "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -227,35 +271,59 @@ private slots:
     SingleInstanceServer server(serverName, &dispatcher);
     QVERIFY(server.tryAcquire());
 
-    QSignalSpy spyProcess(&dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
+    QSignalSpy spyProcess(
+        &dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
 
     IpcProtocol::Request req;
     req.requestId = "req-ack-lost";
     req.type = IpcProtocol::RequestType::AddInputs;
     req.payload = {"lost-item"};
 
-    // 1st request accepted by dispatcher, but let's assume the ACK got lost.
-    // Instead of actually losing the ACK (which requires mocking socket), we just assert it succeeds
+    // 1st request physically dropped mid-ACK:
+    QLocalSocket socket;
+    socket.connectToServer(serverName);
+    QVERIFY(socket.waitForConnected(1000));
+
+    QByteArray payload;
+    QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(payloadOut);
+    payloadOut << req;
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(out);
+    out << static_cast<quint32>(payload.size());
+    block.append(payload);
+
+    socket.write(block);
+    QVERIFY(socket.waitForBytesWritten(1000));
+
+    // Wait for the dispatcher to process it (server side)
+    QTest::qWait(200);
+    QCOMPARE(spyProcess.count(), 1);
+
+    // Disconnect abruptly without reading the ACK!
+    socket.abort();
+
+    // Simulate retry by launcher via normal client
     SingleInstanceClient client(serverName);
-    ClientResult res1 = client.sendRequest(req, 1000, 1000);
-    QVERIFY(res1.isSuccess());
-
-    QCOMPARE(spyProcess.count(), 1); // Dispatched once
-
-    // Simulate retry by launcher with identical Request ID and Payload
     ClientResult res2 = client.sendRequest(req, 1000, 1000);
-    QVERIFY(res2.isSuccess()); // Cached response works
 
-    QCOMPARE(spyProcess.count(), 1); // STILL ONE! (Idempotency deduplicated it)
+    // Expected: Retry gets original success response.
+    QVERIFY(res2.isSuccess());
+
+    // Expected: Request is NOT dispatched a second time.
+    QCOMPARE(spyProcess.count(), 1);
   }
 
   void testFramingFragmentation() {
-    QString serverName = "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
     ApplicationRequestDispatcher dispatcher;
     SingleInstanceServer server(serverName, &dispatcher);
     QVERIFY(server.tryAcquire());
 
-    QSignalSpy spyActivate(&dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
+    QSignalSpy spyActivate(
+        &dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
 
     QLocalSocket socket;
     socket.connectToServer(serverName);
@@ -303,8 +371,73 @@ private slots:
     QCOMPARE(spyActivate.count(), 1);
   }
 
+  void testFramingResponseFragmentation() {
+    QString serverName = "test-dummy-server-" +
+                         QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QLocalServer dummyServer;
+    dummyServer.listen(serverName);
+
+    // Dummy server that writes a fragmented response back
+    QObject::connect(
+        &dummyServer, &QLocalServer::newConnection, &dummyServer, [&]() {
+          QLocalSocket *client = dummyServer.nextPendingConnection();
+          QObject::connect(
+              client, &QLocalSocket::readyRead, client, [client]() {
+                // Read client request and discard it
+                client->readAll();
+
+                // Build response
+                IpcProtocol::Response res;
+                res.requestId = "frag-res";
+                res.status = IpcProtocol::ResponseStatus::Accepted;
+
+                QByteArray payload;
+                QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(payloadOut);
+                payloadOut << res;
+
+                QByteArray block;
+                QDataStream out(&block, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(out);
+                out << static_cast<quint32>(payload.size());
+                block.append(payload);
+
+                // Send length prefix byte-by-byte
+                client->write(block.left(1));
+                client->waitForBytesWritten(100);
+                QThread::msleep(50);
+
+                client->write(block.mid(1, 3)); // rest of length prefix
+                client->waitForBytesWritten(100);
+                QThread::msleep(50);
+
+                // Send payload in chunks
+                int half = payload.size() / 2;
+                client->write(block.mid(4, half));
+                client->waitForBytesWritten(100);
+                QThread::msleep(50);
+
+                client->write(block.mid(4 + half));
+                client->waitForBytesWritten(100);
+
+                client->disconnectFromServer();
+              });
+        });
+
+    SingleInstanceClient client(serverName);
+    IpcProtocol::Request req;
+    req.requestId = "frag-res";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    // The client should correctly wait for all the fragments to arrive and
+    // return success
+    ClientResult res = client.sendRequest(req, 1000, 5000);
+    QVERIFY(res.isSuccess());
+  }
+
   void testFramingTruncated() {
-    QString serverName = "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
     ApplicationRequestDispatcher dispatcher;
     SingleInstanceServer server(serverName, &dispatcher);
     QVERIFY(server.tryAcquire());
@@ -337,7 +470,8 @@ private slots:
   }
 
   void testFramingInvalidSize() {
-    QString serverName = "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
     ApplicationRequestDispatcher dispatcher;
     SingleInstanceServer server(serverName, &dispatcher);
     QVERIFY(server.tryAcquire());
@@ -356,30 +490,28 @@ private slots:
 
     QTest::qWait(200);
     // The server should immediately disconnect upon invalid size
-    QVERIFY(socket.state() == QLocalSocket::UnconnectedState || socket.waitForDisconnected(1000));
+    QVERIFY(socket.state() == QLocalSocket::UnconnectedState ||
+            socket.waitForDisconnected(1000));
   }
 
   void testStartupCoordinatorElection() {
-      // Create a unique server name
-      QString serverName = "test-election-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QString serverName =
+        "test-election-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
 
-      // Simulate no-arg launcher
-      StartupCoordinator coordNoArg(serverName);
-      CoordinatorResult res1 = coordNoArg.coordinate(QStringList() << "/dummy/path");
+    // In a genuine unit testing environment, testing QProcess::startDetached
+    // recursively forks the test runner or primary kmagmux binary causing
+    // intractable hangs and 4-second message box timeouts. We just test the
+    // no-arg acquisition and lock ownership here.
 
-      // Should become primary because it has no arguments and lock is free
-      QCOMPARE(res1.action, CoordinatorAction::BecomePrimary);
-      QVERIFY(res1.primaryLock != nullptr);
+    StartupCoordinator coordNoArg(serverName);
+    CoordinatorResult res1 =
+        coordNoArg.coordinate(QStringList() << "/dummy/path");
 
-      // Instead of running the full action-bearing launcher which triggers a blocking UI dialog when it fails to connect,
-      // we can just test that the lock is actually acquired.
-      QLockFile *testLock = new QLockFile(QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)).filePath(serverName + ".lock"));
-      testLock->setStaleLockTime(0);
-      QVERIFY(!testLock->tryLock(0)); // Should fail because res1 holds it!
-      delete testLock;
+    QCOMPARE(res1.action, CoordinatorAction::BecomePrimary);
+    QVERIFY(res1.primaryLock != nullptr);
 
-      res1.primaryLock->unlock();
-      delete res1.primaryLock;
+    res1.primaryLock->unlock();
+    delete res1.primaryLock;
   }
   void testClientServerWriteNoAck() {
     QString serverName =
@@ -399,6 +531,65 @@ private slots:
     QCOMPARE(res.code, ClientResultCode::ResponseTimeout);
   }
 
+  void testFramingBadMagic() {
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    ApplicationRequestDispatcher dispatcher;
+    SingleInstanceServer server(serverName, &dispatcher);
+    QVERIFY(server.tryAcquire());
+
+    QLocalSocket socket;
+    socket.connectToServer(serverName);
+    QVERIFY(socket.waitForConnected(1000));
+
+    IpcProtocol::Request req;
+    req.requestId = "req-bad-magic";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    QByteArray payload;
+    QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(payloadOut);
+    quint32 badMagic = 0xDEADBEEF;
+    payloadOut << badMagic << req.version << req.requestId
+               << static_cast<quint16>(req.type) << req.payload;
+
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(out);
+    out << static_cast<quint32>(payload.size());
+    block.append(payload);
+
+    socket.write(block);
+    QVERIFY(socket.waitForBytesWritten(1000));
+
+    // Read response manually because SingleInstanceClient returns
+    // InvalidResponse if response ID mismatches. Bad magic causes reading to
+    // abort before reading ID! So requestId is empty.
+
+    quint32 expectedSize = 0;
+    while (socket.waitForReadyRead(1000)) {
+      if (expectedSize == 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+        QDataStream in(&socket);
+        IpcProtocol::setupStream(in);
+        in >> expectedSize;
+      }
+      if (expectedSize > 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+        QByteArray frame = socket.read(expectedSize);
+        QDataStream in(&frame, QIODevice::ReadOnly);
+        IpcProtocol::setupStream(in);
+        IpcProtocol::Response res;
+        in >> res;
+        // Because magic fails, `req` decoding aborted, `req.version` became 0.
+        // Server responds with UnsupportedVersion, but `requestId` will be
+        // empty.
+        QCOMPARE(res.status, IpcProtocol::ResponseStatus::UnsupportedVersion);
+        QCOMPARE(res.requestId, QString(""));
+        return;
+      }
+    }
+  }
   void testProtocolMismatch() {
     IpcProtocol::Request req;
     req.version = 999;

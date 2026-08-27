@@ -1,8 +1,8 @@
 #ifndef SINGLEINSTANCESERVER_H
 #define SINGLEINSTANCESERVER_H
 
-#include <QLockFile>
 #include <QLocalServer>
+#include <QLockFile>
 #include <QObject>
 #include <QString>
 

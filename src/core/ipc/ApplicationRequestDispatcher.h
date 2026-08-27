@@ -14,7 +14,7 @@ public:
   IpcProtocol::ResponseStatus dispatch(const IpcProtocol::Request &request);
 
 public slots:
-  void completeCurrentProcessing();
+  void completeCurrentProcessing(const QString &tokenId);
 
 private slots:
   void processNext();
@@ -22,6 +22,7 @@ private slots:
 private:
   QQueue<QStringList> m_addInputsQueue;
   bool m_isProcessing;
+  QString m_currentTokenId;
 
   struct CachedResult {
     QString requestId;
@@ -38,7 +39,8 @@ private:
 
 signals:
   void activateWindowRequested();
-  void processAddedLinesRequested(const QStringList &lines);
+  void processAddedLinesRequested(const QStringList &lines,
+                                  const QString &tokenId);
 };
 
 #endif // APPLICATIONREQUESTDISPATCHER_H
