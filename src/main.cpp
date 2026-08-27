@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 
   SingleInstanceServer server(serverName, &dispatcher);
 
-  if (!server.tryAcquire(coordResult.primaryLock)) {
+  if (!server.tryAcquire(std::move(coordResult.primaryLock))) {
     qWarning() << "Failed to acquire lock as primary after coordination.";
     return 1;
   }

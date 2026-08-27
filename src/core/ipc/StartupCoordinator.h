@@ -5,6 +5,7 @@
 #include <QLockFile>
 #include <QString>
 #include <QStringList>
+#include <memory>
 
 enum class CoordinatorAction {
   BecomePrimary,
@@ -16,20 +17,34 @@ enum class CoordinatorAction {
 
 struct CoordinatorResult {
   CoordinatorAction action;
-  QLockFile *primaryLock = nullptr;
+  std::unique_ptr<QLockFile> primaryLock = nullptr;
+};
+
+class StartupSystemInterface {
+public:
+  virtual ~StartupSystemInterface() = default;
+  virtual bool spawnCleanPrimary() = 0;
+  virtual void msleep(int ms) = 0;
+};
+
+class DefaultStartupSystem : public StartupSystemInterface {
+public:
+  bool spawnCleanPrimary() override;
+  void msleep(int ms) override;
 };
 
 class StartupCoordinator {
 public:
-  explicit StartupCoordinator(const QString &serverName);
+  explicit StartupCoordinator(const QString &serverName,
+                              StartupSystemInterface *sys = nullptr);
 
   CoordinatorResult coordinate(const QStringList &args);
 
 private:
   QString m_serverName;
+  StartupSystemInterface *m_sys;
 
   CoordinatorAction handleClientRequest(const IpcProtocol::Request &request);
-  static bool spawnCleanPrimary();
 };
 
 #endif // STARTUPCOORDINATOR_H

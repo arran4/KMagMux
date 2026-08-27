@@ -155,6 +155,52 @@ private slots:
     QCOMPARE(spyActivate.count(), 1);
   }
 
+  void testUICompletionToken() {
+    ApplicationRequestDispatcher dispatcher;
+
+    QSignalSpy spyProcess(
+        &dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
+
+    IpcProtocol::Request reqA;
+    reqA.requestId = "req-A";
+    reqA.type = IpcProtocol::RequestType::AddInputs;
+    reqA.payload = {"A"};
+
+    IpcProtocol::Request reqB;
+    reqB.requestId = "req-B";
+    reqB.type = IpcProtocol::RequestType::AddInputs;
+    reqB.payload = {"B"};
+
+    // Dispatch A
+    QCOMPARE(dispatcher.dispatch(reqA), IpcProtocol::ResponseStatus::Accepted);
+
+    // Ensure A is popped deterministically
+    QCOMPARE(spyProcess.count(), 1);
+    QList<QVariant> args = spyProcess.takeFirst();
+    QCOMPARE(args.at(0).toStringList()[0], QString("A"));
+    QString tokenIdA = args.at(1).toString();
+
+    // Dispatch B while A is still "processing"
+    QCOMPARE(dispatcher.dispatch(reqB), IpcProtocol::ResponseStatus::Accepted);
+
+    // Ensure B is NOT popped yet
+    QCOMPARE(spyProcess.count(), 0);
+
+    // Explicitly complete with an UNRELATED token
+    QMetaObject::invokeMethod(&dispatcher, "completeCurrentProcessing",
+                              Q_ARG(QString, "unrelated-token-id"));
+
+    // Ensure B is STILL NOT popped
+    QCOMPARE(spyProcess.count(), 0);
+
+    // Now explicitly complete A with the CORRECT token
+    QMetaObject::invokeMethod(&dispatcher, "completeCurrentProcessing",
+                              Q_ARG(QString, tokenIdA));
+
+    // Now B should be popped deterministically
+    QCOMPARE(spyProcess.count(), 1);
+    QCOMPARE(spyProcess.takeFirst().at(0).toStringList()[0], QString("B"));
+  }
   void testQueueSerialization() {
     ApplicationRequestDispatcher dispatcher;
 
@@ -298,8 +344,7 @@ private slots:
     QVERIFY(socket.waitForBytesWritten(1000));
 
     // Wait for the dispatcher to process it (server side)
-    QTest::qWait(200);
-    QCOMPARE(spyProcess.count(), 1);
+    QTRY_COMPARE(spyProcess.count(), 1);
 
     // Disconnect abruptly without reading the ACK!
     socket.abort();
@@ -347,28 +392,24 @@ private slots:
     // 1. Write just 1 byte of the 4-byte size prefix
     socket.write(block.left(1));
     QVERIFY(socket.waitForBytesWritten(1000));
-    QTest::qWait(100);
-    QCOMPARE(spyActivate.count(), 0);
+    QTRY_COMPARE_WITH_TIMEOUT(spyActivate.count(), 0, 50);
 
     // 2. Write next 2 bytes of the size prefix
     socket.write(block.mid(1, 2));
     QVERIFY(socket.waitForBytesWritten(1000));
-    QTest::qWait(100);
-    QCOMPARE(spyActivate.count(), 0);
+    QTRY_COMPARE_WITH_TIMEOUT(spyActivate.count(), 0, 50);
 
     // 3. Write final byte of size prefix + half of payload
     socket.write(block.mid(3, 1 + payload.size() / 2));
     QVERIFY(socket.waitForBytesWritten(1000));
-    QTest::qWait(100);
-    QCOMPARE(spyActivate.count(), 0);
+    QTRY_COMPARE_WITH_TIMEOUT(spyActivate.count(), 0, 50);
 
     // 4. Write the rest
     socket.write(block.mid(4 + payload.size() / 2));
     QVERIFY(socket.waitForBytesWritten(1000));
 
     // Now it should process!
-    QTest::qWait(500);
-    QCOMPARE(spyActivate.count(), 1);
+    QTRY_COMPARE(spyActivate.count(), 1);
   }
 
   void testFramingResponseFragmentation() {
@@ -466,7 +507,7 @@ private slots:
     QVERIFY(socket.waitForBytesWritten(1000));
     socket.disconnectFromServer();
 
-    QTest::qWait(500); // Allow server to clean it up (or timeout)
+    QTRY_VERIFY(socket.state() == QLocalSocket::UnconnectedState);
   }
 
   void testFramingInvalidSize() {
@@ -488,10 +529,7 @@ private slots:
     socket.write(block);
     QVERIFY(socket.waitForBytesWritten(1000));
 
-    QTest::qWait(200);
-    // The server should immediately disconnect upon invalid size
-    QVERIFY(socket.state() == QLocalSocket::UnconnectedState ||
-            socket.waitForDisconnected(1000));
+    QTRY_VERIFY(socket.state() == QLocalSocket::UnconnectedState);
   }
 
   void testStartupCoordinatorElection() {
@@ -511,7 +549,7 @@ private slots:
     QVERIFY(res1.primaryLock != nullptr);
 
     res1.primaryLock->unlock();
-    delete res1.primaryLock;
+    res1.primaryLock.reset();
   }
   void testClientServerWriteNoAck() {
     QString serverName =

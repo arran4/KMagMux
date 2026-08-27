@@ -17,13 +17,12 @@ SingleInstanceServer::~SingleInstanceServer() {
   m_server.close();
   if (m_lockFile) {
     m_lockFile->unlock();
-    delete m_lockFile;
   }
 }
 
-bool SingleInstanceServer::tryAcquire(QLockFile *existingLock) {
+bool SingleInstanceServer::tryAcquire(std::unique_ptr<QLockFile> existingLock) {
   if (existingLock) {
-    m_lockFile = existingLock;
+    m_lockFile = std::move(existingLock);
   } else {
     QString runtimePath =
         QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
@@ -32,14 +31,13 @@ bool SingleInstanceServer::tryAcquire(QLockFile *existingLock) {
     }
     QString lockFilePath = QDir(runtimePath).filePath(m_serverName + ".lock");
 
-    m_lockFile = new QLockFile(lockFilePath);
+    m_lockFile = std::make_unique<QLockFile>(lockFilePath);
     m_lockFile->setStaleLockTime(0); // Only considered stale if process is dead
 
     if (!m_lockFile->tryLock(0)) {
       qDebug() << "Could not acquire primary lock. Another instance is likely "
                   "running.";
-      delete m_lockFile;
-      m_lockFile = nullptr;
+      m_lockFile.reset();
       return false;
     }
   }

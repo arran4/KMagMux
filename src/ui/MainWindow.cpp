@@ -1002,30 +1002,31 @@ void MainWindow::onAddItems() {
 void MainWindow::processAddedLines(const QStringList &lines,
                                    const QString &tokenId) {
   if (lines.isEmpty()) {
-    emit processingCompleted();
+    emit processingCompleted(tokenId);
     return;
   }
 
   // Offload parsing to a background thread
   auto *watcher = new QFutureWatcher<ParseResult>(this);
 
-  connect(
-      watcher, &QFutureWatcher<ParseResult>::finished, this, [this, watcher]() {
-        ParseResult res = watcher->result();
-        if (!res.items.empty()) {
-          openAddItemsDialog(res.items);
-        }
-        if (!res.rejectedInputs.empty()) {
-          QStringList messages;
-          for (const auto &rejected : res.rejectedInputs) {
-            messages << QString("%1: %2").arg(rejected.input, rejected.reason);
-          }
-          QMessageBox::warning(this, "Some items failed to load",
-                               messages.join("\n"));
-        }
-        watcher->deleteLater();
-        emit processingCompleted();
-      });
+  connect(watcher, &QFutureWatcher<ParseResult>::finished, this,
+          [this, watcher, tokenId]() {
+            ParseResult res = watcher->result();
+            if (!res.items.empty()) {
+              openAddItemsDialog(res.items);
+            }
+            if (!res.rejectedInputs.empty()) {
+              QStringList messages;
+              for (const auto &rejected : res.rejectedInputs) {
+                messages << QString("%1: %2").arg(rejected.input,
+                                                  rejected.reason);
+              }
+              QMessageBox::warning(this, "Some items failed to load",
+                                   messages.join("\n"));
+            }
+            watcher->deleteLater();
+            emit processingCompleted(tokenId);
+          });
 
   QFuture<ParseResult> future = QtConcurrent::run(
       [lines]() -> ParseResult { return ItemParser::parseLines(lines); });

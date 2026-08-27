@@ -11,8 +11,19 @@
 #include <QThread>
 #include <QUuid>
 
-StartupCoordinator::StartupCoordinator(const QString &serverName)
-    : m_serverName(serverName) {}
+bool DefaultStartupSystem::spawnCleanPrimary() {
+  QString program = QCoreApplication::applicationFilePath();
+  qDebug() << "Spawning clean primary:" << program;
+  return QProcess::startDetached(program, QStringList());
+}
+
+void DefaultStartupSystem::msleep(int ms) { QThread::msleep(ms); }
+
+static DefaultStartupSystem g_defaultSystem;
+
+StartupCoordinator::StartupCoordinator(const QString &serverName,
+                                       StartupSystemInterface *sys)
+    : m_serverName(serverName), m_sys(sys ? sys : &g_defaultSystem) {}
 
 CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   IpcProtocol::Request request;
@@ -49,12 +60,12 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
 
   if (inputs.isEmpty()) {
     // We are a no-arg launcher. Try to become the primary immediately.
-    auto *primaryLock = new QLockFile(primaryFilePath);
+    auto primaryLock = std::make_unique<QLockFile>(primaryFilePath);
     primaryLock->setStaleLockTime(0);
     if (primaryLock->tryLock(0)) {
-      return {CoordinatorAction::BecomePrimary, primaryLock};
+      return {CoordinatorAction::BecomePrimary, std::move(primaryLock)};
     }
-    delete primaryLock;
+
     // Primary exists, act as a client to activate window.
     return {handleClientRequest(request), nullptr};
   }
@@ -73,7 +84,7 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
 
       qDebug() << "We are an action-bearing launcher and no primary exists. "
                   "Spawning clean primary...";
-      if (!spawnCleanPrimary()) {
+      if (!m_sys->spawnCleanPrimary()) {
         electionLock.unlock();
         return {CoordinatorAction::SpawnFailed, nullptr};
       }
@@ -95,12 +106,6 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   return {handleClientRequest(request), nullptr};
 }
 
-bool StartupCoordinator::spawnCleanPrimary() {
-  QString program = QCoreApplication::applicationFilePath();
-  qDebug() << "Spawning clean primary:" << program;
-  return QProcess::startDetached(program, QStringList());
-}
-
 CoordinatorAction
 StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
   SingleInstanceClient client(m_serverName);
@@ -114,7 +119,7 @@ StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
     result = client.sendRequest(request, 1000, 5000);
     if (result.code == ClientResultCode::ConnectFailed ||
         result.code == ClientResultCode::ConnectionClosed) {
-      QThread::msleep(200); // Wait and retry connecting
+      m_sys->msleep(200); // Wait and retry connecting
       retries--;
     } else {
       break;
@@ -124,7 +129,17 @@ StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
   while (!result.isSuccess()) {
     qWarning() << "IPC Request Failed:" << result.diagnostic;
 
+    // Explicitly reject deterministic failures rather than treating them as
+    // transport timeout
+    if (result.code == ClientResultCode::RequestRejected ||
+        result.code == ClientResultCode::UnsupportedProtocol ||
+        result.code == ClientResultCode::InvalidResponse ||
+        result.code == ClientResultCode::NoPrimary) {
+      return CoordinatorAction::RequestFailed;
+    }
+
     // Requirement 21: "NON-RESPONSIVE PRIMARY RECOVERY UX"
+    // Apply only for actual transport connection loss or timeouts
     QMessageBox::StandardButton reply = QMessageBox::warning(
         nullptr, "KMagMux Error",
         QString("KMagMux appears to be running but is not responding.\n\n"

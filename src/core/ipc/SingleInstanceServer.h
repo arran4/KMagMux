@@ -1,6 +1,8 @@
 #ifndef SINGLEINSTANCESERVER_H
 #define SINGLEINSTANCESERVER_H
 
+#include <memory>
+
 #include <QLocalServer>
 #include <QLockFile>
 #include <QObject>
@@ -17,7 +19,7 @@ public:
                        QObject *parent = nullptr);
   ~SingleInstanceServer();
 
-  bool tryAcquire(QLockFile *existingLock = nullptr);
+  bool tryAcquire(std::unique_ptr<QLockFile> existingLock = nullptr);
 
 private slots:
   void handleNewConnection();
@@ -27,7 +29,7 @@ private:
   QString m_serverName;
   QLocalServer m_server;
   ApplicationRequestDispatcher *m_dispatcher;
-  QLockFile *m_lockFile;
+  std::unique_ptr<QLockFile> m_lockFile;
 };
 
 #endif // SINGLEINSTANCESERVER_H
