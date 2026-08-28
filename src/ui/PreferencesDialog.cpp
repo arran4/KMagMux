@@ -17,12 +17,13 @@
 #include <QScrollArea>
 #include <QSettings>
 #include <QStackedWidget>
+#include "../core/Constants.h"
 #include <QTableWidget>
 #include <QVBoxLayout>
 #include <QVariant>
 
 PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
-    : QDialog(parent), m_engine(engine) {
+    : QDialog(parent), m_engine(engine), m_defaultConnectorsList(nullptr) {
   setWindowTitle(tr("Preferences"));
   resize(800, 600);
 
@@ -63,6 +64,15 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
                               m_autoMoveInboxCombo->currentIndex());
             settings.setValue("allowPlaintextStorage",
                               m_allowPlaintextStorageCb->isChecked());
+            QStringList defaultConnectors;
+            if (m_defaultConnectorsList != nullptr) {
+              for (int i = 0; i < m_defaultConnectorsList->count(); ++i) {
+                if (m_defaultConnectorsList->item(i)->checkState() == Qt::Checked) {
+                  defaultConnectors.append(m_defaultConnectorsList->item(i)->text());
+                }
+              }
+            }
+            settings.setValue("defaultConnectors", defaultConnectors);
           });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
@@ -74,6 +84,15 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
     settings.setValue("allowPlaintextStorage",
                       m_allowPlaintextStorageCb->isChecked());
+    QStringList defaultConnectors;
+    if (m_defaultConnectorsList != nullptr) {
+      for (int i = 0; i < m_defaultConnectorsList->count(); ++i) {
+        if (m_defaultConnectorsList->item(i)->checkState() == Qt::Checked) {
+          defaultConnectors.append(m_defaultConnectorsList->item(i)->text());
+        }
+      }
+    }
+    settings.setValue("defaultConnectors", defaultConnectors);
     accept();
   });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -156,6 +175,33 @@ void PreferencesDialog::createGeneralPage() {
   m_allowPlaintextStorageCb->setChecked(
       settings.value("allowPlaintextStorage", false).toBool());
   layout->addWidget(m_allowPlaintextStorageCb);
+
+  layout->addWidget(new QLabel(tr("Default Connectors:"), page));
+  m_defaultConnectorsList = new QListWidget(page);
+  m_defaultConnectorsList->setMaximumHeight(100);
+
+  QStringList defaultConnectors = settings.value("defaultConnectors").toStringList();
+  if (defaultConnectors.isEmpty()) {
+      defaultConnectors.append(Constants::DefaultActionName);
+  }
+
+  QStringList availableConnectors;
+  availableConnectors.append(Constants::DefaultActionName);
+  if (m_engine != nullptr) {
+      availableConnectors.append(m_engine->getAllConnectors());
+      availableConnectors.removeDuplicates();
+  }
+
+  for (const QString &connector : availableConnectors) {
+    QListWidgetItem *item = new QListWidgetItem(connector, m_defaultConnectorsList);
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    if (defaultConnectors.contains(connector)) {
+      item->setCheckState(Qt::Checked);
+    } else {
+      item->setCheckState(Qt::Unchecked);
+    }
+  }
+  layout->addWidget(m_defaultConnectorsList);
 
   layout->addStretch();
   m_pagesWidget->addWidget(page);

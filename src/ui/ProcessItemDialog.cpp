@@ -8,6 +8,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QUrl>
+#include <QSettings>
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -158,11 +159,17 @@ void ProcessItemDialog::setupUi() {
       false); // Initially disabled unless "Hold" is selected
   formLayout->addRow("Hold Until:", m_holdTimeEdit);
 
+  QSettings settings;
+  QStringList defaultConnectors = settings.value("defaultConnectors").toStringList();
+  if (defaultConnectors.isEmpty()) {
+      defaultConnectors.append(Constants::DefaultActionName);
+  }
+
   m_connectorList = new QListWidget(this);
   for (const QString &connector : m_connectors) {
     QListWidgetItem *item = new QListWidgetItem(connector, m_connectorList);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    if (connector == Constants::DefaultActionName) {
+    if (defaultConnectors.contains(connector)) {
       item->setCheckState(Qt::Checked);
     } else {
       item->setCheckState(Qt::Unchecked);
@@ -182,7 +189,28 @@ void ProcessItemDialog::setupUi() {
     m_connectorList->item(0)->setCheckState(Qt::Checked);
   }
 
-  formLayout->addRow("Connectors:", m_connectorList);
+  QVBoxLayout *connectorLayout = new QVBoxLayout();
+  connectorLayout->addWidget(m_connectorList);
+
+  QPushButton *makeDefaultBtn = new QPushButton("Make Default", this);
+  connect(makeDefaultBtn, &QPushButton::clicked, this, [this]() {
+    QStringList defaultConnectors;
+    for (int i = 0; i < m_connectorList->count(); ++i) {
+      if (m_connectorList->item(i)->checkState() == Qt::Checked) {
+        defaultConnectors.append(m_connectorList->item(i)->text());
+      }
+    }
+    QSettings settings;
+    settings.setValue("defaultConnectors", defaultConnectors);
+    QMessageBox::information(this, "Default Connectors", "Default connectors have been saved.");
+  });
+
+  QHBoxLayout *connectorBtnLayout = new QHBoxLayout();
+  connectorBtnLayout->addStretch();
+  connectorBtnLayout->addWidget(makeDefaultBtn);
+  connectorLayout->addLayout(connectorBtnLayout);
+
+  formLayout->addRow("Connectors:", connectorLayout);
 
   mainLayout->addLayout(formLayout);
 

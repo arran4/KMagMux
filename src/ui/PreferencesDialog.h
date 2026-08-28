@@ -43,6 +43,7 @@ private:
   QComboBox *m_autoMoveInboxCombo;
   QSpinBox *m_autoArchiveDays;
   QCheckBox *m_allowPlaintextStorageCb;
+  QListWidget *m_defaultConnectorsList;
 };
 
 #endif // PREFERENCESDIALOG_H
