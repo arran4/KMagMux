@@ -628,6 +628,124 @@ private slots:
       }
     }
   }
+  void testFramingUnsupportedVersion() {
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    ApplicationRequestDispatcher dispatcher;
+    SingleInstanceServer server(serverName, &dispatcher);
+    QVERIFY(server.tryAcquire());
+
+    QLocalSocket socket;
+    socket.connectToServer(serverName);
+    QVERIFY(socket.waitForConnected(1000));
+
+    IpcProtocol::Request req;
+    req.version = 999;
+    req.requestId = "req-bad-ver";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    QByteArray payload;
+    QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(payloadOut);
+    payloadOut << req;
+
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(out);
+    out << static_cast<quint32>(payload.size());
+    block.append(payload);
+
+    socket.write(block);
+    QVERIFY(socket.waitForBytesWritten(1000));
+
+    quint32 expectedSize = 0;
+    QEventLoop loop;
+    QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+    QObject::connect(&socket, &QLocalSocket::readyRead, &loop, [&]() {
+      if (expectedSize == 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+        QDataStream in(&socket);
+        IpcProtocol::setupStream(in);
+        in >> expectedSize;
+      }
+      if (expectedSize > 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+        QByteArray frame = socket.read(expectedSize);
+        QDataStream in(&frame, QIODevice::ReadOnly);
+        IpcProtocol::setupStream(in);
+        IpcProtocol::Response res;
+        in >> res;
+
+        QCOMPARE(res.status, IpcProtocol::ResponseStatus::UnsupportedVersion);
+        QCOMPARE(res.requestId, QString("req-bad-ver"));
+        loop.quit();
+      }
+    });
+    loop.exec();
+
+    QVERIFY(socket.state() == QLocalSocket::UnconnectedState ||
+            expectedSize > 0);
+  }
+
+  void testFramingUnknownRequestType() {
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    ApplicationRequestDispatcher dispatcher;
+    SingleInstanceServer server(serverName, &dispatcher);
+    QVERIFY(server.tryAcquire());
+
+    QLocalSocket socket;
+    socket.connectToServer(serverName);
+    QVERIFY(socket.waitForConnected(1000));
+
+    IpcProtocol::Request req;
+    req.version = IpcProtocol::VERSION;
+    req.requestId = "req-bad-type";
+    req.type = static_cast<IpcProtocol::RequestType>(999);
+
+    QByteArray payload;
+    QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(payloadOut);
+    payloadOut << req;
+
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(out);
+    out << static_cast<quint32>(payload.size());
+    block.append(payload);
+
+    socket.write(block);
+    QVERIFY(socket.waitForBytesWritten(1000));
+
+    quint32 expectedSize = 0;
+    QEventLoop loop;
+    QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+    QObject::connect(&socket, &QLocalSocket::readyRead, &loop, [&]() {
+      if (expectedSize == 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+        QDataStream in(&socket);
+        IpcProtocol::setupStream(in);
+        in >> expectedSize;
+      }
+      if (expectedSize > 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+        QByteArray frame = socket.read(expectedSize);
+        QDataStream in(&frame, QIODevice::ReadOnly);
+        IpcProtocol::setupStream(in);
+        IpcProtocol::Response res;
+        in >> res;
+
+        QCOMPARE(res.status, IpcProtocol::ResponseStatus::UnknownRequestType);
+        QCOMPARE(res.requestId, QString("req-bad-type"));
+        loop.quit();
+      }
+    });
+    loop.exec();
+
+    QVERIFY(socket.state() == QLocalSocket::UnconnectedState ||
+            expectedSize > 0);
+  }
+
   void testProtocolMismatch() {
     IpcProtocol::Request req;
     req.version = 999;

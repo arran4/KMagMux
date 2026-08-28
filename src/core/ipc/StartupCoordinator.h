@@ -25,12 +25,16 @@ public:
   virtual ~StartupSystemInterface() = default;
   virtual bool spawnCleanPrimary() = 0;
   virtual void msleep(int ms) = 0;
+  virtual void showErrorMessage(const QString &msg) = 0;
+  virtual bool showRecoveryPrompt(const QString &diagnostic) = 0;
 };
 
 class DefaultStartupSystem : public StartupSystemInterface {
 public:
   bool spawnCleanPrimary() override;
   void msleep(int ms) override;
+  void showErrorMessage(const QString &msg) override;
+  bool showRecoveryPrompt(const QString &diagnostic) override;
 };
 
 class StartupCoordinator {

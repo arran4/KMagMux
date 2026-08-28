@@ -19,6 +19,21 @@ bool DefaultStartupSystem::spawnCleanPrimary() {
 
 void DefaultStartupSystem::msleep(int ms) { QThread::msleep(ms); }
 
+void DefaultStartupSystem::showErrorMessage(const QString &msg) {
+  QMessageBox::critical(nullptr, "KMagMux Error", msg);
+}
+
+bool DefaultStartupSystem::showRecoveryPrompt(const QString &diagnostic) {
+  QMessageBox::StandardButton reply = QMessageBox::warning(
+      nullptr, "KMagMux Error",
+      QString("KMagMux appears to be running but is not responding.\n\n"
+              "This request has NOT been confirmed as accepted.\n\n"
+              "Error: %1")
+          .arg(diagnostic),
+      QMessageBox::Retry | QMessageBox::Cancel);
+  return reply == QMessageBox::Retry;
+}
+
 static DefaultStartupSystem g_defaultSystem;
 
 StartupCoordinator::StartupCoordinator(const QString &serverName,
@@ -135,20 +150,16 @@ StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
         result.code == ClientResultCode::UnsupportedProtocol ||
         result.code == ClientResultCode::InvalidResponse ||
         result.code == ClientResultCode::NoPrimary) {
+      m_sys->showErrorMessage("Deterministic IPC Request Failed:\n\n" +
+                              result.diagnostic);
       return CoordinatorAction::RequestFailed;
     }
 
     // Requirement 21: "NON-RESPONSIVE PRIMARY RECOVERY UX"
     // Apply only for actual transport connection loss or timeouts
-    QMessageBox::StandardButton reply = QMessageBox::warning(
-        nullptr, "KMagMux Error",
-        QString("KMagMux appears to be running but is not responding.\n\n"
-                "This request has NOT been confirmed as accepted.\n\n"
-                "Error: %1")
-            .arg(result.diagnostic),
-        QMessageBox::Retry | QMessageBox::Cancel);
+    bool retry = m_sys->showRecoveryPrompt(result.diagnostic);
 
-    if (reply == QMessageBox::Retry) {
+    if (retry) {
       result = client.sendRequest(request, 1000, 5000);
     } else {
       return CoordinatorAction::UserCancelled;

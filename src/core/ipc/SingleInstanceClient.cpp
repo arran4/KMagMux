@@ -62,7 +62,8 @@ SingleInstanceClient::sendRequest(const IpcProtocol::Request &request,
       if (expectedSize == 0 || expectedSize > IpcProtocol::MAX_FRAME_SIZE) {
         qWarning() << "Invalid frame size received from server:"
                    << expectedSize;
-        break;
+        return {ClientResultCode::InvalidResponse,
+                "Invalid frame size received from primary."};
       }
     }
 
@@ -71,17 +72,14 @@ SingleInstanceClient::sendRequest(const IpcProtocol::Request &request,
       QByteArray frame = socket.read(expectedSize);
       QDataStream in(&frame, QIODevice::ReadOnly);
       IpcProtocol::setupStream(in);
-      in >> response;
+      IpcProtocol::DecodeResult decodeRes =
+          IpcProtocol::decodeResponse(in, response);
 
-      if (in.status() == QDataStream::Ok && in.atEnd()) {
+      if (decodeRes == IpcProtocol::DecodeResult::Success) {
         responseReceived = true;
       } else {
-        // Frame was malformed
-        response.status = IpcProtocol::ResponseStatus::MalformedRequest;
-        response.version = 0;
-        // Keep loop running to fail with timeout/disconnect, or break.
-        // Since frame is malformed, we can't reliably read more.
-        break;
+        return {ClientResultCode::InvalidResponse,
+                "Received malformed response frame from server."};
       }
       break;
     }
