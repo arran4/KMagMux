@@ -53,3 +53,8 @@ add_executable(TestSecureStorage TestSecureStorage.cpp)
 target_link_libraries(TestSecureStorage PRIVATE KMagMuxCore Qt6::Core Qt6::Test KF6::Wallet)
 target_include_directories(TestSecureStorage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 add_test(NAME TestSecureStorage COMMAND TestSecureStorage)
+
+add_executable(TestIpc TestIpc.cpp)
+target_link_libraries(TestIpc PRIVATE KMagMuxCore Qt6::Core Qt6::Test Qt6::Network)
+target_include_directories(TestIpc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+add_test(NAME TestIpc COMMAND TestIpc)

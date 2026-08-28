@@ -160,21 +160,30 @@ void MainWindow::dropEvent(QDropEvent *event) {
   }
 
   if (!lines.isEmpty() || !filesToRead.isEmpty()) {
-    auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
+    auto *watcher = new QFutureWatcher<ParseResult>(this);
 
-    connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
+    connect(watcher, &QFutureWatcher<ParseResult>::finished, this,
             [this, watcher]() {
-              std::vector<Item> parsedItems = watcher->result();
-              if (!parsedItems.empty()) {
-                m_storage->saveItems(parsedItems);
+              ParseResult res = watcher->result();
+              if (!res.items.empty()) {
+                m_storage->saveItems(res.items);
+              }
+              if (!res.rejectedInputs.empty()) {
+                QStringList messages;
+                for (const auto &rejected : res.rejectedInputs) {
+                  messages << QString("%1: %2").arg(rejected.input,
+                                                    rejected.reason);
+                }
+                QMessageBox::warning(this, "Some items failed to load",
+                                     messages.join("\n"));
               }
               // Switch to Inbox tab
               m_tabWidget->setCurrentIndex(0);
               watcher->deleteLater();
             });
 
-    QFuture<std::vector<Item>> future =
-        QtConcurrent::run([lines, filesToRead]() -> std::vector<Item> {
+    QFuture<ParseResult> future =
+        QtConcurrent::run([lines, filesToRead]() -> ParseResult {
           QStringList finalLines = lines;
           for (const QString &localPath : filesToRead) {
             QFile file(localPath);
@@ -990,24 +999,37 @@ void MainWindow::onAddItems() {
   }
 }
 
-void MainWindow::processAddedLines(const QStringList &lines) {
-  if (lines.isEmpty())
+void MainWindow::processAddedLines(const QStringList &lines,
+                                   const QString &tokenId) {
+  if (lines.isEmpty()) {
+    emit processingCompleted(tokenId);
     return;
+  }
 
   // Offload parsing to a background thread
-  auto *watcher = new QFutureWatcher<std::vector<Item>>(this);
+  auto *watcher = new QFutureWatcher<ParseResult>(this);
 
-  connect(watcher, &QFutureWatcher<std::vector<Item>>::finished, this,
-          [this, watcher]() {
-            std::vector<Item> items = watcher->result();
-            if (!items.empty()) {
-              openAddItemsDialog(items);
+  connect(watcher, &QFutureWatcher<ParseResult>::finished, this,
+          [this, watcher, tokenId]() {
+            ParseResult res = watcher->result();
+            if (!res.items.empty()) {
+              openAddItemsDialog(res.items);
+            }
+            if (!res.rejectedInputs.empty()) {
+              QStringList messages;
+              for (const auto &rejected : res.rejectedInputs) {
+                messages << QString("%1: %2").arg(rejected.input,
+                                                  rejected.reason);
+              }
+              QMessageBox::warning(this, "Some items failed to load",
+                                   messages.join("\n"));
             }
             watcher->deleteLater();
+            emit processingCompleted(tokenId);
           });
 
-  QFuture<std::vector<Item>> future = QtConcurrent::run(
-      [lines]() -> std::vector<Item> { return ItemParser::parseLines(lines); });
+  QFuture<ParseResult> future = QtConcurrent::run(
+      [lines]() -> ParseResult { return ItemParser::parseLines(lines); });
 
   watcher->setFuture(future);
 }
