@@ -11,10 +11,13 @@
 #include <QThread>
 #include <QUuid>
 
-bool DefaultStartupSystem::spawnCleanPrimary() {
-  QString program = QCoreApplication::applicationFilePath();
-  qDebug() << "Spawning clean primary:" << program;
-  return QProcess::startDetached(program, QStringList());
+bool DefaultStartupSystem::spawnDetached(const QString &program, const QStringList &args) {
+  return QProcess::startDetached(program, args);
+}
+
+ClientResult DefaultStartupSystem::sendClientRequest(const QString &serverName, const IpcProtocol::Request &request, int connectTimeout, int responseTimeout) {
+  SingleInstanceClient client(serverName);
+  return client.sendRequest(request, connectTimeout, responseTimeout);
 }
 
 void DefaultStartupSystem::msleep(int ms) { QThread::msleep(ms); }
@@ -37,8 +40,9 @@ bool DefaultStartupSystem::showRecoveryPrompt(const QString &diagnostic) {
 static DefaultStartupSystem g_defaultSystem;
 
 StartupCoordinator::StartupCoordinator(const QString &serverName,
-                                       StartupSystemInterface *sys)
-    : m_serverName(serverName), m_sys(sys ? sys : &g_defaultSystem) {}
+                                       StartupSystemInterface *sys,
+                                       StartupRetryPolicy policy)
+    : m_serverName(serverName), m_sys(sys ? sys : &g_defaultSystem), m_policy(policy) {}
 
 CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   IpcProtocol::Request request;
@@ -99,7 +103,8 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
 
       qDebug() << "We are an action-bearing launcher and no primary exists. "
                   "Spawning clean primary...";
-      if (!m_sys->spawnCleanPrimary()) {
+      QString program = QCoreApplication::applicationFilePath();
+      if (!m_sys->spawnDetached(program, QStringList())) {
         electionLock.unlock();
         return {CoordinatorAction::SpawnFailed, nullptr};
       }
@@ -123,18 +128,14 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
 
 CoordinatorAction
 StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
-  SingleInstanceClient client(m_serverName);
-
-  // We might have just spawned the primary, so give it some time to start the
-  // server.
-  int retries = 20; // Up to 4 seconds
+  int retries = m_policy.maxRetries;
   ClientResult result{ClientResultCode::RequestRejected, ""};
 
   while (retries > 0) {
-    result = client.sendRequest(request, 1000, 5000);
+    result = m_sys->sendClientRequest(m_serverName, request, m_policy.connectTimeoutMs, m_policy.responseTimeoutMs);
     if (result.code == ClientResultCode::ConnectFailed ||
         result.code == ClientResultCode::ConnectionClosed) {
-      m_sys->msleep(200); // Wait and retry connecting
+      m_sys->msleep(m_policy.retryDelayMs);
       retries--;
     } else {
       break;
@@ -160,7 +161,7 @@ StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
     bool retry = m_sys->showRecoveryPrompt(result.diagnostic);
 
     if (retry) {
-      result = client.sendRequest(request, 1000, 5000);
+      result = m_sys->sendClientRequest(m_serverName, request, m_policy.connectTimeoutMs, m_policy.responseTimeoutMs);
     } else {
       return CoordinatorAction::UserCancelled;
     }

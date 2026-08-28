@@ -476,7 +476,7 @@ private slots:
     QVERIFY(res.isSuccess());
   }
 
-  void testFramingTruncated() {
+  void testFramingIncompleteTransportFrame() {
     QString serverName =
         "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
     ApplicationRequestDispatcher dispatcher;
@@ -510,6 +510,65 @@ private slots:
     QTRY_VERIFY(socket.state() == QLocalSocket::UnconnectedState);
   }
 
+  void testFramingTruncatedRequest() {
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    ApplicationRequestDispatcher dispatcher;
+    SingleInstanceServer server(serverName, &dispatcher);
+    QVERIFY(server.tryAcquire());
+
+    QLocalSocket socket;
+    socket.connectToServer(serverName);
+    QVERIFY(socket.waitForConnected(1000));
+
+    IpcProtocol::Request req;
+    req.requestId = "req-trunc";
+    req.type = IpcProtocol::RequestType::AddInputs;
+    req.payload = {"Truncate-Me-Please-123456789"};
+
+    QByteArray payload;
+    QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(payloadOut);
+    payloadOut << req;
+
+    // Remove the last 10 bytes so that magic, version, and requestId are fully intact!
+    // But payload is truncated. So QDataStream will return Ok until it hits the end unexpectedly.
+    payload.chop(10);
+
+    QByteArray block;
+    QDataStream out(&block, QIODevice::WriteOnly);
+    IpcProtocol::setupStream(out);
+    out << static_cast<quint32>(payload.size());
+    block.append(payload);
+
+    socket.write(block);
+    QVERIFY(socket.waitForBytesWritten(1000));
+
+    quint32 expectedSize = 0;
+    QEventLoop loop;
+    QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+    QObject::connect(&socket, &QLocalSocket::readyRead, &loop, [&]() {
+      if (expectedSize == 0 && socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+        QDataStream in(&socket);
+        IpcProtocol::setupStream(in);
+        in >> expectedSize;
+      }
+      if (expectedSize > 0 && socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+        QByteArray frame = socket.read(expectedSize);
+        QDataStream in(&frame, QIODevice::ReadOnly);
+        IpcProtocol::setupStream(in);
+        IpcProtocol::Response res;
+        in >> res;
+
+        QCOMPARE(res.status, IpcProtocol::ResponseStatus::MalformedRequest);
+        QCOMPARE(res.requestId, QString("req-trunc")); // Since it read requestId safely before aborting!
+        loop.quit();
+      }
+    });
+    loop.exec();
+
+    QVERIFY(socket.state() == QLocalSocket::UnconnectedState || expectedSize > 0);
+  }
   void testFramingInvalidSize() {
     QString serverName =
         "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -576,6 +635,9 @@ private slots:
     SingleInstanceServer server(serverName, &dispatcher);
     QVERIFY(server.tryAcquire());
 
+    QSignalSpy spyActivate(&dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
+    QSignalSpy spyProcess(&dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
+
     QLocalSocket socket;
     socket.connectToServer(serverName);
     QVERIFY(socket.waitForConnected(1000));
@@ -619,11 +681,12 @@ private slots:
         IpcProtocol::setupStream(in);
         IpcProtocol::Response res;
         in >> res;
-        // Because magic fails, `req` decoding aborted, `req.version` became 0.
-        // Server responds with UnsupportedVersion, but `requestId` will be
-        // empty.
+        // decodeRequest() reports BadMagic, server returns MalformedRequest.
+        // requestId may be empty because the envelope was not trusted/decoded.
         QCOMPARE(res.status, IpcProtocol::ResponseStatus::MalformedRequest);
         QCOMPARE(res.requestId, QString(""));
+        QCOMPARE(spyActivate.count(), 0);
+        QCOMPARE(spyProcess.count(), 0);
         return;
       }
     }
