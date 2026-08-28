@@ -61,34 +61,51 @@ inline QDataStream &operator<<(QDataStream &out, const Response &res) {
 enum class DecodeResult { Success, BadMagic, Truncated };
 
 inline DecodeResult decodeRequest(QDataStream &in, Request &req) {
-  quint32 magic;
+  quint32 magic = 0;
   in >> magic;
+  if (in.status() != QDataStream::Ok) {
+    return DecodeResult::Truncated;
+  }
   if (magic != MAGIC) {
     return DecodeResult::BadMagic;
   }
-  quint16 typeInt;
+  quint16 typeInt = 0;
   in >> req.version >> req.requestId >> typeInt >> req.payload;
-  req.type = static_cast<RequestType>(typeInt);
-
   if (in.status() != QDataStream::Ok || !in.atEnd()) {
     return DecodeResult::Truncated;
   }
+  req.type = static_cast<RequestType>(typeInt);
+
   return DecodeResult::Success;
 }
 
+inline bool isValidResponseStatus(quint16 status) {
+  return status >= static_cast<quint16>(ResponseStatus::Accepted) &&
+         status <= static_cast<quint16>(ResponseStatus::InternalError);
+}
+
 inline DecodeResult decodeResponse(QDataStream &in, Response &res) {
-  quint32 magic;
+  quint32 magic = 0;
   in >> magic;
+  if (in.status() != QDataStream::Ok) {
+    return DecodeResult::Truncated;
+  }
   if (magic != MAGIC) {
     return DecodeResult::BadMagic;
   }
-  quint16 statusInt;
+  quint16 statusInt = 0;
   in >> res.version >> res.requestId >> statusInt >> res.errorMessage;
-  res.status = static_cast<ResponseStatus>(statusInt);
 
   if (in.status() != QDataStream::Ok || !in.atEnd()) {
     return DecodeResult::Truncated;
   }
+
+  if (!isValidResponseStatus(statusInt)) {
+      return DecodeResult::Truncated; // Or invalid, but truncated fails decoding which Client treats as InvalidResponse
+  }
+
+  res.status = static_cast<ResponseStatus>(statusInt);
+
   return DecodeResult::Success;
 }
 

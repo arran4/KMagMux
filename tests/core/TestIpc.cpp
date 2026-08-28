@@ -209,9 +209,6 @@ private slots:
     ClientResult res2 = client.sendRequest(req, 1000, 1000);
     QVERIFY(res2.isSuccess());
 
-    // Wait just in case
-    QTest::qWait(100);
-
     // Still 1! Deduplicated.
     QCOMPARE(spyActivate.count(), 1);
   }
@@ -473,6 +470,163 @@ private slots:
     QTRY_COMPARE(spyActivate.count(), 1);
   }
 
+  void testFramingMalformedResponseTruncated() {
+    QString serverName = "test-dummy-server-" +
+                         QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QLocalServer dummyServer;
+    dummyServer.listen(serverName);
+
+    QObject::connect(
+        &dummyServer, &QLocalServer::newConnection, &dummyServer, [&]() {
+          QLocalSocket *client = dummyServer.nextPendingConnection();
+          QObject::connect(
+              client, &QLocalSocket::readyRead, client, [client]() {
+                client->readAll();
+
+                // Build response
+                IpcProtocol::Response res;
+                res.requestId = "frag-res";
+                res.status = IpcProtocol::ResponseStatus::Accepted;
+
+                QByteArray payload;
+                QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(payloadOut);
+                payloadOut << res;
+
+                // Truncate payload internally!
+                payload.chop(5);
+
+                QByteArray block;
+                QDataStream out(&block, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(out);
+                out << static_cast<quint32>(payload.size()); // valid length!
+                block.append(payload);
+
+                client->write(block);
+                client->waitForBytesWritten(100);
+                client->disconnectFromServer();
+              });
+        });
+
+    SingleInstanceClient client(serverName);
+    IpcProtocol::Request req;
+    req.requestId = "frag-res";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    ClientResult res = client.sendRequest(req, 1000, 5000);
+    QCOMPARE(res.code, ClientResultCode::InvalidResponse);
+  }
+
+  void testFramingMalformedResponseZeroSize() {
+    QString serverName = "test-dummy-server-" +
+                         QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QLocalServer dummyServer;
+    dummyServer.listen(serverName);
+
+    QObject::connect(
+        &dummyServer, &QLocalServer::newConnection, &dummyServer, [&]() {
+          QLocalSocket *client = dummyServer.nextPendingConnection();
+          QObject::connect(client, &QLocalSocket::readyRead, client,
+                           [client]() {
+                             client->readAll();
+
+                             QByteArray block;
+                             QDataStream out(&block, QIODevice::WriteOnly);
+                             IpcProtocol::setupStream(out);
+                             out << static_cast<quint32>(0); // ZERO size frame
+
+                             client->write(block);
+                             client->waitForBytesWritten(100);
+                             client->disconnectFromServer();
+                           });
+        });
+
+    SingleInstanceClient client(serverName);
+    IpcProtocol::Request req;
+    req.requestId = "frag-res";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    ClientResult res = client.sendRequest(req, 1000, 5000);
+    QCOMPARE(res.code, ClientResultCode::InvalidResponse);
+  }
+
+  void testFramingMalformedResponseOversized() {
+    QString serverName = "test-dummy-server-" +
+                         QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QLocalServer dummyServer;
+    dummyServer.listen(serverName);
+
+    QObject::connect(
+        &dummyServer, &QLocalServer::newConnection, &dummyServer, [&]() {
+          QLocalSocket *client = dummyServer.nextPendingConnection();
+          QObject::connect(client, &QLocalSocket::readyRead, client,
+                           [client]() {
+                             client->readAll();
+
+                             QByteArray block;
+                             QDataStream out(&block, QIODevice::WriteOnly);
+                             IpcProtocol::setupStream(out);
+                             out << static_cast<quint32>(
+                                 15 * 1024 * 1024); // OVERSIZED frame
+
+                             client->write(block);
+                             client->waitForBytesWritten(100);
+                             client->disconnectFromServer();
+                           });
+        });
+
+    SingleInstanceClient client(serverName);
+    IpcProtocol::Request req;
+    req.requestId = "frag-res";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    ClientResult res = client.sendRequest(req, 1000, 5000);
+    QCOMPARE(res.code, ClientResultCode::InvalidResponse);
+  }
+
+  void testFramingMalformedResponseUnknownStatus() {
+    QString serverName = "test-dummy-server-" +
+                         QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QLocalServer dummyServer;
+    dummyServer.listen(serverName);
+
+    QObject::connect(
+        &dummyServer, &QLocalServer::newConnection, &dummyServer, [&]() {
+          QLocalSocket *client = dummyServer.nextPendingConnection();
+          QObject::connect(
+              client, &QLocalSocket::readyRead, client, [client]() {
+                client->readAll();
+
+                QByteArray payload;
+                QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(payloadOut);
+                quint32 magic = IpcProtocol::MAGIC;
+                quint16 unknownStatus = 999;
+                payloadOut << magic
+                           << static_cast<quint16>(IpcProtocol::VERSION)
+                           << QString("frag-res") << unknownStatus
+                           << QString("");
+
+                QByteArray block;
+                QDataStream out(&block, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(out);
+                out << static_cast<quint32>(payload.size());
+                block.append(payload);
+
+                client->write(block);
+                client->waitForBytesWritten(100);
+                client->disconnectFromServer();
+              });
+        });
+
+    SingleInstanceClient client(serverName);
+    IpcProtocol::Request req;
+    req.requestId = "frag-res";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    ClientResult res = client.sendRequest(req, 1000, 5000);
+    QCOMPARE(res.code, ClientResultCode::InvalidResponse);
+  }
   void testFramingResponseFragmentation() {
     QString serverName = "test-dummy-server-" +
                          QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -577,6 +731,11 @@ private slots:
     ApplicationRequestDispatcher dispatcher;
     SingleInstanceServer server(serverName, &dispatcher);
     QVERIFY(server.tryAcquire());
+
+    QSignalSpy spyActivate(
+        &dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
+    QSignalSpy spyProcess(
+        &dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
 
     QLocalSocket socket;
     socket.connectToServer(serverName);
