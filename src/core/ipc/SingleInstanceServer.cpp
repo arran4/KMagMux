@@ -109,36 +109,39 @@ void SingleInstanceServer::handleNewConnection() {
           QDataStream in(&frame, QIODevice::ReadOnly);
           IpcProtocol::setupStream(in);
           IpcProtocol::Request request;
-          in >> request;
-
-          // Ensure reading succeeded fully and exactly to the end of the frame
-          if (in.status() != QDataStream::Ok || !in.atEnd()) {
-            request.version = 0; // invalidate
-          }
+          const auto decodeResult = IpcProtocol::decodeRequest(in, request);
 
           IpcProtocol::Response response;
           response.requestId = request.requestId;
 
-          if (!request.isValid()) {
+          switch (decodeResult) {
+          case IpcProtocol::DecodeResult::BadMagic:
+          case IpcProtocol::DecodeResult::Truncated:
+            response.status = IpcProtocol::ResponseStatus::MalformedRequest;
+            response.errorMessage = "Malformed request";
+            break;
+          case IpcProtocol::DecodeResult::Success:
             if (request.version != IpcProtocol::VERSION) {
               response.status = IpcProtocol::ResponseStatus::UnsupportedVersion;
               response.errorMessage = "Unsupported protocol version";
-            } else {
+            } else if (request.requestId.isEmpty()) {
               response.status = IpcProtocol::ResponseStatus::MalformedRequest;
               response.errorMessage = "Malformed request";
+            } else if (request.type !=
+                           IpcProtocol::RequestType::ActivateWindow &&
+                       request.type != IpcProtocol::RequestType::AddInputs) {
+              response.status = IpcProtocol::ResponseStatus::UnknownRequestType;
+              response.errorMessage = "Unknown request type";
+            } else if (m_dispatcher) {
+              response.status = m_dispatcher->dispatch(request);
+              if (response.status != IpcProtocol::ResponseStatus::Accepted) {
+                response.errorMessage = "Failed to dispatch request";
+              }
+            } else {
+              response.status = IpcProtocol::ResponseStatus::InternalError;
+              response.errorMessage = "No dispatcher available";
             }
-          } else if (request.type != IpcProtocol::RequestType::ActivateWindow &&
-                     request.type != IpcProtocol::RequestType::AddInputs) {
-            response.status = IpcProtocol::ResponseStatus::UnknownRequestType;
-            response.errorMessage = "Unknown request type";
-          } else if (m_dispatcher) {
-            response.status = m_dispatcher->dispatch(request);
-            if (response.status != IpcProtocol::ResponseStatus::Accepted) {
-              response.errorMessage = "Failed to dispatch request";
-            }
-          } else {
-            response.status = IpcProtocol::ResponseStatus::InternalError;
-            response.errorMessage = "No dispatcher available";
+            break;
           }
 
           QByteArray payload;

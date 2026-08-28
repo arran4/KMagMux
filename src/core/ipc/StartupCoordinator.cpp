@@ -150,7 +150,7 @@ StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
         result.code == ClientResultCode::UnsupportedProtocol ||
         result.code == ClientResultCode::InvalidResponse ||
         result.code == ClientResultCode::NoPrimary) {
-      m_sys->showErrorMessage("Deterministic IPC Request Failed:\n\n" +
+      m_sys->showErrorMessage("KMagMux could not process the request:\n\n" +
                               result.diagnostic);
       return CoordinatorAction::RequestFailed;
     }
