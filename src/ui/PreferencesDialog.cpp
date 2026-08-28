@@ -1,6 +1,7 @@
 #include "PreferencesDialog.h"
 
 #include "../core/Connector.h"
+#include "../core/Constants.h"
 #include "../core/Engine.h"
 #include <QCheckBox>
 #include <QComboBox>
@@ -17,7 +18,6 @@
 #include <QScrollArea>
 #include <QSettings>
 #include <QStackedWidget>
-#include "../core/Constants.h"
 #include <QTableWidget>
 #include <QVBoxLayout>
 #include <QVariant>
@@ -52,28 +52,29 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
   QHBoxLayout *horizontalLayout = new QHBoxLayout;
   horizontalLayout->addWidget(m_categoriesList);
   horizontalLayout->addWidget(m_pagesWidget, 1);
-  connect(m_buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked,
-          this, [this]() {
-            QSettings settings;
-            settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
-            settings.setValue("minimizeToTray",
-                              m_minimizeToTrayCb->isChecked());
-            settings.setValue("autoStart", m_autoStartCb->isChecked());
-            settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
-            settings.setValue("autoMoveInbox",
-                              m_autoMoveInboxCombo->currentIndex());
-            settings.setValue("allowPlaintextStorage",
-                              m_allowPlaintextStorageCb->isChecked());
-            QStringList defaultConnectors;
-            if (m_defaultConnectorsList != nullptr) {
-              for (int i = 0; i < m_defaultConnectorsList->count(); ++i) {
-                if (m_defaultConnectorsList->item(i)->checkState() == Qt::Checked) {
-                  defaultConnectors.append(m_defaultConnectorsList->item(i)->text());
-                }
-              }
+  connect(
+      m_buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this,
+      [this]() {
+        QSettings settings;
+        settings.setValue("closeToTray", m_closeToTrayCb->isChecked());
+        settings.setValue("minimizeToTray", m_minimizeToTrayCb->isChecked());
+        settings.setValue("autoStart", m_autoStartCb->isChecked());
+        settings.setValue("autoArchiveDays", m_autoArchiveDays->value());
+        settings.setValue("autoMoveInbox",
+                          m_autoMoveInboxCombo->currentIndex());
+        settings.setValue("allowPlaintextStorage",
+                          m_allowPlaintextStorageCb->isChecked());
+        QStringList defaultConnectors;
+        if (m_defaultConnectorsList != nullptr) {
+          for (int i = 0; i < m_defaultConnectorsList->count(); ++i) {
+            if (m_defaultConnectorsList->item(i)->checkState() == Qt::Checked) {
+              defaultConnectors.append(
+                  m_defaultConnectorsList->item(i)->text());
             }
-            settings.setValue("defaultConnectors", defaultConnectors);
-          });
+          }
+        }
+        settings.setValue("defaultConnectors", defaultConnectors);
+      });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
     QSettings settings;
@@ -180,20 +181,22 @@ void PreferencesDialog::createGeneralPage() {
   m_defaultConnectorsList = new QListWidget(page);
   m_defaultConnectorsList->setMaximumHeight(100);
 
-  QStringList defaultConnectors = settings.value("defaultConnectors").toStringList();
+  QStringList defaultConnectors =
+      settings.value("defaultConnectors").toStringList();
   if (defaultConnectors.isEmpty()) {
-      defaultConnectors.append(Constants::DefaultActionName);
+    defaultConnectors.append(Constants::DefaultActionName);
   }
 
   QStringList availableConnectors;
   availableConnectors.append(Constants::DefaultActionName);
   if (m_engine != nullptr) {
-      availableConnectors.append(m_engine->getAllConnectors());
-      availableConnectors.removeDuplicates();
+    availableConnectors.append(m_engine->getAllConnectors());
+    availableConnectors.removeDuplicates();
   }
 
   for (const QString &connector : availableConnectors) {
-    QListWidgetItem *item = new QListWidgetItem(connector, m_defaultConnectorsList);
+    QListWidgetItem *item =
+        new QListWidgetItem(connector, m_defaultConnectorsList);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     if (defaultConnectors.contains(connector)) {
       item->setCheckState(Qt::Checked);

@@ -7,8 +7,8 @@
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
-#include <QUrl>
 #include <QSettings>
+#include <QUrl>
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -160,9 +160,10 @@ void ProcessItemDialog::setupUi() {
   formLayout->addRow("Hold Until:", m_holdTimeEdit);
 
   QSettings settings;
-  QStringList defaultConnectors = settings.value("defaultConnectors").toStringList();
+  QStringList defaultConnectors =
+      settings.value("defaultConnectors").toStringList();
   if (defaultConnectors.isEmpty()) {
-      defaultConnectors.append(Constants::DefaultActionName);
+    defaultConnectors.append(Constants::DefaultActionName);
   }
 
   m_connectorList = new QListWidget(this);
@@ -202,7 +203,8 @@ void ProcessItemDialog::setupUi() {
     }
     QSettings settings;
     settings.setValue("defaultConnectors", defaultConnectors);
-    QMessageBox::information(this, "Default Connectors", "Default connectors have been saved.");
+    QMessageBox::information(this, "Default Connectors",
+                             "Default connectors have been saved.");
   });
 
   QHBoxLayout *connectorBtnLayout = new QHBoxLayout();
