@@ -36,7 +36,7 @@ struct Request {
 struct Response {
   quint16 version = VERSION;
   QString requestId;
-  ResponseStatus status = ResponseStatus::MalformedRequest;
+  quint16 rawStatus = static_cast<quint16>(ResponseStatus::MalformedRequest);
   QString errorMessage;
 };
 
@@ -53,8 +53,8 @@ inline QDataStream &operator<<(QDataStream &out, const Request &req) {
 }
 
 inline QDataStream &operator<<(QDataStream &out, const Response &res) {
-  out << MAGIC << res.version << res.requestId
-      << static_cast<quint16>(res.status) << res.errorMessage;
+  out << MAGIC << res.version << res.requestId << res.rawStatus
+      << res.errorMessage;
   return out;
 }
 
@@ -93,18 +93,11 @@ inline DecodeResult decodeResponse(QDataStream &in, Response &res) {
   if (magic != MAGIC) {
     return DecodeResult::BadMagic;
   }
-  quint16 statusInt = 0;
-  in >> res.version >> res.requestId >> statusInt >> res.errorMessage;
+  in >> res.version >> res.requestId >> res.rawStatus >> res.errorMessage;
 
   if (in.status() != QDataStream::Ok || !in.atEnd()) {
     return DecodeResult::Truncated;
   }
-
-  if (!isValidResponseStatus(statusInt)) {
-      return DecodeResult::Truncated; // Or invalid, but truncated fails decoding which Client treats as InvalidResponse
-  }
-
-  res.status = static_cast<ResponseStatus>(statusInt);
 
   return DecodeResult::Success;
 }

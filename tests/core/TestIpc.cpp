@@ -37,11 +37,18 @@ public:
   int sendRequestCount = 0;
   IpcProtocol::Request lastSentRequest;
   QString lastSentId;
+  QString lastServerName;
 
-  ClientResult sendClientRequest(const QString &,
-                                 const IpcProtocol::Request &req, int,
-                                 int) override {
+  int lastConnectTimeout = 0;
+  int lastResponseTimeout = 0;
+  ClientResult sendClientRequest(const QString &serverName,
+                                 const IpcProtocol::Request &req,
+                                 int connectTimeout,
+                                 int responseTimeout) override {
     sendRequestCount++;
+    lastServerName = serverName;
+    lastConnectTimeout = connectTimeout;
+    lastResponseTimeout = responseTimeout;
     lastSentRequest = req;
     lastSentId = req.requestId;
     return {requestResultCode, ""};
@@ -114,7 +121,8 @@ private slots:
   void testResponseEncodeDecode() {
     IpcProtocol::Response res1;
     res1.requestId = "test-123";
-    res1.status = IpcProtocol::ResponseStatus::Accepted;
+    res1.rawStatus =
+        static_cast<quint16>(IpcProtocol::ResponseStatus::Accepted);
     res1.errorMessage = "OK";
 
     QByteArray payload;
@@ -138,7 +146,8 @@ private slots:
 
     QCOMPARE(res2.version, IpcProtocol::VERSION);
     QCOMPARE(res2.requestId, QString("test-123"));
-    QCOMPARE(res2.status, IpcProtocol::ResponseStatus::Accepted);
+    QCOMPARE(res2.rawStatus,
+             static_cast<quint16>(IpcProtocol::ResponseStatus::Accepted));
     QCOMPARE(res2.errorMessage, QString("OK"));
   }
 
@@ -470,6 +479,51 @@ private slots:
     QTRY_COMPARE(spyActivate.count(), 1);
   }
 
+  void testFramingMalformedResponseBadMagic() {
+    QString serverName = "test-dummy-server-" +
+                         QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QLocalServer dummyServer;
+    dummyServer.listen(serverName);
+
+    QObject::connect(
+        &dummyServer, &QLocalServer::newConnection, &dummyServer, [&]() {
+          QLocalSocket *client = dummyServer.nextPendingConnection();
+          QObject::connect(
+              client, &QLocalSocket::readyRead, client, [client]() {
+                client->readAll();
+
+                QByteArray payload;
+                QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(payloadOut);
+                quint32 badMagic = 0xBADF00D;
+                payloadOut << badMagic
+                           << static_cast<quint16>(IpcProtocol::VERSION)
+                           << QString("frag-res")
+                           << static_cast<quint16>(
+                                  IpcProtocol::ResponseStatus::Accepted)
+                           << QString("");
+
+                QByteArray block;
+                QDataStream out(&block, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(out);
+                out << static_cast<quint32>(payload.size());
+                block.append(payload);
+
+                client->write(block);
+                client->waitForBytesWritten(100);
+                client->disconnectFromServer();
+              });
+        });
+
+    SingleInstanceClient client(serverName);
+    IpcProtocol::Request req;
+    req.requestId = "frag-res";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    ClientResult res = client.sendRequest(req, 1000, 5000);
+    QCOMPARE(res.code, ClientResultCode::InvalidResponse);
+  }
+
   void testFramingMalformedResponseTruncated() {
     QString serverName = "test-dummy-server-" +
                          QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -486,7 +540,8 @@ private slots:
                 // Build response
                 IpcProtocol::Response res;
                 res.requestId = "frag-res";
-                res.status = IpcProtocol::ResponseStatus::Accepted;
+                res.rawStatus =
+                    static_cast<quint16>(IpcProtocol::ResponseStatus::Accepted);
 
                 QByteArray payload;
                 QDataStream payloadOut(&payload, QIODevice::WriteOnly);
@@ -645,7 +700,8 @@ private slots:
                 // Build response
                 IpcProtocol::Response res;
                 res.requestId = "frag-res";
-                res.status = IpcProtocol::ResponseStatus::Accepted;
+                res.rawStatus =
+                    static_cast<quint16>(IpcProtocol::ResponseStatus::Accepted);
 
                 QByteArray payload;
                 QDataStream payloadOut(&payload, QIODevice::WriteOnly);
@@ -783,7 +839,9 @@ private slots:
         IpcProtocol::Response res;
         in >> res;
 
-        QCOMPARE(res.status, IpcProtocol::ResponseStatus::MalformedRequest);
+        QCOMPARE(res.rawStatus,
+                 static_cast<quint16>(
+                     IpcProtocol::ResponseStatus::MalformedRequest));
         QCOMPARE(res.requestId,
                  QString("req-trunc")); // Since it read requestId safely before
                                         // aborting!
@@ -833,6 +891,7 @@ private slots:
     QCOMPARE(sysAction.spawnCount, 1);
     QCOMPARE(sysAction.spawnedProgram, QCoreApplication::applicationFilePath());
     QCOMPARE(sysAction.spawnedArgs.size(), 0); // Must be empty
+    QCOMPARE(sysAction.lastServerName, serverName);
 
     QCOMPARE(sysAction.sendRequestCount, 1);
     QCOMPARE(sysAction.lastSentRequest.type,
@@ -995,7 +1054,9 @@ private slots:
         in >> res;
         // decodeRequest() reports BadMagic, server returns MalformedRequest.
         // requestId may be empty because the envelope was not trusted/decoded.
-        QCOMPARE(res.status, IpcProtocol::ResponseStatus::MalformedRequest);
+        QCOMPARE(res.rawStatus,
+                 static_cast<quint16>(
+                     IpcProtocol::ResponseStatus::MalformedRequest));
         QCOMPARE(res.requestId, QString(""));
         QCOMPARE(spyActivate.count(), 0);
         QCOMPARE(spyProcess.count(), 0);
@@ -1051,7 +1112,9 @@ private slots:
         IpcProtocol::Response res;
         in >> res;
 
-        QCOMPARE(res.status, IpcProtocol::ResponseStatus::UnsupportedVersion);
+        QCOMPARE(res.rawStatus,
+                 static_cast<quint16>(
+                     IpcProtocol::ResponseStatus::UnsupportedVersion));
         QCOMPARE(res.requestId, QString("req-bad-ver"));
         loop.quit();
       }
@@ -1110,7 +1173,9 @@ private slots:
         IpcProtocol::Response res;
         in >> res;
 
-        QCOMPARE(res.status, IpcProtocol::ResponseStatus::UnknownRequestType);
+        QCOMPARE(res.rawStatus,
+                 static_cast<quint16>(
+                     IpcProtocol::ResponseStatus::UnknownRequestType));
         QCOMPARE(res.requestId, QString("req-bad-type"));
         loop.quit();
       }
@@ -1121,6 +1186,70 @@ private slots:
             expectedSize > 0);
   }
 
+  void testFramingUnsupportedVersionFutureStatus() {
+    QString serverName = "test-dummy-server-" +
+                         QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QLocalServer dummyServer;
+    dummyServer.listen(serverName);
+
+    QObject::connect(
+        &dummyServer, &QLocalServer::newConnection, &dummyServer, [&]() {
+          QLocalSocket *client = dummyServer.nextPendingConnection();
+          QObject::connect(
+              client, &QLocalSocket::readyRead, client, [client]() {
+                client->readAll();
+
+                QByteArray payload;
+                QDataStream payloadOut(&payload, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(payloadOut);
+                quint32 magic = IpcProtocol::MAGIC;
+                quint16 version = IpcProtocol::VERSION + 1; // Future version!
+                quint16 futureStatus = 999; // Unknown to current client
+                payloadOut << magic << version << QString("req-unsupported")
+                           << futureStatus << QString("");
+
+                QByteArray block;
+                QDataStream out(&block, QIODevice::WriteOnly);
+                IpcProtocol::setupStream(out);
+                out << static_cast<quint32>(payload.size());
+                block.append(payload);
+
+                client->write(block);
+                client->waitForBytesWritten(100);
+                client->disconnectFromServer();
+              });
+        });
+
+    SingleInstanceClient client(serverName);
+    IpcProtocol::Request req;
+    req.requestId = "req-unsupported";
+    req.type = IpcProtocol::RequestType::ActivateWindow;
+
+    ClientResult res = client.sendRequest(req, 1000, 5000);
+    // Even though status 999 is invalid to US, the version mismatch must take
+    // precedence!
+    QCOMPARE(res.code, ClientResultCode::UnsupportedProtocol);
+  }
+
+  void testDecoderTinyBuffers() {
+    for (int size = 0; size < 4; ++size) {
+      QByteArray shortBuffer;
+      shortBuffer.resize(size);
+      shortBuffer.fill(0);
+
+      QDataStream inReq(&shortBuffer, QIODevice::ReadOnly);
+      IpcProtocol::setupStream(inReq);
+      IpcProtocol::Request req;
+      QCOMPARE(IpcProtocol::decodeRequest(inReq, req),
+               IpcProtocol::DecodeResult::Truncated);
+
+      QDataStream inRes(&shortBuffer, QIODevice::ReadOnly);
+      IpcProtocol::setupStream(inRes);
+      IpcProtocol::Response res;
+      QCOMPARE(IpcProtocol::decodeResponse(inRes, res),
+               IpcProtocol::DecodeResult::Truncated);
+    }
+  }
   void testProtocolMismatch() {
     IpcProtocol::Request req;
     req.version = 999;

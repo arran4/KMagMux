@@ -117,28 +117,35 @@ void SingleInstanceServer::handleNewConnection() {
           switch (decodeResult) {
           case IpcProtocol::DecodeResult::BadMagic:
           case IpcProtocol::DecodeResult::Truncated:
-            response.status = IpcProtocol::ResponseStatus::MalformedRequest;
+            response.rawStatus = static_cast<quint16>(
+                IpcProtocol::ResponseStatus::MalformedRequest);
             response.errorMessage = "Malformed request";
             break;
           case IpcProtocol::DecodeResult::Success:
             if (request.version != IpcProtocol::VERSION) {
-              response.status = IpcProtocol::ResponseStatus::UnsupportedVersion;
+              response.rawStatus = static_cast<quint16>(
+                  IpcProtocol::ResponseStatus::UnsupportedVersion);
               response.errorMessage = "Unsupported protocol version";
             } else if (request.requestId.isEmpty()) {
-              response.status = IpcProtocol::ResponseStatus::MalformedRequest;
+              response.rawStatus = static_cast<quint16>(
+                  IpcProtocol::ResponseStatus::MalformedRequest);
               response.errorMessage = "Malformed request";
             } else if (request.type !=
                            IpcProtocol::RequestType::ActivateWindow &&
                        request.type != IpcProtocol::RequestType::AddInputs) {
-              response.status = IpcProtocol::ResponseStatus::UnknownRequestType;
+              response.rawStatus = static_cast<quint16>(
+                  IpcProtocol::ResponseStatus::UnknownRequestType);
               response.errorMessage = "Unknown request type";
             } else if (m_dispatcher) {
-              response.status = m_dispatcher->dispatch(request);
-              if (response.status != IpcProtocol::ResponseStatus::Accepted) {
+              IpcProtocol::ResponseStatus status =
+                  m_dispatcher->dispatch(request);
+              response.rawStatus = static_cast<quint16>(status);
+              if (status != IpcProtocol::ResponseStatus::Accepted) {
                 response.errorMessage = "Failed to dispatch request";
               }
             } else {
-              response.status = IpcProtocol::ResponseStatus::InternalError;
+              response.rawStatus = static_cast<quint16>(
+                  IpcProtocol::ResponseStatus::InternalError);
               response.errorMessage = "No dispatcher available";
             }
             break;

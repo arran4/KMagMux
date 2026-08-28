@@ -109,7 +109,13 @@ SingleInstanceClient::sendRequest(const IpcProtocol::Request &request,
             "Mismatched request ID in response."};
   }
 
-  if (response.status == IpcProtocol::ResponseStatus::Accepted) {
+  if (!IpcProtocol::isValidResponseStatus(response.rawStatus)) {
+    return {ClientResultCode::InvalidResponse,
+            "Unknown response status value from primary."};
+  }
+
+  if (static_cast<IpcProtocol::ResponseStatus>(response.rawStatus) ==
+      IpcProtocol::ResponseStatus::Accepted) {
     return {ClientResultCode::Accepted, "Request accepted."};
   }
 
