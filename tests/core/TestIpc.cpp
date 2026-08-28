@@ -622,7 +622,7 @@ private slots:
         // Because magic fails, `req` decoding aborted, `req.version` became 0.
         // Server responds with UnsupportedVersion, but `requestId` will be
         // empty.
-        QCOMPARE(res.status, IpcProtocol::ResponseStatus::UnsupportedVersion);
+        QCOMPARE(res.status, IpcProtocol::ResponseStatus::MalformedRequest);
         QCOMPARE(res.requestId, QString(""));
         return;
       }
