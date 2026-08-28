@@ -11,11 +11,14 @@
 #include <QThread>
 #include <QUuid>
 
-bool DefaultStartupSystem::spawnDetached(const QString &program, const QStringList &args) {
+bool DefaultStartupSystem::spawnDetached(const QString &program,
+                                         const QStringList &args) {
   return QProcess::startDetached(program, args);
 }
 
-ClientResult DefaultStartupSystem::sendClientRequest(const QString &serverName, const IpcProtocol::Request &request, int connectTimeout, int responseTimeout) {
+ClientResult DefaultStartupSystem::sendClientRequest(
+    const QString &serverName, const IpcProtocol::Request &request,
+    int connectTimeout, int responseTimeout) {
   SingleInstanceClient client(serverName);
   return client.sendRequest(request, connectTimeout, responseTimeout);
 }
@@ -42,7 +45,8 @@ static DefaultStartupSystem g_defaultSystem;
 StartupCoordinator::StartupCoordinator(const QString &serverName,
                                        StartupSystemInterface *sys,
                                        StartupRetryPolicy policy)
-    : m_serverName(serverName), m_sys(sys ? sys : &g_defaultSystem), m_policy(policy) {}
+    : m_serverName(serverName), m_sys(sys ? sys : &g_defaultSystem),
+      m_policy(policy) {}
 
 CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   IpcProtocol::Request request;
@@ -132,7 +136,9 @@ StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
   ClientResult result{ClientResultCode::RequestRejected, ""};
 
   while (retries > 0) {
-    result = m_sys->sendClientRequest(m_serverName, request, m_policy.connectTimeoutMs, m_policy.responseTimeoutMs);
+    result = m_sys->sendClientRequest(m_serverName, request,
+                                      m_policy.connectTimeoutMs,
+                                      m_policy.responseTimeoutMs);
     if (result.code == ClientResultCode::ConnectFailed ||
         result.code == ClientResultCode::ConnectionClosed) {
       m_sys->msleep(m_policy.retryDelayMs);
@@ -161,7 +167,9 @@ StartupCoordinator::handleClientRequest(const IpcProtocol::Request &request) {
     bool retry = m_sys->showRecoveryPrompt(result.diagnostic);
 
     if (retry) {
-      result = m_sys->sendClientRequest(m_serverName, request, m_policy.connectTimeoutMs, m_policy.responseTimeoutMs);
+      result = m_sys->sendClientRequest(m_serverName, request,
+                                        m_policy.connectTimeoutMs,
+                                        m_policy.responseTimeoutMs);
     } else {
       return CoordinatorAction::UserCancelled;
     }

@@ -26,10 +26,15 @@ public:
   virtual ~StartupSystemInterface() = default;
 
   // Expose the raw program arguments to allow test assertions
-  virtual bool spawnDetached(const QString &program, const QStringList &args) = 0;
+  virtual bool spawnDetached(const QString &program,
+                             const QStringList &args) = 0;
 
-  // Inject client request delivery to avoid spinning up raw sockets when testing coordination logic
-  virtual ClientResult sendClientRequest(const QString &serverName, const IpcProtocol::Request &request, int connectTimeout, int responseTimeout) = 0;
+  // Inject client request delivery to avoid spinning up raw sockets when
+  // testing coordination logic
+  virtual ClientResult sendClientRequest(const QString &serverName,
+                                         const IpcProtocol::Request &request,
+                                         int connectTimeout,
+                                         int responseTimeout) = 0;
 
   virtual void msleep(int ms) = 0;
   virtual void showErrorMessage(const QString &msg) = 0;
@@ -37,16 +42,19 @@ public:
 };
 
 struct StartupRetryPolicy {
-    int maxRetries = 20;
-    int connectTimeoutMs = 1000;
-    int responseTimeoutMs = 5000;
-    int retryDelayMs = 200;
+  int maxRetries = 20;
+  int connectTimeoutMs = 1000;
+  int responseTimeoutMs = 5000;
+  int retryDelayMs = 200;
 };
 
 class DefaultStartupSystem : public StartupSystemInterface {
 public:
   bool spawnDetached(const QString &program, const QStringList &args) override;
-  ClientResult sendClientRequest(const QString &serverName, const IpcProtocol::Request &request, int connectTimeout, int responseTimeout) override;
+  ClientResult sendClientRequest(const QString &serverName,
+                                 const IpcProtocol::Request &request,
+                                 int connectTimeout,
+                                 int responseTimeout) override;
   void msleep(int ms) override;
   void showErrorMessage(const QString &msg) override;
   bool showRecoveryPrompt(const QString &diagnostic) override;

@@ -14,6 +14,67 @@
 #include <QTimer>
 #include <QUuid>
 
+class MockStartupSystem : public StartupSystemInterface {
+public:
+  int spawnCount = 0;
+  QString spawnedProgram;
+  QStringList spawnedArgs;
+
+  int errorCount = 0;
+  int recoveryCount = 0;
+
+  bool recoveryResult = false;
+  bool spawnResult = true;
+  ClientResultCode requestResultCode = ClientResultCode::Accepted;
+
+  bool spawnDetached(const QString &program, const QStringList &args) override {
+    spawnCount++;
+    spawnedProgram = program;
+    spawnedArgs = args;
+    return spawnResult;
+  }
+
+  int sendRequestCount = 0;
+  IpcProtocol::Request lastSentRequest;
+  QString lastSentId;
+
+  ClientResult sendClientRequest(const QString &,
+                                 const IpcProtocol::Request &req, int,
+                                 int) override {
+    sendRequestCount++;
+    lastSentRequest = req;
+    lastSentId = req.requestId;
+    return {requestResultCode, ""};
+  }
+
+  void msleep(int) override {}
+
+  void showErrorMessage(const QString &) override { errorCount++; }
+
+  bool showRecoveryPrompt(const QString &) override {
+    recoveryCount++;
+    return recoveryResult;
+  }
+};
+
+class TransientMockSystem : public MockStartupSystem {
+public:
+  ClientResult sendClientRequest(const QString &,
+                                 const IpcProtocol::Request &req, int,
+                                 int) override {
+    sendRequestCount++;
+    if (lastSentId.isEmpty())
+      lastSentId = req.requestId;
+    if (lastSentId != req.requestId) {
+      return {ClientResultCode::RequestRejected, "ID mismatch"};
+    }
+
+    if (sendRequestCount <= 2)
+      return {ClientResultCode::ConnectFailed, ""};
+    return {ClientResultCode::Accepted, ""};
+  }
+};
+
 class TestIpc : public QObject {
   Q_OBJECT
 
@@ -531,8 +592,9 @@ private slots:
     IpcProtocol::setupStream(payloadOut);
     payloadOut << req;
 
-    // Remove the last 10 bytes so that magic, version, and requestId are fully intact!
-    // But payload is truncated. So QDataStream will return Ok until it hits the end unexpectedly.
+    // Remove the last 10 bytes so that magic, version, and requestId are fully
+    // intact! But payload is truncated. So QDataStream will return Ok until it
+    // hits the end unexpectedly.
     payload.chop(10);
 
     QByteArray block;
@@ -548,12 +610,14 @@ private slots:
     QEventLoop loop;
     QTimer::singleShot(2000, &loop, &QEventLoop::quit);
     QObject::connect(&socket, &QLocalSocket::readyRead, &loop, [&]() {
-      if (expectedSize == 0 && socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
+      if (expectedSize == 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(sizeof(quint32))) {
         QDataStream in(&socket);
         IpcProtocol::setupStream(in);
         in >> expectedSize;
       }
-      if (expectedSize > 0 && socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
+      if (expectedSize > 0 &&
+          socket.bytesAvailable() >= static_cast<qint64>(expectedSize)) {
         QByteArray frame = socket.read(expectedSize);
         QDataStream in(&frame, QIODevice::ReadOnly);
         IpcProtocol::setupStream(in);
@@ -561,13 +625,16 @@ private slots:
         in >> res;
 
         QCOMPARE(res.status, IpcProtocol::ResponseStatus::MalformedRequest);
-        QCOMPARE(res.requestId, QString("req-trunc")); // Since it read requestId safely before aborting!
+        QCOMPARE(res.requestId,
+                 QString("req-trunc")); // Since it read requestId safely before
+                                        // aborting!
         loop.quit();
       }
     });
     loop.exec();
 
-    QVERIFY(socket.state() == QLocalSocket::UnconnectedState || expectedSize > 0);
+    QVERIFY(socket.state() == QLocalSocket::UnconnectedState ||
+            expectedSize > 0);
   }
   void testFramingInvalidSize() {
     QString serverName =
@@ -595,20 +662,104 @@ private slots:
     QString serverName =
         "test-election-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
 
-    // In a genuine unit testing environment, testing QProcess::startDetached
-    // recursively forks the test runner or primary kmagmux binary causing
-    // intractable hangs and 4-second message box timeouts. We just test the
-    // no-arg acquisition and lock ownership here.
+    // Test 1: No primary exists, Action-bearing launch succeeds
+    MockStartupSystem sysAction;
+    StartupCoordinator coordAction(serverName, &sysAction, {2, 1, 1, 0});
+    CoordinatorResult resAction =
+        coordAction.coordinate(QStringList() << "/dummy/path" << "A.torrent");
 
-    StartupCoordinator coordNoArg(serverName);
-    CoordinatorResult res1 =
-        coordNoArg.coordinate(QStringList() << "/dummy/path");
+    QCOMPARE(resAction.action, CoordinatorAction::RequestDelivered);
+    QVERIFY(resAction.primaryLock ==
+            nullptr); // short-lived launcher does not hold lock
+    QCOMPARE(sysAction.spawnCount, 1);
+    QCOMPARE(sysAction.spawnedProgram, QCoreApplication::applicationFilePath());
+    QCOMPARE(sysAction.spawnedArgs.size(), 0); // Must be empty
 
-    QCOMPARE(res1.action, CoordinatorAction::BecomePrimary);
-    QVERIFY(res1.primaryLock != nullptr);
+    QCOMPARE(sysAction.sendRequestCount, 1);
+    QCOMPARE(sysAction.lastSentRequest.type,
+             IpcProtocol::RequestType::AddInputs);
+    QCOMPARE(sysAction.lastSentRequest.payload.size(), 1);
+    QCOMPARE(sysAction.lastSentRequest.payload[0], QString("A.torrent"));
 
-    res1.primaryLock->unlock();
-    res1.primaryLock.reset();
+    // Test 2: Existing primary
+    // Create a persistent primary lock here locally to simulate an existing
+    // primary
+    QString runtimePath =
+        QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    if (runtimePath.isEmpty())
+      runtimePath = QDir::tempPath();
+    QLockFile existingLock(QDir(runtimePath).filePath(serverName + ".lock"));
+    existingLock.setStaleLockTime(0);
+    QVERIFY(existingLock.tryLock(0));
+
+    MockStartupSystem sysExisting;
+    StartupCoordinator coordExisting(serverName, &sysExisting, {2, 1, 1, 0});
+    CoordinatorResult resExisting =
+        coordExisting.coordinate(QStringList() << "/dummy/path" << "B.torrent");
+
+    QCOMPARE(resExisting.action, CoordinatorAction::RequestDelivered);
+    QCOMPARE(sysExisting.spawnCount, 0); // MUST NOT SPAWN
+    QCOMPARE(sysExisting.sendRequestCount, 1);
+    QCOMPARE(sysExisting.lastSentRequest.payload[0], QString("B.torrent"));
+
+    existingLock.unlock();
+  }
+
+  void testStartupCoordinatorFailures() {
+    QString serverName =
+        "test-failures-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+
+    // C: Spawn failure
+    MockStartupSystem sysFailSpawn;
+    sysFailSpawn.spawnResult = false;
+    StartupCoordinator coordSpawn(serverName, &sysFailSpawn, {2, 1, 1, 0});
+    CoordinatorResult resSpawn =
+        coordSpawn.coordinate(QStringList() << "/dummy/path" << "A.torrent");
+
+    QCOMPARE(resSpawn.action, CoordinatorAction::SpawnFailed);
+    QCOMPARE(sysFailSpawn.spawnCount, 1);
+    QCOMPARE(sysFailSpawn.sendRequestCount,
+             0); // Never sent request because spawn failed
+
+    // D: Startup retry (Simulate transient connection issues recovering on
+    // final retry) Since our mock returns a single static result, we can't
+    // easily alternate failures to success without a custom mock state. But we
+    // can test the retry loop itself if it exhausts. Or we can modify the mock
+    // to alternate.
+
+    TransientMockSystem sysTransient;
+    StartupCoordinator coordTransient(serverName, &sysTransient, {5, 1, 1, 0});
+    CoordinatorResult resTransient = coordTransient.coordinate(
+        QStringList() << "/dummy/path" << "A.torrent");
+
+    QCOMPARE(resTransient.action, CoordinatorAction::RequestDelivered);
+    QCOMPARE(sysTransient.sendRequestCount,
+             3); // Failed twice, succeeded third.
+
+    // E: Deterministic rejection
+    MockStartupSystem sysReject;
+    sysReject.requestResultCode = ClientResultCode::RequestRejected;
+    StartupCoordinator coordReject(serverName, &sysReject, {2, 1, 1, 0});
+    CoordinatorResult resReject =
+        coordReject.coordinate(QStringList() << "/dummy/path" << "A.torrent");
+
+    QCOMPARE(resReject.action, CoordinatorAction::RequestFailed);
+    QCOMPARE(sysReject.errorCount, 1);    // Visible error hook called
+    QCOMPARE(sysReject.recoveryCount, 0); // NO recovery loop prompt
+
+    // F: Recovery cancel after automatic attempts exhaust
+    MockStartupSystem sysTimeout;
+    sysTimeout.requestResultCode = ClientResultCode::ResponseTimeout;
+    sysTimeout.recoveryResult = false; // User selects Cancel on recovery prompt
+    StartupCoordinator coordTimeout(serverName, &sysTimeout,
+                                    {2, 1, 1, 0}); // 2 retries
+    CoordinatorResult resTimeout =
+        coordTimeout.coordinate(QStringList() << "/dummy/path" << "A.torrent");
+
+    QCOMPARE(resTimeout.action, CoordinatorAction::UserCancelled);
+    QCOMPARE(sysTimeout.recoveryCount, 1);
+    // Since it's a transport failure, showErrorMessage is NOT called.
+    QCOMPARE(sysTimeout.errorCount, 0);
   }
   void testClientServerWriteNoAck() {
     QString serverName =
@@ -635,8 +786,10 @@ private slots:
     SingleInstanceServer server(serverName, &dispatcher);
     QVERIFY(server.tryAcquire());
 
-    QSignalSpy spyActivate(&dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
-    QSignalSpy spyProcess(&dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
+    QSignalSpy spyActivate(
+        &dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
+    QSignalSpy spyProcess(
+        &dispatcher, &ApplicationRequestDispatcher::processAddedLinesRequested);
 
     QLocalSocket socket;
     socket.connectToServer(serverName);
