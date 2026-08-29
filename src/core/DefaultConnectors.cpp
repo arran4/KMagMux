@@ -17,9 +17,12 @@ QStringList DefaultConnectors::get(const QStringList &availableConnectors) {
   QStringList result;
 
   for (const QString &id : configured) {
-    const QString normalizedId = (id == Constants::DefaultActionName) ? Constants::QBittorrentConnectorId : id;
+    const QString normalizedId = (id == Constants::DefaultActionName)
+                                     ? Constants::QBittorrentConnectorId
+                                     : id;
 
-    if (availableConnectors.contains(normalizedId) && !result.contains(normalizedId)) {
+    if (availableConnectors.contains(normalizedId) &&
+        !result.contains(normalizedId)) {
       result.append(normalizedId);
     }
   }
@@ -32,7 +35,9 @@ void DefaultConnectors::set(const QStringList &connectors) {
   QStringList canonical;
 
   for (const QString &id : connectors) {
-    const QString normalizedId = (id == Constants::DefaultActionName) ? Constants::QBittorrentConnectorId : id;
+    const QString normalizedId = (id == Constants::DefaultActionName)
+                                     ? Constants::QBittorrentConnectorId
+                                     : id;
     if (!canonical.contains(normalizedId)) {
       canonical.append(normalizedId);
     }

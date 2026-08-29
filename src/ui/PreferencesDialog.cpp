@@ -203,9 +203,8 @@ void PreferencesDialog::createGeneralPage() {
     }
   }
 
-  connect(m_defaultConnectorsList, &QListWidget::itemChanged, this, [this](QListWidgetItem*) {
-    m_defaultConnectorsModified = true;
-  });
+  connect(m_defaultConnectorsList, &QListWidget::itemChanged, this,
+          [this](QListWidgetItem *) { m_defaultConnectorsModified = true; });
 
   layout->addWidget(m_defaultConnectorsList);
 
