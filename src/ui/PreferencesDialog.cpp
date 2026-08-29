@@ -65,16 +65,17 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
                           m_autoMoveInboxCombo->currentIndex());
         settings.setValue("allowPlaintextStorage",
                           m_allowPlaintextStorageCb->isChecked());
-        QStringList defaultConnectors;
-        if (m_defaultConnectorsList != nullptr) {
+        if (m_defaultConnectorsModified && m_defaultConnectorsList != nullptr) {
+          QStringList defaultConnectors;
           for (int i = 0; i < m_defaultConnectorsList->count(); ++i) {
             if (m_defaultConnectorsList->item(i)->checkState() == Qt::Checked) {
               defaultConnectors.append(
                   m_defaultConnectorsList->item(i)->text());
             }
           }
+          DefaultConnectors::set(defaultConnectors);
+          m_defaultConnectorsModified = false;
         }
-        DefaultConnectors::set(defaultConnectors);
       });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
@@ -86,15 +87,17 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
     settings.setValue("autoMoveInbox", m_autoMoveInboxCombo->currentIndex());
     settings.setValue("allowPlaintextStorage",
                       m_allowPlaintextStorageCb->isChecked());
-    QStringList defaultConnectors;
-    if (m_defaultConnectorsList != nullptr) {
+
+    if (m_defaultConnectorsModified && m_defaultConnectorsList != nullptr) {
+      QStringList defaultConnectors;
       for (int i = 0; i < m_defaultConnectorsList->count(); ++i) {
         if (m_defaultConnectorsList->item(i)->checkState() == Qt::Checked) {
           defaultConnectors.append(m_defaultConnectorsList->item(i)->text());
         }
       }
+      DefaultConnectors::set(defaultConnectors);
+      m_defaultConnectorsModified = false;
     }
-    DefaultConnectors::set(defaultConnectors);
     accept();
   });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -199,6 +202,11 @@ void PreferencesDialog::createGeneralPage() {
       item->setCheckState(Qt::Unchecked);
     }
   }
+
+  connect(m_defaultConnectorsList, &QListWidget::itemChanged, this, [this](QListWidgetItem*) {
+    m_defaultConnectorsModified = true;
+  });
+
   layout->addWidget(m_defaultConnectorsList);
 
   layout->addStretch();

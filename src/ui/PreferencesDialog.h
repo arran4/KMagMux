@@ -44,6 +44,7 @@ private:
   QSpinBox *m_autoArchiveDays;
   QCheckBox *m_allowPlaintextStorageCb;
   QListWidget *m_defaultConnectorsList;
+  bool m_defaultConnectorsModified = false;
 };
 
 #endif // PREFERENCESDIALOG_H

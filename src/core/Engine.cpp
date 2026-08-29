@@ -305,12 +305,20 @@ void Engine::dispatchItem(Item &item) {
     searchId = Constants::QBittorrentConnectorId;
   }
 
-  if (!searchId.isEmpty() && m_connectors.contains(searchId)) {
-    connector = m_connectors[searchId];
+  if (!searchId.isEmpty()) {
+    if (m_connectors.contains(searchId)) {
+      Connector *c = m_connectors[searchId];
+      if (c->isEnabled()) {
+        connector = c;
+      }
+    }
   } else {
-    // Fallback to qBittorrent if connectorId is not found
+    // Only empty ID falls back to qBittorrent (if present & enabled)
     if (m_connectors.contains(Constants::QBittorrentConnectorId)) {
-      connector = m_connectors[Constants::QBittorrentConnectorId];
+      Connector *c = m_connectors[Constants::QBittorrentConnectorId];
+      if (c->isEnabled()) {
+        connector = c;
+      }
     }
   }
 

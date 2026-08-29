@@ -1,3 +1,4 @@
+#include "core/Constants.h"
 #include "core/Engine.h"
 #include "core/StorageManager.h"
 #include <QCoreApplication>
@@ -11,6 +12,13 @@ class TestEngine : public QObject {
 private slots:
   void initTestCase() {
     // Initialize Qt test framework if needed
+    QCoreApplication::setOrganizationName("KMagMuxTest");
+    QCoreApplication::setApplicationName("TestEngine");
+
+    // Ensure we can write to storage locally without test paths that fail creation
+    QString dataHome = QDir::currentPath() + "/xdg_data";
+    qputenv("XDG_DATA_HOME", dataHome.toLocal8Bit());
+    QDir().mkpath(dataHome + "/KMagMuxTest/TestEngine/data");
   }
 
   void testEnginePluginLoading() {
@@ -43,17 +51,11 @@ private slots:
       QFile::copy(sourcePluginPath, destPluginPath);
       qDebug() << "Copied mock plugin from" << sourcePluginPath << "to"
                << destPluginPath;
-    } else if (QFile::exists(destPluginPath)) {
-      qDebug() << "Mock plugin already exists at" << destPluginPath;
-    } else {
-      qWarning() << "Could not find mock plugin at" << sourcePluginPath;
-      // Maybe the path is different depending on CMake generator/version
-      QDir searchDir(appDir);
-      searchDir.cdUp(); // tests
-      searchDir.cdUp(); // build
+    } else if (!QFile::exists(destPluginPath)) {
+      // Try alternate path if running from build dir
       QString altPath =
-          searchDir.absoluteFilePath("tests/plugins/" + mockPluginFilename);
-      if (QFile::exists(altPath) && !QFile::exists(destPluginPath)) {
+          QDir::cleanPath(appDir + "/../../plugins/" + mockPluginFilename);
+      if (QFile::exists(altPath)) {
         QFile::copy(altPath, destPluginPath);
         qDebug() << "Copied mock plugin from" << altPath << "to"
                  << destPluginPath;
@@ -69,6 +71,74 @@ private slots:
     // Ensure we loaded the MockConnector successfully
     QVERIFY(!connectors.isEmpty());
     QVERIFY(connectors.contains("MockConnector"));
+  }
+
+  void testEngineDispatchLegacyDefaultFallback() {
+    StorageManager storage;
+    Engine engine(&storage);
+
+    Item item;
+    item.id = "test-legacy";
+    item.connectorId = Constants::DefaultActionName;
+    item.state = ItemState::Queued;
+    storage.saveItem(item);
+
+    QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
+
+    auto opt = storage.loadItem("test-legacy");
+    QVERIFY(opt.has_value());
+
+    // Check if qbittorrent was loaded
+    bool hasQbt = engine.getAllConnectors().contains(Constants::QBittorrentConnectorId);
+    if (!hasQbt) {
+      QCOMPARE(opt->state, ItemState::Failed);
+      QCOMPARE(opt->metadata["dispatchResult"].toString(), QString("No suitable connector found."));
+    } else {
+      QVERIFY(opt->metadata["dispatchResult"].toString() != "No suitable connector found.");
+    }
+  }
+
+  void testEngineDispatchExplicitFailsIfMissing() {
+    StorageManager storage;
+    Engine engine(&storage);
+
+    Item item;
+    item.id = "test-explicit";
+    item.connectorId = "MissingConnectorId";
+    item.state = ItemState::Queued;
+    storage.saveItem(item);
+
+    QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
+
+    auto opt = storage.loadItem("test-explicit");
+    QVERIFY(opt.has_value());
+    QCOMPARE(opt->state, ItemState::Failed); // Should explicitly fail, NOT fallback
+    QCOMPARE(opt->metadata["dispatchResult"].toString(), QString("No suitable connector found."));
+  }
+
+  void testEngineDispatchEmptyIDFallsBackToQBittorrent() {
+    StorageManager storage;
+    Engine engine(&storage);
+
+    Item item;
+    item.id = "test-empty";
+    item.connectorId = "";
+    item.state = ItemState::Queued;
+    storage.saveItem(item);
+
+    QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
+
+    auto opt = storage.loadItem("test-empty");
+    QVERIFY(opt.has_value());
+
+    // Check if qbittorrent was loaded
+    bool hasQbt = engine.getAllConnectors().contains(Constants::QBittorrentConnectorId);
+    if (!hasQbt) {
+      QCOMPARE(opt->state, ItemState::Failed);
+      QCOMPARE(opt->metadata["dispatchResult"].toString(), QString("No suitable connector found."));
+    } else {
+      QVERIFY(opt->metadata["dispatchResult"].toString() != "No suitable connector found.");
+    }
   }
 };
 
