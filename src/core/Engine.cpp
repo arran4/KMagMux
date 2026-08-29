@@ -211,6 +211,12 @@ QStringList Engine::getAvailableConnectors() const {
 
 QStringList Engine::getAllConnectors() const { return m_connectors.keys(); }
 
+void Engine::setConnectorForTesting(Connector *connector) {
+  if (connector) {
+    m_connectors.insert(connector->getId(), connector);
+  }
+}
+
 void Engine::start() {
   if (!m_paused) {
     m_timer->start();
