@@ -298,12 +298,17 @@ void Engine::dispatchItem(Item &item) {
   qDebug() << "Dispatching item:" << item.id << "Source:" << item.sourcePath;
 
   Connector *connector = nullptr;
-  if (!item.connectorId.isEmpty() && m_connectors.contains(item.connectorId)) {
-    connector = m_connectors[item.connectorId];
+  QString searchId = item.connectorId;
+
+  // Normalize legacy "Default" to "qBittorrent"
+  if (searchId == Constants::DefaultActionName) {
+    searchId = Constants::QBittorrentConnectorId;
+  }
+
+  if (!searchId.isEmpty() && m_connectors.contains(searchId)) {
+    connector = m_connectors[searchId];
   } else {
-    // Fallback to qBittorrent if connectorId is not found or is "Default"
-    // In AddItemDialog we add "Default" and "qBittorrent".
-    // If "Default" is selected, we use qBittorrent for now.
+    // Fallback to qBittorrent if connectorId is not found
     if (m_connectors.contains(Constants::QBittorrentConnectorId)) {
       connector = m_connectors[Constants::QBittorrentConnectorId];
     }

@@ -7,7 +7,6 @@
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
-#include <QSettings>
 #include <QUrl>
 
 #include <QAbstractItemView>
@@ -24,6 +23,7 @@
 #include <cstddef>
 
 #include "../core/Constants.h"
+#include "../core/DefaultConnectors.h"
 #include "MaxWidthDelegate.h"
 #include "TorrentInfoDialog.h"
 
@@ -159,12 +159,7 @@ void ProcessItemDialog::setupUi() {
       false); // Initially disabled unless "Hold" is selected
   formLayout->addRow("Hold Until:", m_holdTimeEdit);
 
-  QSettings settings;
-  QStringList defaultConnectors =
-      settings.value("defaultConnectors").toStringList();
-  if (defaultConnectors.isEmpty()) {
-    defaultConnectors.append(Constants::DefaultActionName);
-  }
+  QStringList defaultConnectors = DefaultConnectors::get(m_connectors);
 
   m_connectorList = new QListWidget(this);
   for (const QString &connector : m_connectors) {
@@ -175,19 +170,6 @@ void ProcessItemDialog::setupUi() {
     } else {
       item->setCheckState(Qt::Unchecked);
     }
-  }
-
-  // If Default is not in the list or nothing is checked, check the first one if
-  // available
-  bool anythingChecked = false;
-  for (int i = 0; i < m_connectorList->count(); ++i) {
-    if (m_connectorList->item(i)->checkState() == Qt::Checked) {
-      anythingChecked = true;
-      break;
-    }
-  }
-  if (!anythingChecked && m_connectorList->count() > 0) {
-    m_connectorList->item(0)->setCheckState(Qt::Checked);
   }
 
   QVBoxLayout *connectorLayout = new QVBoxLayout();
@@ -201,8 +183,7 @@ void ProcessItemDialog::setupUi() {
         defaultConnectors.append(m_connectorList->item(i)->text());
       }
     }
-    QSettings settings;
-    settings.setValue("defaultConnectors", defaultConnectors);
+    DefaultConnectors::set(defaultConnectors);
     QMessageBox::information(this, "Default Connectors",
                              "Default connectors have been saved.");
   });

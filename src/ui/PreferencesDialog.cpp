@@ -2,6 +2,7 @@
 
 #include "../core/Connector.h"
 #include "../core/Constants.h"
+#include "../core/DefaultConnectors.h"
 #include "../core/Engine.h"
 #include <QCheckBox>
 #include <QComboBox>
@@ -73,7 +74,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
             }
           }
         }
-        settings.setValue("defaultConnectors", defaultConnectors);
+        DefaultConnectors::set(defaultConnectors);
       });
 
   connect(m_buttonBox, &QDialogButtonBox::accepted, this, [this]() {
@@ -93,7 +94,7 @@ PreferencesDialog::PreferencesDialog(Engine *engine, QWidget *parent)
         }
       }
     }
-    settings.setValue("defaultConnectors", defaultConnectors);
+    DefaultConnectors::set(defaultConnectors);
     accept();
   });
   connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -181,18 +182,12 @@ void PreferencesDialog::createGeneralPage() {
   m_defaultConnectorsList = new QListWidget(page);
   m_defaultConnectorsList->setMaximumHeight(100);
 
-  QStringList defaultConnectors =
-      settings.value("defaultConnectors").toStringList();
-  if (defaultConnectors.isEmpty()) {
-    defaultConnectors.append(Constants::DefaultActionName);
+  QStringList availableConnectors;
+  if (m_engine != nullptr) {
+    availableConnectors = m_engine->getAvailableConnectors();
   }
 
-  QStringList availableConnectors;
-  availableConnectors.append(Constants::DefaultActionName);
-  if (m_engine != nullptr) {
-    availableConnectors.append(m_engine->getAllConnectors());
-    availableConnectors.removeDuplicates();
-  }
+  QStringList defaultConnectors = DefaultConnectors::get(availableConnectors);
 
   for (const QString &connector : availableConnectors) {
     QListWidgetItem *item =
