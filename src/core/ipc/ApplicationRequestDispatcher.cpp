@@ -31,10 +31,9 @@ QString ApplicationRequestDispatcher::calculateFingerprint(
 bool ApplicationRequestDispatcher::checkRecentResult(
     const QString &id, const QString &fingerprint,
     IpcProtocol::ResponseStatus &outStatus) const {
-  auto it = std::find_if(m_recentResults.begin(), m_recentResults.end(),
-                         [&id](const CachedResult &cached) {
-                           return cached.requestId == id;
-                         });
+  auto it = std::find_if(
+      m_recentResults.begin(), m_recentResults.end(),
+      [&id](const CachedResult &cached) { return cached.requestId == id; });
   if (it != m_recentResults.end()) {
     if (it->fingerprint != fingerprint) {
       outStatus = IpcProtocol::ResponseStatus::MalformedRequest; // Collision

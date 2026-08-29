@@ -27,7 +27,8 @@ private:
   struct CachedResult {
     QString requestId;
     QString fingerprint;
-    IpcProtocol::ResponseStatus status = IpcProtocol::ResponseStatus::InternalError;
+    IpcProtocol::ResponseStatus status =
+        IpcProtocol::ResponseStatus::InternalError;
   };
 
   QList<CachedResult> m_recentResults;
