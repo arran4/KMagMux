@@ -11,6 +11,10 @@ private slots:
   void initTestCase() {
     QCoreApplication::setOrganizationName("KMagMuxTest");
     QCoreApplication::setApplicationName("TestDefaultConnectors");
+
+    // Ensure we can write to storage locally without test paths that fail creation
+    QString configHome = QDir::currentPath() + "/xdg_config";
+    qputenv("XDG_CONFIG_HOME", configHome.toLocal8Bit());
   }
 
   void init() {

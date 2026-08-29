@@ -83,15 +83,51 @@ private slots:
     item.state = ItemState::Queued;
     storage.saveItem(item);
 
+    // Mock qBittorrent disabled
+    if (Connector* qbt = engine.getConnector(Constants::QBittorrentConnectorId)) {
+       QObject *qbtObj = dynamic_cast<QObject*>(qbt);
+       if (qbtObj) qbtObj->setProperty("enabled", false);
+    }
+
     QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
 
     auto opt = storage.loadItem("test-legacy");
     QVERIFY(opt.has_value());
 
-    // Check if qbittorrent was loaded
-    bool hasQbt = engine.getAllConnectors().contains(Constants::QBittorrentConnectorId);
-    if (!hasQbt) {
+    // Check if qbittorrent was loaded and enabled
+    bool hasQbtEnabled = engine.getAvailableConnectors().contains(Constants::QBittorrentConnectorId);
+    if (!hasQbtEnabled) {
       QCOMPARE(opt->state, ItemState::Failed);
+      QCOMPARE(opt->metadata["dispatchResult"].toString(), QString("No suitable connector found."));
+    } else {
+      QVERIFY(opt->metadata["dispatchResult"].toString() != "No suitable connector found.");
+    }
+  }
+
+  void testEngineDispatchExplicitFailsIfDisabled() {
+    StorageManager storage;
+    Engine engine(&storage);
+
+    Item item;
+    item.id = "test-explicit-disabled";
+    item.connectorId = Constants::QBittorrentConnectorId;
+    item.state = ItemState::Queued;
+    storage.saveItem(item);
+
+    // Mock qBittorrent disabled
+    if (Connector* qbt = engine.getConnector(Constants::QBittorrentConnectorId)) {
+       QObject *qbtObj = dynamic_cast<QObject*>(qbt);
+       if (qbtObj) qbtObj->setProperty("enabled", false);
+    }
+
+    QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
+
+    auto opt = storage.loadItem("test-explicit-disabled");
+    QVERIFY(opt.has_value());
+
+    bool hasQbtEnabled = engine.getAvailableConnectors().contains(Constants::QBittorrentConnectorId);
+    if (!hasQbtEnabled) {
+      QCOMPARE(opt->state, ItemState::Failed); // Should explicitly fail, NOT fallback
       QCOMPARE(opt->metadata["dispatchResult"].toString(), QString("No suitable connector found."));
     } else {
       QVERIFY(opt->metadata["dispatchResult"].toString() != "No suitable connector found.");
@@ -126,14 +162,20 @@ private slots:
     item.state = ItemState::Queued;
     storage.saveItem(item);
 
+    // Mock qBittorrent disabled
+    if (Connector* qbt = engine.getConnector(Constants::QBittorrentConnectorId)) {
+       QObject *qbtObj = dynamic_cast<QObject*>(qbt);
+       if (qbtObj) qbtObj->setProperty("enabled", false);
+    }
+
     QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
 
     auto opt = storage.loadItem("test-empty");
     QVERIFY(opt.has_value());
 
-    // Check if qbittorrent was loaded
-    bool hasQbt = engine.getAllConnectors().contains(Constants::QBittorrentConnectorId);
-    if (!hasQbt) {
+    // Check if qbittorrent was loaded and enabled
+    bool hasQbtEnabled = engine.getAvailableConnectors().contains(Constants::QBittorrentConnectorId);
+    if (!hasQbtEnabled) {
       QCOMPARE(opt->state, ItemState::Failed);
       QCOMPARE(opt->metadata["dispatchResult"].toString(), QString("No suitable connector found."));
     } else {
