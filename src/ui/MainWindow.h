@@ -5,6 +5,7 @@
 #include "../core/ItemModel.h"
 #include "../core/StorageManager.h"
 #include "ItemFilterProxyModel.h"
+#include "utils/ClickableLabel.h"
 #include <KActionCollection>
 #include <KStandardAction>
 #include <KXmlGuiWindow>
@@ -126,6 +127,8 @@ private:
   QAction *m_minimizeAction;
   QAction *m_showHideAction;
   QAction *m_quitAction;
+
+  ClickableLabel *m_statusLabel = nullptr;
 
   bool m_closeToTray;
   bool m_minimizeToTray;

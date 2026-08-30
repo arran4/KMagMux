@@ -302,6 +302,7 @@ void Engine::processQueue() {
 
 void Engine::dispatchItem(Item &item) {
   qDebug() << "Dispatching item:" << item.id << "Source:" << item.sourcePath;
+  emit actionMessage(QString("Dispatching item to %1: %2").arg(item.connectorId, item.id));
 
   Connector *connector = nullptr;
   QString searchId = item.connectorId;
@@ -365,6 +366,7 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
           QString(
               "Item dispatched successfully to %1 and deleted as requested.")
               .arg(item.connectorId));
+      emit actionMessage(QString("Sent to Connector %1: successful").arg(item.connectorId));
       qDebug() << "Item dispatched successfully and deleted as requested:"
                << itemId;
       m_storage->deleteItem(item.id);
@@ -372,11 +374,13 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
     }
     if (item.state != ItemState::Failed) {
       item.state = ItemState::Done;
+      emit actionMessage(QString("Sent to Connector %1: successful").arg(item.connectorId));
       qDebug() << "Item dispatched successfully:" << itemId;
     }
   } else {
     item.state = ItemState::Failed;
     meta["error"] = message;
+    emit actionMessage(QString("Sent to Connector %1: Failed - %2").arg(item.connectorId, message));
     qWarning() << "Item dispatch failed:" << itemId << "Reason:" << message;
   }
   item.metadata = meta;

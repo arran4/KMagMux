@@ -7,6 +7,7 @@
 #include "PreferencesDialog.h"
 #include "ProcessItemDialog.h"
 #include "TorrentInfoDialog.h"
+#include "ActivityLogWindow.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
@@ -52,13 +53,19 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_deleteAction(nullptr), m_infoAction(nullptr),
       m_rawResultsAction(nullptr), m_trayIcon(nullptr), m_trayIconMenu(nullptr),
       m_minimizeAction(nullptr), m_showHideAction(nullptr),
-      m_quitAction(nullptr), m_closeToTray(false), m_minimizeToTray(false),
+      m_quitAction(nullptr), m_statusLabel(nullptr), m_closeToTray(false), m_minimizeToTray(false),
       m_autoStart(false), m_forceQuit(false) {
   qApp->setQuitOnLastWindowClosed(false);
 
   applySettings();
 
   m_engine = new Engine(m_storage, this);
+  connect(m_engine, &Engine::actionMessage, this, [this](const QString &msg) {
+    if (m_statusLabel) {
+      m_statusLabel->setText(msg);
+    }
+    ActivityLogWindow::instance()->logMessage(msg);
+  });
   m_engine->start();
 
   setupUi();
@@ -216,7 +223,14 @@ void MainWindow::setupUi() {
   setupSystemTray();
 
   // Setup Status Bar
-  statusBar()->showMessage(tr("Ready"));
+  // Setup Status Bar
+  m_statusLabel = new ClickableLabel(tr("Ready"), this);
+  connect(m_statusLabel, &ClickableLabel::clicked, this, []() {
+    ActivityLogWindow::instance()->show();
+    ActivityLogWindow::instance()->raise();
+    ActivityLogWindow::instance()->activateWindow();
+  });
+  statusBar()->addWidget(m_statusLabel);
 }
 
 void MainWindow::setupActionsAndMenus() {

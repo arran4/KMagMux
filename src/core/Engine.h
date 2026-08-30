@@ -26,6 +26,10 @@ public:
 
 private slots:
   void processQueue();
+Q_SIGNALS:
+  void actionMessage(const QString &message);
+
+private slots:
   void onDispatchFinished(const QString &itemId, bool success,
                           const QString &message,
                           const QJsonObject &metadata = QJsonObject());
