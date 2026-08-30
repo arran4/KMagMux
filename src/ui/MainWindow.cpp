@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "../core/ItemParser.h"
+#include "ActivityLogWindow.h"
 #include "AddItemDialog.h"
 #include "ApiExplorerDialog.h"
 #include "LinkExtractorDialog.h"
@@ -7,7 +8,6 @@
 #include "PreferencesDialog.h"
 #include "ProcessItemDialog.h"
 #include "TorrentInfoDialog.h"
-#include "ActivityLogWindow.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
@@ -53,8 +53,8 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
       m_deleteAction(nullptr), m_infoAction(nullptr),
       m_rawResultsAction(nullptr), m_trayIcon(nullptr), m_trayIconMenu(nullptr),
       m_minimizeAction(nullptr), m_showHideAction(nullptr),
-      m_quitAction(nullptr), m_statusLabel(nullptr), m_closeToTray(false), m_minimizeToTray(false),
-      m_autoStart(false), m_forceQuit(false) {
+      m_quitAction(nullptr), m_statusLabel(nullptr), m_closeToTray(false),
+      m_minimizeToTray(false), m_autoStart(false), m_forceQuit(false) {
   qApp->setQuitOnLastWindowClosed(false);
 
   applySettings();

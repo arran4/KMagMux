@@ -10,11 +10,14 @@ class ClickableLabel : public QLabel {
 public:
   explicit ClickableLabel(QWidget *parent = nullptr) : QLabel(parent) {
     setCursor(Qt::PointingHandCursor);
-    connect(this, &QLabel::linkActivated, this, [this]() { m_linkJustActivated = true; });
+    connect(this, &QLabel::linkActivated, this,
+            [this]() { m_linkJustActivated = true; });
   }
-  explicit ClickableLabel(const QString &text, QWidget *parent = nullptr) : QLabel(text, parent) {
+  explicit ClickableLabel(const QString &text, QWidget *parent = nullptr)
+      : QLabel(text, parent) {
     setCursor(Qt::PointingHandCursor);
-    connect(this, &QLabel::linkActivated, this, [this]() { m_linkJustActivated = true; });
+    connect(this, &QLabel::linkActivated, this,
+            [this]() { m_linkJustActivated = true; });
   }
 
 Q_SIGNALS:

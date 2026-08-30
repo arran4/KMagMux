@@ -25,7 +25,8 @@ ActivityLogWindow::ActivityLogWindow(QWidget *parent) : KXmlGuiWindow(parent) {
   setCentralWidget(m_logBrowser);
 
   QMenu *fileMenu = new QMenu(tr("File"), this);
-  QAction *closeAction = new QAction(QIcon::fromTheme(QStringLiteral("window-close")), tr("Close"), this);
+  QAction *closeAction = new QAction(
+      QIcon::fromTheme(QStringLiteral("window-close")), tr("Close"), this);
   closeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
   connect(closeAction, &QAction::triggered, this, &KXmlGuiWindow::close);
   fileMenu->addAction(closeAction);
@@ -38,7 +39,8 @@ ActivityLogWindow::ActivityLogWindow(QWidget *parent) : KXmlGuiWindow(parent) {
 ActivityLogWindow::~ActivityLogWindow() = default;
 
 void ActivityLogWindow::logMessage(const QString &message) {
-  QString timeStr = QDateTime::currentDateTime().toString(QStringLiteral("hh:mm:ss"));
+  QString timeStr =
+      QDateTime::currentDateTime().toString(QStringLiteral("hh:mm:ss"));
   m_logBrowser->append(QStringLiteral("[%1] %2").arg(timeStr, message));
 }
 
