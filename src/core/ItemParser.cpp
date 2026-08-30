@@ -64,8 +64,8 @@ ParseResult ItemParser::parseLines(const QStringList &lines) {
          pathToCheck.startsWith("https://", Qt::CaseInsensitive)) &&
         pathToCheck.endsWith(".torrent", Qt::CaseInsensitive)) {
 
-      QUrl url(pathToCheck);
-      QString host = url.host();
+      QUrl torrentUrl(pathToCheck);
+      QString host = torrentUrl.host();
       QHostInfo info = QHostInfo::fromName(host);
 
       bool isSafe = false;

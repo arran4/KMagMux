@@ -23,6 +23,7 @@
 #include <cstddef>
 
 #include "../core/Constants.h"
+#include "../core/DefaultConnectors.h"
 #include "MaxWidthDelegate.h"
 #include "TorrentInfoDialog.h"
 
@@ -158,31 +159,41 @@ void ProcessItemDialog::setupUi() {
       false); // Initially disabled unless "Hold" is selected
   formLayout->addRow("Hold Until:", m_holdTimeEdit);
 
+  QStringList defaultConnectors = DefaultConnectors::get(m_connectors);
+
   m_connectorList = new QListWidget(this);
   for (const QString &connector : m_connectors) {
     QListWidgetItem *item = new QListWidgetItem(connector, m_connectorList);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    if (connector == Constants::DefaultActionName) {
+    if (defaultConnectors.contains(connector)) {
       item->setCheckState(Qt::Checked);
     } else {
       item->setCheckState(Qt::Unchecked);
     }
   }
 
-  // If Default is not in the list or nothing is checked, check the first one if
-  // available
-  bool anythingChecked = false;
-  for (int i = 0; i < m_connectorList->count(); ++i) {
-    if (m_connectorList->item(i)->checkState() == Qt::Checked) {
-      anythingChecked = true;
-      break;
-    }
-  }
-  if (!anythingChecked && m_connectorList->count() > 0) {
-    m_connectorList->item(0)->setCheckState(Qt::Checked);
-  }
+  QVBoxLayout *connectorLayout = new QVBoxLayout();
+  connectorLayout->addWidget(m_connectorList);
 
-  formLayout->addRow("Connectors:", m_connectorList);
+  QPushButton *makeDefaultBtn = new QPushButton("Make Default", this);
+  connect(makeDefaultBtn, &QPushButton::clicked, this, [this]() {
+    QStringList defaultConnectors;
+    for (int i = 0; i < m_connectorList->count(); ++i) {
+      if (m_connectorList->item(i)->checkState() == Qt::Checked) {
+        defaultConnectors.append(m_connectorList->item(i)->text());
+      }
+    }
+    DefaultConnectors::set(defaultConnectors);
+    QMessageBox::information(this, "Default Connectors",
+                             "Default connectors have been saved.");
+  });
+
+  QHBoxLayout *connectorBtnLayout = new QHBoxLayout();
+  connectorBtnLayout->addStretch();
+  connectorBtnLayout->addWidget(makeDefaultBtn);
+  connectorLayout->addLayout(connectorBtnLayout);
+
+  formLayout->addRow("Connectors:", connectorLayout);
 
   mainLayout->addLayout(formLayout);
 

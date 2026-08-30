@@ -17,7 +17,7 @@ enum class CoordinatorAction {
 };
 
 struct CoordinatorResult {
-  CoordinatorAction action;
+  CoordinatorAction action = CoordinatorAction::BecomePrimary;
   std::unique_ptr<QLockFile> primaryLock = nullptr;
 };
 

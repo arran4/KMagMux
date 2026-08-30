@@ -17,7 +17,7 @@ enum class ClientResultCode {
 };
 
 struct ClientResult {
-  ClientResultCode code;
+  ClientResultCode code = ClientResultCode::InvalidResponse;
   QString diagnostic;
 
   bool isSuccess() const { return code == ClientResultCode::Accepted; }

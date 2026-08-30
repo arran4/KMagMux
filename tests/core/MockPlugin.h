@@ -14,6 +14,14 @@ public:
   QString getId() const override { return "MockConnector"; }
   QString getName() const override { return "Mock Connector"; }
   void dispatch(const Item &item) override { Q_UNUSED(item); }
+
+  bool isEnabled() const override {
+      return m_enabled;
+  }
+  void setEnabled(bool enabled) { m_enabled = enabled; }
+
+private:
+  bool m_enabled = true;
 };
 
 #endif // MOCKPLUGIN_H

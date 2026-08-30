@@ -21,6 +21,9 @@ public:
   QStringList getAllConnectors() const;
   Connector *getConnector(const QString &identifier) const;
 
+  // For testing explicitly overriding connectors
+  void setConnectorForTesting(Connector *connector);
+
 private slots:
   void processQueue();
   void onDispatchFinished(const QString &itemId, bool success,

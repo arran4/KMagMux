@@ -25,6 +25,7 @@ add_library(KMagMuxCore SHARED
     src/core/ItemModel.cpp
     src/core/ItemParser.cpp
     src/core/SecureStorage.cpp
+    src/core/DefaultConnectors.cpp
     src/core/BencodeParser.cpp
     src/core/TorrentParser.cpp
     src/core/TrackerClient.cpp
