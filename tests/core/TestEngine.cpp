@@ -13,14 +13,22 @@ public:
   FakeConnector(const QString &id, QObject *parent = nullptr) : QObject(parent), m_id(id) {}
   QString getId() const override { return m_id; }
   QString getName() const override { return m_id; }
-  void dispatch(const Item &item) override { Q_UNUSED(item); }
+  void dispatch(const Item &item) override {
+    m_dispatchCount++;
+    m_lastDispatchedItemId = item.id;
+  }
 
   bool isEnabled() const override { return m_enabled; }
   void setEnabled(bool enabled) { m_enabled = enabled; }
 
+  int dispatchCount() const { return m_dispatchCount; }
+  QString lastDispatchedItemId() const { return m_lastDispatchedItemId; }
+
 private:
   QString m_id;
   bool m_enabled = true;
+  int m_dispatchCount = 0;
+  QString m_lastDispatchedItemId;
 };
 
 class TestEngine : public QObject {
@@ -95,6 +103,7 @@ private slots:
 
   void testEngineDispatchLegacyDefaultFallback() {
     StorageManager storage;
+    storage.deleteItem("test-legacy"); storage.deleteItem("test-explicit-disabled"); storage.deleteItem("test-explicit"); storage.deleteItem("test-empty");
     Engine engine(&storage);
 
     FakeConnector *qbt = new FakeConnector(Constants::QBittorrentConnectorId);
@@ -122,12 +131,13 @@ private slots:
     storage.saveItem(item);
     QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
 
-    opt = storage.loadItem("test-legacy");
-    QVERIFY(opt->metadata["dispatchResult"].toString() != "No suitable connector found.");
+    QCOMPARE(qbt->dispatchCount(), 1);
+    QCOMPARE(qbt->lastDispatchedItemId(), QString("test-legacy"));
   }
 
   void testEngineDispatchExplicitFailsIfDisabled() {
     StorageManager storage;
+    storage.deleteItem("test-legacy"); storage.deleteItem("test-explicit-disabled"); storage.deleteItem("test-explicit"); storage.deleteItem("test-empty");
     Engine engine(&storage);
 
     FakeConnector *testConn = new FakeConnector("TestExplicitConnector");
@@ -155,6 +165,7 @@ private slots:
 
   void testEngineDispatchExplicitFailsIfMissing() {
     StorageManager storage;
+    storage.deleteItem("test-legacy"); storage.deleteItem("test-explicit-disabled"); storage.deleteItem("test-explicit"); storage.deleteItem("test-empty");
     Engine engine(&storage);
 
     FakeConnector *qbt = new FakeConnector(Constants::QBittorrentConnectorId);
@@ -178,9 +189,6 @@ private slots:
   void testEngineDispatchEmptyIDFallsBackToQBittorrent() {
     StorageManager storage;
     storage.deleteItem("test-legacy"); storage.deleteItem("test-explicit-disabled"); storage.deleteItem("test-explicit"); storage.deleteItem("test-empty");
-    storage.deleteItem("test-legacy"); storage.deleteItem("test-explicit-disabled"); storage.deleteItem("test-explicit"); storage.deleteItem("test-empty");
-    storage.deleteItem("test-legacy"); storage.deleteItem("test-explicit-disabled"); storage.deleteItem("test-explicit"); storage.deleteItem("test-empty");
-    storage.deleteItem("test-legacy"); storage.deleteItem("test-explicit-disabled"); storage.deleteItem("test-explicit"); storage.deleteItem("test-empty");
     Engine engine(&storage);
 
     FakeConnector *qbt = new FakeConnector(Constants::QBittorrentConnectorId);
@@ -200,6 +208,15 @@ private slots:
 
     QCOMPARE(opt->state, ItemState::Failed);
     QCOMPARE(opt->metadata["dispatchResult"].toString(), QString("No suitable connector found."));
+
+    // Try again with enabled qBittorrent to ensure empty string fallback actually works when enabled
+    qbt->setEnabled(true);
+    item.state = ItemState::Queued;
+    storage.saveItem(item);
+    QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
+
+    QCOMPARE(qbt->dispatchCount(), 1);
+    QCOMPARE(qbt->lastDispatchedItemId(), QString("test-empty"));
   }
 };
 

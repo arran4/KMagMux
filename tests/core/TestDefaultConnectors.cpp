@@ -6,6 +6,7 @@
 
 class TestDefaultConnectors : public QObject {
   Q_OBJECT
+  QTemporaryDir m_configDir;
 
 private slots:
   void initTestCase() {
