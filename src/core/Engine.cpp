@@ -302,8 +302,6 @@ void Engine::processQueue() {
 
 void Engine::dispatchItem(Item &item) {
   qDebug() << "Dispatching item:" << item.id << "Source:" << item.sourcePath;
-  emit actionMessage(
-      QString("Dispatching item to %1: %2").arg(item.connectorId, item.id));
 
   Connector *connector = nullptr;
   QString searchId = item.connectorId;
@@ -331,10 +329,27 @@ void Engine::dispatchItem(Item &item) {
   }
 
   if (connector != nullptr) {
+    QString connectorName = connector->getName();
+    // Storing resolved connectorName in metadata to ensure completion uses the
+    // same name
+    QJsonObject meta = item.metadata;
+    meta["resolvedConnectorName"] = connectorName;
+    item.metadata = meta;
+    m_storage->saveItem(item);
+    emit actionMessage(
+        QString("Dispatching item to %1: %2").arg(connectorName, item.id));
     connector->dispatch(item);
   } else {
     qWarning() << "No connector found for item:" << item.id
                << " ConnectorId:" << item.connectorId;
+    QString failedConnectorName = item.connectorId;
+    if (failedConnectorName.isEmpty() ||
+        failedConnectorName == Constants::DefaultActionName) {
+      failedConnectorName = Constants::QBittorrentConnectorId;
+    }
+    emit actionMessage(
+        QString("Sent to Connector %1: Failed - No suitable connector found.")
+            .arg(failedConnectorName));
     // Directly fail it here because we can't dispatch
     onDispatchFinished(item.id, false, "No suitable connector found.");
   }
@@ -350,6 +365,12 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
   }
 
   Item item = *itemOpt;
+  QString connectorName =
+      item.metadata.value("resolvedConnectorName").toString(item.connectorId);
+  if (connectorName.isEmpty() ||
+      connectorName == Constants::DefaultActionName) {
+    connectorName = Constants::QBittorrentConnectorId;
+  }
 
   // Update metadata
   QJsonObject meta = item.metadata;
@@ -367,8 +388,7 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
           QString(
               "Item dispatched successfully to %1 and deleted as requested.")
               .arg(item.connectorId));
-      emit actionMessage(
-          QString("Sent to Connector %1: successful").arg(item.connectorId));
+      emit actionMessage(QString("Sent to Connector %1: successful").arg(connectorName));
       qDebug() << "Item dispatched successfully and deleted as requested:"
                << itemId;
       m_storage->deleteItem(item.id);
@@ -376,15 +396,13 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
     }
     if (item.state != ItemState::Failed) {
       item.state = ItemState::Done;
-      emit actionMessage(
-          QString("Sent to Connector %1: successful").arg(item.connectorId));
+      emit actionMessage(QString("Sent to Connector %1: successful").arg(connectorName));
       qDebug() << "Item dispatched successfully:" << itemId;
     }
   } else {
     item.state = ItemState::Failed;
     meta["error"] = message;
-    emit actionMessage(QString("Sent to Connector %1: Failed - %2")
-                           .arg(item.connectorId, message));
+    emit actionMessage(QString("Sent to Connector %1: Failed - %2").arg(connectorName, message));
     qWarning() << "Item dispatch failed:" << itemId << "Reason:" << message;
   }
   item.metadata = meta;
