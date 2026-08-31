@@ -330,26 +330,12 @@ void Engine::dispatchItem(Item &item) {
 
   if (connector != nullptr) {
     QString connectorName = connector->getName();
-    // Storing resolved connectorName in metadata to ensure completion uses the
-    // same name
-    QJsonObject meta = item.metadata;
-    meta["resolvedConnectorName"] = connectorName;
-    item.metadata = meta;
-    m_storage->saveItem(item);
-    emit actionMessage(
-        QString("Dispatching item to %1: %2").arg(connectorName, item.id));
+    m_inFlightConnectors[item.id] = connectorName;
+    emit actionMessage(QString("Dispatching item to %1: %2").arg(connectorName, item.id));
     connector->dispatch(item);
   } else {
     qWarning() << "No connector found for item:" << item.id
                << " ConnectorId:" << item.connectorId;
-    QString failedConnectorName = item.connectorId;
-    if (failedConnectorName.isEmpty() ||
-        failedConnectorName == Constants::DefaultActionName) {
-      failedConnectorName = Constants::QBittorrentConnectorId;
-    }
-    emit actionMessage(
-        QString("Sent to Connector %1: Failed - No suitable connector found.")
-            .arg(failedConnectorName));
     // Directly fail it here because we can't dispatch
     onDispatchFinished(item.id, false, "No suitable connector found.");
   }
@@ -365,13 +351,19 @@ void Engine::onDispatchFinished(const QString &itemId, bool success,
   }
 
   Item item = *itemOpt;
-  QString connectorName =
-      item.metadata.value("resolvedConnectorName").toString(item.connectorId);
-  if (connectorName.isEmpty() ||
-      connectorName == Constants::DefaultActionName) {
-    connectorName = Constants::QBittorrentConnectorId;
+  QString connectorName;
+  if (m_inFlightConnectors.contains(item.id)) {
+    connectorName = m_inFlightConnectors.take(item.id);
+  } else {
+    // Fallback if not in flight (e.g., failed to start)
+    connectorName = item.connectorId;
+    if (connectorName.isEmpty() || connectorName == Constants::DefaultActionName) {
+      connectorName = Constants::QBittorrentConnectorId;
+    }
+    if (m_connectors.contains(connectorName)) {
+      connectorName = m_connectors[connectorName]->getName();
+    }
   }
-
   // Update metadata
   QJsonObject meta = item.metadata;
   meta["lastDispatchTime"] = QDateTime::currentDateTime().toString(Qt::ISODate);

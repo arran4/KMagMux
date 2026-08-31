@@ -13,7 +13,12 @@ public:
   FakeConnector(const QString &id, QObject *parent = nullptr)
       : QObject(parent), m_id(id) {}
   QString getId() const override { return m_id; }
-  QString getName() const override { return m_id; }
+  QString getName() const override {
+    if (property("name").isValid()) {
+      return property("name").toString();
+    }
+    return m_id;
+  }
   void dispatch(const Item &item) override {
     m_dispatchCount++;
     m_lastDispatchedItemId = item.id;
@@ -107,12 +112,14 @@ private slots:
     StorageManager storage;
     storage.deleteItem("test-signal");
     Engine engine(&storage);
-    FakeConnector *testConn = new FakeConnector("TestConn");
+    FakeConnector *testConn = new FakeConnector("TestConnId");
+    // To explicitly test display name
+    testConn->setProperty("name", "TestConnDisplay");
     engine.setConnectorForTesting(testConn);
 
     Item item;
     item.id = "test-signal";
-    item.connectorId = "TestConn";
+    item.connectorId = "TestConnId";
     item.state = ItemState::Queued;
     storage.saveItem(item);
 
@@ -120,7 +127,7 @@ private slots:
     QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
     QVERIFY(spy.count() >= 1);
     QCOMPARE(spy.takeFirst().at(0).toString(),
-             QString("Dispatching item to TestConn: test-signal"));
+             QString("Dispatching item to TestConnDisplay: test-signal"));
 
     // Trigger finished
     QMetaObject::invokeMethod(
@@ -129,7 +136,7 @@ private slots:
         Q_ARG(QString, "success msg"), Q_ARG(QJsonObject, QJsonObject()));
     QVERIFY(spy.count() >= 1);
     QCOMPARE(spy.takeFirst().at(0).toString(),
-             QString("Sent to Connector TestConn: successful"));
+             QString("Sent to Connector TestConnDisplay: successful"));
   }
 
   void testEngineDispatchLegacyDefaultFallback() {
@@ -184,7 +191,9 @@ private slots:
     storage.deleteItem("test-empty");
     Engine engine(&storage);
 
-    FakeConnector *testConn = new FakeConnector("TestExplicitConnector");
+    FakeConnector *testConn = new FakeConnector("TestConnId");
+    // To explicitly test display name
+    testConn->setProperty("name", "TestConnDisplay");
     testConn->setEnabled(false);
     engine.setConnectorForTesting(testConn);
 

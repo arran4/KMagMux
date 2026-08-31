@@ -39,6 +39,7 @@ private:
   QTimer *m_timer;
   bool m_paused;
   QMap<QString, Connector *> m_connectors;
+  QMap<QString, QString> m_inFlightConnectors;
 
   void dispatchItem(Item &item);
 };
