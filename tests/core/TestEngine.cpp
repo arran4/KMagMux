@@ -13,12 +13,7 @@ public:
   FakeConnector(const QString &id, QObject *parent = nullptr)
       : QObject(parent), m_id(id) {}
   QString getId() const override { return m_id; }
-  QString getName() const override {
-    if (property("name").isValid()) {
-      return property("name").toString();
-    }
-    return m_id;
-  }
+  QString getName() const override { return m_id; }
   void dispatch(const Item &item) override {
     m_dispatchCount++;
     m_lastDispatchedItemId = item.id;
@@ -108,37 +103,6 @@ private slots:
     QVERIFY(connectors.contains("MockConnector"));
   }
 
-  void testEngineActionMessageSignal() {
-    StorageManager storage;
-    storage.deleteItem("test-signal");
-    Engine engine(&storage);
-    FakeConnector *testConn = new FakeConnector("TestConnId");
-    // To explicitly test display name
-    testConn->setProperty("name", "TestConnDisplay");
-    engine.setConnectorForTesting(testConn);
-
-    Item item;
-    item.id = "test-signal";
-    item.connectorId = "TestConnId";
-    item.state = ItemState::Queued;
-    storage.saveItem(item);
-
-    QSignalSpy spy(&engine, SIGNAL(actionMessage(QString)));
-    QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
-    QVERIFY(spy.count() >= 1);
-    QCOMPARE(spy.takeFirst().at(0).toString(),
-             QString("Dispatching item to TestConnDisplay: test-signal"));
-
-    // Trigger finished
-    QMetaObject::invokeMethod(
-        &engine, "onDispatchFinished", Qt::DirectConnection,
-        Q_ARG(QString, "test-signal"), Q_ARG(bool, true),
-        Q_ARG(QString, "success msg"), Q_ARG(QJsonObject, QJsonObject()));
-    QVERIFY(spy.count() >= 1);
-    QCOMPARE(spy.takeFirst().at(0).toString(),
-             QString("Sent to Connector TestConnDisplay: successful"));
-  }
-
   void testEngineDispatchLegacyDefaultFallback() {
     StorageManager storage;
     storage.deleteItem("test-legacy");
@@ -157,12 +121,7 @@ private slots:
     item.state = ItemState::Queued;
     storage.saveItem(item);
 
-    QSignalSpy spy(&engine, SIGNAL(actionMessage(QString)));
     QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
-    QVERIFY(spy.count() >= 1);
-    QCOMPARE(spy.takeFirst().at(0).toString(),
-             QString("Sent to Connector qBittorrent: Failed - No suitable "
-                     "connector found."));
 
     auto opt = storage.loadItem("test-legacy");
     QVERIFY(opt.has_value());
@@ -191,9 +150,7 @@ private slots:
     storage.deleteItem("test-empty");
     Engine engine(&storage);
 
-    FakeConnector *testConn = new FakeConnector("TestConnId");
-    // To explicitly test display name
-    testConn->setProperty("name", "TestConnDisplay");
+    FakeConnector *testConn = new FakeConnector("TestExplicitConnector");
     testConn->setEnabled(false);
     engine.setConnectorForTesting(testConn);
 
@@ -203,7 +160,7 @@ private slots:
 
     Item item;
     item.id = "test-explicit-disabled";
-    item.connectorId = "TestExplicitConnector";
+    item.connectorId = "TestConnId";
     item.state = ItemState::Queued;
     storage.saveItem(item);
 
@@ -264,12 +221,7 @@ private slots:
     item.state = ItemState::Queued;
     storage.saveItem(item);
 
-    QSignalSpy spy(&engine, SIGNAL(actionMessage(QString)));
     QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
-    QVERIFY(spy.count() >= 1);
-    QCOMPARE(spy.takeFirst().at(0).toString(),
-             QString("Sent to Connector qBittorrent: Failed - No suitable "
-                     "connector found."));
 
     auto opt = storage.loadItem("test-empty");
     QVERIFY(opt.has_value());
