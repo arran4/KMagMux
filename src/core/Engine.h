@@ -26,6 +26,10 @@ public:
 
 private slots:
   void processQueue();
+Q_SIGNALS:
+  void actionMessage(const QString &message);
+
+private slots:
   void onDispatchFinished(const QString &itemId, bool success,
                           const QString &message,
                           const QJsonObject &metadata = QJsonObject());
@@ -35,6 +39,7 @@ private:
   QTimer *m_timer;
   bool m_paused;
   QMap<QString, Connector *> m_connectors;
+  QMap<QString, QString> m_inFlightConnectors;
 
   void dispatchItem(Item &item);
 };
