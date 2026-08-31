@@ -302,8 +302,6 @@ void Engine::processQueue() {
 
 void Engine::dispatchItem(Item &item) {
   qDebug() << "Dispatching item:" << item.id << "Source:" << item.sourcePath;
-  emit actionMessage(
-      QString("Dispatching item to %1: %2").arg(item.connectorId, item.id));
 
   Connector *connector = nullptr;
   QString searchId = item.connectorId;

@@ -223,7 +223,6 @@ void MainWindow::setupUi() {
   setupSystemTray();
 
   // Setup Status Bar
-  // Setup Status Bar
   m_statusLabel = new ClickableLabel(tr("Ready"), this);
   connect(m_statusLabel, &ClickableLabel::clicked, this, []() {
     ActivityLogWindow::instance()->show();
@@ -510,6 +509,14 @@ void MainWindow::setupSystemTray() {
   m_trayIconMenu->addAction(trayAddAction);
 
   m_trayIconMenu->addSeparator();
+
+  QAction *trayActivityLogAction = new QAction(tr("Activity Log"), this);
+  connect(trayActivityLogAction, &QAction::triggered, this, []() {
+    ActivityLogWindow::instance()->show();
+    ActivityLogWindow::instance()->raise();
+    ActivityLogWindow::instance()->activateWindow();
+  });
+  m_trayIconMenu->addAction(trayActivityLogAction);
 
   m_showHideAction = new QAction(tr("Show/Hide"), this);
   connect(m_showHideAction, &QAction::triggered, this,

@@ -13,7 +13,8 @@ public:
   FakeConnector(const QString &id, QObject *parent = nullptr)
       : QObject(parent), m_id(id) {}
   QString getId() const override { return m_id; }
-  QString getName() const override { return m_id; }
+  QString getName() const override { return m_name.isEmpty() ? m_id : m_name; }
+  void setName(const QString &name) { m_name = name; }
   void dispatch(const Item &item) override {
     m_dispatchCount++;
     m_lastDispatchedItemId = item.id;
@@ -27,6 +28,7 @@ public:
 
 private:
   QString m_id;
+  QString m_name;
   bool m_enabled = true;
   int m_dispatchCount = 0;
   QString m_lastDispatchedItemId;
@@ -135,11 +137,58 @@ private slots:
     // works when enabled
     qbt->setEnabled(true);
     item.state = ItemState::Queued;
+    QSignalSpy spy(&engine, SIGNAL(actionMessage(QString)));
+
     storage.saveItem(item);
     QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
 
     QCOMPARE(qbt->dispatchCount(), 1);
     QCOMPARE(qbt->lastDispatchedItemId(), QString("test-legacy"));
+
+    // One dispatch signal with the explicit name, since fake connector's id is
+    // qBittorrent It should have emitted "Dispatching item to qBittorrent:
+    // test-legacy"
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.takeFirst().at(0).toString(),
+             QString("Dispatching item to qBittorrent: test-legacy"));
+  }
+
+  void testEngineActionMessageExactCountAndDisplayName() {
+    StorageManager storage;
+    storage.deleteItem("test-msg");
+    Engine engine(&storage);
+
+    FakeConnector *myConn = new FakeConnector("MyConnId");
+    myConn->setName("My Fancy Display Name");
+    engine.setConnectorForTesting(myConn);
+
+    Item item;
+    item.id = "test-msg";
+    item.connectorId = "MyConnId";
+    item.state = ItemState::Queued;
+    storage.saveItem(item);
+
+    QSignalSpy spy(&engine, SIGNAL(actionMessage(QString)));
+
+    QMetaObject::invokeMethod(&engine, "processQueue", Qt::DirectConnection);
+
+    QCOMPARE(myConn->dispatchCount(), 1);
+
+    // Should emit EXACTLY one "Dispatching..." message, and it MUST use the
+    // display name
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.takeFirst().at(0).toString(),
+             QString("Dispatching item to My Fancy Display Name: test-msg"));
+
+    // Now simulate finished via queued signal since onDispatchFinished is
+    // private
+    QMetaObject::invokeMethod(&engine, "onDispatchFinished",
+                              Qt::DirectConnection, Q_ARG(QString, "test-msg"),
+                              Q_ARG(bool, true), Q_ARG(QString, "OK"),
+                              Q_ARG(QJsonObject, QJsonObject()));
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.takeFirst().at(0).toString(),
+             QString("Sent to Connector My Fancy Display Name: successful"));
   }
 
   void testEngineDispatchExplicitFailsIfDisabled() {
@@ -160,7 +209,7 @@ private slots:
 
     Item item;
     item.id = "test-explicit-disabled";
-    item.connectorId = "TestConnId";
+    item.connectorId = "TestExplicitConnector";
     item.state = ItemState::Queued;
     storage.saveItem(item);
 
