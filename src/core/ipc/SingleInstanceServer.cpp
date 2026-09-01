@@ -130,9 +130,8 @@ void SingleInstanceServer::handleNewConnection() {
               response.rawStatus = static_cast<quint16>(
                   IpcProtocol::ResponseStatus::MalformedRequest);
               response.errorMessage = "Malformed request";
-            } else if (request.type !=
-                           IpcProtocol::RequestType::ActivateWindow &&
-                       request.type != IpcProtocol::RequestType::AddInputs) {
+            } else if (!IpcProtocol::isValidRequestType(
+                           static_cast<quint16>(request.type))) {
               response.rawStatus = static_cast<quint16>(
                   IpcProtocol::ResponseStatus::UnknownRequestType);
               response.errorMessage = "Unknown request type";

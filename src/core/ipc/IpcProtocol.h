@@ -66,6 +66,11 @@ inline QDataStream &operator<<(QDataStream &out, const Response &res) {
 
 enum class DecodeResult { Success, BadMagic, Truncated };
 
+inline bool isValidRequestType(quint16 type) {
+  return type >= static_cast<quint16>(RequestType::ActivateWindow) &&
+         type <= static_cast<quint16>(RequestType::ToggleWindow);
+}
+
 inline DecodeResult decodeRequest(QDataStream &in, Request &req) {
   quint32 magic = 0;
   in >> magic;
