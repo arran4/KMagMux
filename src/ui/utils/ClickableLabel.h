@@ -26,6 +26,7 @@ Q_SIGNALS:
 protected:
   void mousePressEvent(QMouseEvent *event) override {
     if (event->button() == Qt::LeftButton) {
+      m_linkJustActivated = false;
       QLabel::mousePressEvent(event);
       if (!event->isAccepted()) {
         event->accept();
@@ -37,7 +38,6 @@ protected:
 
   void mouseReleaseEvent(QMouseEvent *event) override {
     if (event->button() == Qt::LeftButton) {
-      m_linkJustActivated = false;
       QLabel::mouseReleaseEvent(event);
       if (!m_linkJustActivated) {
         Q_EMIT clicked();
