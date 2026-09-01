@@ -151,7 +151,8 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
                   "Spawning clean primary...";
       QString program = QCoreApplication::applicationFilePath();
 
-      // If we are spawning a primary purely because of an IPC command, start it hidden.
+      // If we are spawning a primary purely because of an IPC command, start it
+      // hidden.
       if (!m_sys->spawnDetached(program, QStringList() << "--hidden-primary")) {
         electionLock.unlock();
         return {CoordinatorAction::SpawnFailed, nullptr};

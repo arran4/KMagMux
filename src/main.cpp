@@ -40,18 +40,28 @@ int main(int argc, char *argv[]) {
 
   QCommandLineParser parser;
   aboutData.setupCommandLine(&parser);
-  parser.addOption(QCommandLineOption(QStringList() << "show" << "open", i18n("Restore and activate the main window (start if not running).")));
-  parser.addOption(QCommandLineOption(QStringList() << "hide" << "close", i18n("Hide the main window without quitting (no-op if not running).")));
-  parser.addOption(QCommandLineOption(QStringList() << "toggle", i18n("Toggle main window visibility (start if not running).")));
-  parser.addOption(QCommandLineOption("hidden-primary", i18n("Internal flag to start primary process hidden.")));
-  parser.addPositionalArgument("inputs", i18n("Files or URLs to add"), "[inputs...]");
+  parser.addOption(QCommandLineOption(
+      QStringList() << "show" << "open",
+      i18n("Restore and activate the main window (start if not running).")));
+  parser.addOption(QCommandLineOption(
+      QStringList() << "hide" << "close",
+      i18n("Hide the main window without quitting (no-op if not running).")));
+  parser.addOption(QCommandLineOption(
+      QStringList() << "toggle",
+      i18n("Toggle main window visibility (start if not running).")));
+  parser.addOption(QCommandLineOption(
+      "hidden-primary",
+      i18n("Internal flag to start primary process hidden.")));
+  parser.addPositionalArgument("inputs", i18n("Files or URLs to add"),
+                               "[inputs...]");
   parser.process(app);
   aboutData.processCommandLine(&parser);
 
   const QString serverName = setupApplication(app);
 
   // Reconstruct the parsed arguments and positional inputs for the coordinator
-  // This avoids passing the raw `QApplication::arguments()` which might contain KDE flags.
+  // This avoids passing the raw `QApplication::arguments()` which might contain
+  // KDE flags.
   QStringList parsedArgs;
   parsedArgs << QApplication::arguments().first(); // Program name
   if (parser.isSet("show") || parser.isSet("open")) {
@@ -100,14 +110,14 @@ int main(int argc, char *argv[]) {
                    &ApplicationRequestDispatcher::activateWindowRequested,
                    window, &MainWindow::showMainWindow);
   QObject::connect(&dispatcher,
-                   &ApplicationRequestDispatcher::showWindowRequested,
-                   window, &MainWindow::showMainWindow);
+                   &ApplicationRequestDispatcher::showWindowRequested, window,
+                   &MainWindow::showMainWindow);
   QObject::connect(&dispatcher,
-                   &ApplicationRequestDispatcher::hideWindowRequested,
-                   window, &MainWindow::hideMainWindow);
+                   &ApplicationRequestDispatcher::hideWindowRequested, window,
+                   &MainWindow::hideMainWindow);
   QObject::connect(&dispatcher,
-                   &ApplicationRequestDispatcher::toggleWindowRequested,
-                   window, &MainWindow::toggleMainWindow);
+                   &ApplicationRequestDispatcher::toggleWindowRequested, window,
+                   &MainWindow::toggleMainWindow);
   QObject::connect(&dispatcher,
                    &ApplicationRequestDispatcher::processAddedLinesRequested,
                    window, &MainWindow::processAddedLines);

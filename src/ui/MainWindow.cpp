@@ -550,9 +550,7 @@ void MainWindow::showMainWindow() {
   activateWindow();
 }
 
-void MainWindow::hideMainWindow() {
-  hide();
-}
+void MainWindow::hideMainWindow() { hide(); }
 
 void MainWindow::toggleMainWindow() {
   if (isVisible()) {
@@ -562,9 +560,7 @@ void MainWindow::toggleMainWindow() {
   }
 }
 
-void MainWindow::toggleShowHide() {
-  toggleMainWindow();
-}
+void MainWindow::toggleShowHide() { toggleMainWindow(); }
 
 void MainWindow::minimizeToTray() { hideMainWindow(); }
 

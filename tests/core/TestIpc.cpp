@@ -255,12 +255,12 @@ private slots:
 
     QSignalSpy spyActivate(
         &dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
-    QSignalSpy spyShow(
-        &dispatcher, &ApplicationRequestDispatcher::showWindowRequested);
-    QSignalSpy spyHide(
-        &dispatcher, &ApplicationRequestDispatcher::hideWindowRequested);
-    QSignalSpy spyToggle(
-        &dispatcher, &ApplicationRequestDispatcher::toggleWindowRequested);
+    QSignalSpy spyShow(&dispatcher,
+                       &ApplicationRequestDispatcher::showWindowRequested);
+    QSignalSpy spyHide(&dispatcher,
+                       &ApplicationRequestDispatcher::hideWindowRequested);
+    QSignalSpy spyToggle(&dispatcher,
+                         &ApplicationRequestDispatcher::toggleWindowRequested);
 
     IpcProtocol::Request req;
     req.requestId = "test-show";
@@ -968,7 +968,8 @@ private slots:
     QCOMPARE(sysShow.spawnedArgs.size(), 1);
     QCOMPARE(sysShow.spawnedArgs[0], QString("--hidden-primary"));
     QCOMPARE(sysShow.sendRequestCount, 1);
-    QCOMPARE(sysShow.lastSentRequest.type, IpcProtocol::RequestType::ShowWindow);
+    QCOMPARE(sysShow.lastSentRequest.type,
+             IpcProtocol::RequestType::ShowWindow);
 
     // Test 1c: No primary exists, --hide should not spawn
     MockStartupSystem sysHide;
@@ -983,8 +984,8 @@ private slots:
     // Test 1d: Conflicting flags fail
     MockStartupSystem sysConflict;
     StartupCoordinator coordConflict(serverName, &sysConflict, {2, 1, 1, 0});
-    CoordinatorResult resConflict =
-        coordConflict.coordinate(QStringList() << "/dummy/path" << "--show" << "--hide");
+    CoordinatorResult resConflict = coordConflict.coordinate(
+        QStringList() << "/dummy/path" << "--show" << "--hide");
     QCOMPARE(resConflict.action, CoordinatorAction::RequestFailed);
     QCOMPARE(sysConflict.spawnCount, 0);
 
