@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gui name="kmagmux"
-     version="1"
+     version="2"
      xmlns="http://www.kde.org/standards/kxmlgui/1.0"
      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
      xsi:schemaLocation="http://www.kde.org/standards/kxmlgui/1.0
@@ -10,6 +10,7 @@
         <Menu name="file"><text>&amp;File</text>
             <Action name="add_items"/>
             <Separator/>
+            <Action name="file_close"/>
             <Action name="minimize_to_tray"/>
             <Action name="quit"/>
         </Menu>

@@ -240,6 +240,8 @@ void MainWindow::setupActionsAndMenus() {
   connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
   actionCollection()->addAction("add_items", addItemsAction);
 
+  KStandardAction::close(this, SLOT(close()), actionCollection());
+
   m_minimizeAction =
       new QAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"), this);
   connect(m_minimizeAction, &QAction::triggered, this,
