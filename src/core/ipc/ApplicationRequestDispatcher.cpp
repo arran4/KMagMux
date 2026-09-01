@@ -71,6 +71,15 @@ ApplicationRequestDispatcher::dispatch(const IpcProtocol::Request &request) {
       processNext();
     }
     status = IpcProtocol::ResponseStatus::Accepted;
+  } else if (request.type == IpcProtocol::RequestType::ShowWindow) {
+    emit showWindowRequested();
+    status = IpcProtocol::ResponseStatus::Accepted;
+  } else if (request.type == IpcProtocol::RequestType::HideWindow) {
+    emit hideWindowRequested();
+    status = IpcProtocol::ResponseStatus::Accepted;
+  } else if (request.type == IpcProtocol::RequestType::ToggleWindow) {
+    emit toggleWindowRequested();
+    status = IpcProtocol::ResponseStatus::Accepted;
   } else {
     status = IpcProtocol::ResponseStatus::UnknownRequestType;
   }

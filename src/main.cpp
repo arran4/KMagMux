@@ -6,6 +6,7 @@
 #include <KAboutData>
 #include <KLocalizedString>
 #include <QApplication>
+#include <QCommandLineParser>
 #include <QDebug>
 #include <QMessageBox>
 #include <QPointer>
@@ -34,8 +35,17 @@ int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
 
   KLocalizedString::setApplicationDomain("kmagmux");
-  const KAboutData aboutData("kmagmux", i18n("KMagMux"), "0.1");
+  KAboutData aboutData("kmagmux", i18n("KMagMux"), "0.1");
   KAboutData::setApplicationData(aboutData);
+
+  QCommandLineParser parser;
+  aboutData.setupCommandLine(&parser);
+  parser.addOption(QCommandLineOption(QStringList() << "show" << "open", i18n("Restore and activate the main window (start if not running).")));
+  parser.addOption(QCommandLineOption(QStringList() << "hide" << "close", i18n("Hide the main window without quitting (no-op if not running).")));
+  parser.addOption(QCommandLineOption(QStringList() << "toggle", i18n("Toggle main window visibility (start if not running).")));
+  parser.addOption(QCommandLineOption("hidden-primary", i18n("Internal flag to start primary process hidden.")));
+  parser.addPositionalArgument("inputs", i18n("Files or URLs to add"), "[inputs...]");
+  parser.process(app);
 
   const QString serverName = setupApplication(app);
   const QStringList args = QApplication::arguments();
@@ -70,11 +80,16 @@ int main(int argc, char *argv[]) {
   ApplicationRequestDispatcher dispatcher;
   QObject::connect(&dispatcher,
                    &ApplicationRequestDispatcher::activateWindowRequested,
-                   window, [window]() {
-                     window->show();
-                     window->raise();
-                     window->activateWindow();
-                   });
+                   window, &MainWindow::showMainWindow);
+  QObject::connect(&dispatcher,
+                   &ApplicationRequestDispatcher::showWindowRequested,
+                   window, &MainWindow::showMainWindow);
+  QObject::connect(&dispatcher,
+                   &ApplicationRequestDispatcher::hideWindowRequested,
+                   window, &MainWindow::hideMainWindow);
+  QObject::connect(&dispatcher,
+                   &ApplicationRequestDispatcher::toggleWindowRequested,
+                   window, &MainWindow::toggleMainWindow);
   QObject::connect(&dispatcher,
                    &ApplicationRequestDispatcher::processAddedLinesRequested,
                    window, &MainWindow::processAddedLines);
@@ -88,7 +103,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  window->show();
+  // Only show the window if it wasn't requested to start hidden.
+  bool startHidden = args.contains("--hidden-primary");
+  if (!startHidden) {
+    window->show();
+  }
 
   return QApplication::exec();
 }

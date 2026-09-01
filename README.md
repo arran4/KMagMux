@@ -37,6 +37,15 @@ Successfully dispatched items are moved to the Done tab. You can configure KMagM
 If any item fails to dispatch (for example, due to a missing API token or connection issue), it will be moved to the Errors tab where you can view the error message and retry if necessary.
 ![Errors](screenshots/09-errors.png)
 
+## Command Line Usage
+
+KMagMux supports several command-line flags to control window visibility and pass items:
+
+*   `--show` or `--open`: Restores and activates the main window (starts KMagMux if not running).
+*   `--hide` or `--close`: Hides the main window to the system tray without quitting (no-op if not running).
+*   `--toggle`: Toggles the main window visibility. Starts the application if it's not currently running.
+*   `[inputs...]`: Any unrecognized arguments are treated as paths to `.torrent` files or magnet URLs to add to KMagMux.
+
 ### Preferences and Plugins
 KMagMux supports a variety of local programs and remote services via plugins. You can configure credentials (API keys, OAuth tokens, passwords) securely for each service.
 ![Preferences Plugins](screenshots/01-preferences-plugins.png)

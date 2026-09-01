@@ -66,6 +66,9 @@ private slots:
 public slots:
   void processAddedLines(const QStringList &lines,
                          const QString &tokenId = QString());
+  void showMainWindow();
+  void hideMainWindow();
+  void toggleMainWindow();
 
 signals:
   void processingCompleted(const QString &tokenId = QString());

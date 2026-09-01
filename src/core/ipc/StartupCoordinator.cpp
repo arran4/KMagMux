@@ -53,17 +53,45 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   request.requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
   QStringList inputs;
+  bool hasShow = false;
+  bool hasHide = false;
+  bool hasToggle = false;
+
   for (int i = 1; i < args.size(); ++i) {
-    if (!args[i].startsWith("-")) {
+    if (args[i] == "--show" || args[i] == "--open") {
+      hasShow = true;
+    } else if (args[i] == "--hide" || args[i] == "--close") {
+      hasHide = true;
+    } else if (args[i] == "--toggle") {
+      hasToggle = true;
+    } else if (args[i] == "--hidden-primary") {
+      // Internal flag, ignore
+    } else if (args[i].startsWith("-")) {
+      // Other flags? Ignore or add them to a block list?
+    } else {
       inputs.append(args[i]);
     }
   }
 
-  if (inputs.isEmpty()) {
-    request.type = IpcProtocol::RequestType::ActivateWindow;
-  } else {
+  // Reject ambiguous invocations
+  int flagCount = (hasShow ? 1 : 0) + (hasHide ? 1 : 0) + (hasToggle ? 1 : 0);
+  if (flagCount > 1) {
+    m_sys->showErrorMessage("Conflicting visibility flags provided.");
+    return {CoordinatorAction::RequestFailed, nullptr};
+  }
+
+  if (!inputs.isEmpty()) {
     request.type = IpcProtocol::RequestType::AddInputs;
     request.payload = inputs;
+    // AddInputs implicitly activates window currently.
+  } else if (hasShow) {
+    request.type = IpcProtocol::RequestType::ShowWindow;
+  } else if (hasHide) {
+    request.type = IpcProtocol::RequestType::HideWindow;
+  } else if (hasToggle) {
+    request.type = IpcProtocol::RequestType::ToggleWindow;
+  } else {
+    request.type = IpcProtocol::RequestType::ActivateWindow;
   }
 
   QString runtimePath =
@@ -81,7 +109,7 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
   // Persistent primary ownership lock.
   QString primaryFilePath = QDir(runtimePath).filePath(m_serverName + ".lock");
 
-  if (inputs.isEmpty()) {
+  if (inputs.isEmpty() && flagCount == 0) {
     // We are a no-arg launcher. Try to become the primary immediately.
     auto primaryLock = std::make_unique<QLockFile>(primaryFilePath);
     primaryLock->setStaleLockTime(0);
@@ -91,6 +119,20 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
 
     // Primary exists, act as a client to activate window.
     return {handleClientRequest(request), nullptr};
+  }
+
+  // If there's no primary, and it's a --hide request, don't spawn
+  if (hasHide && inputs.isEmpty()) {
+    auto *tempPrimaryLock = new QLockFile(primaryFilePath);
+    tempPrimaryLock->setStaleLockTime(0);
+    bool primaryExists = !tempPrimaryLock->tryLock(0);
+    if (!primaryExists) {
+      tempPrimaryLock->unlock();
+      delete tempPrimaryLock;
+      return {CoordinatorAction::RequestDelivered, nullptr};
+    }
+    delete tempPrimaryLock;
+    // Fall through to act as client
   }
 
   // We have arguments. We must ensure only ONE launcher spawns a primary.
@@ -108,7 +150,9 @@ CoordinatorResult StartupCoordinator::coordinate(const QStringList &args) {
       qDebug() << "We are an action-bearing launcher and no primary exists. "
                   "Spawning clean primary...";
       QString program = QCoreApplication::applicationFilePath();
-      if (!m_sys->spawnDetached(program, QStringList())) {
+
+      // If we are spawning a primary purely because of an IPC command, start it hidden.
+      if (!m_sys->spawnDetached(program, QStringList() << "--hidden-primary")) {
         electionLock.unlock();
         return {CoordinatorAction::SpawnFailed, nullptr};
       }

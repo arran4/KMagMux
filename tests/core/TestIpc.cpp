@@ -116,6 +116,34 @@ private slots:
     QCOMPARE(req2.type, IpcProtocol::RequestType::AddInputs);
     QCOMPARE(req2.payload.size(), 2);
     QCOMPARE(req2.payload[0], QString("input1"));
+
+    // Verify ShowWindow
+    req1.type = IpcProtocol::RequestType::ShowWindow;
+    payload.clear();
+    block.clear();
+    payloadOut.device()->seek(0);
+    out.device()->seek(0);
+    payloadOut << req1;
+    out << static_cast<quint32>(payload.size());
+    block.append(payload);
+    QDataStream inShow(&block, QIODevice::ReadOnly);
+    IpcProtocol::setupStream(inShow);
+    inShow >> size >> req2;
+    QCOMPARE(req2.type, IpcProtocol::RequestType::ShowWindow);
+
+    // Verify ToggleWindow
+    req1.type = IpcProtocol::RequestType::ToggleWindow;
+    payload.clear();
+    block.clear();
+    payloadOut.device()->seek(0);
+    out.device()->seek(0);
+    payloadOut << req1;
+    out << static_cast<quint32>(payload.size());
+    block.append(payload);
+    QDataStream inToggle(&block, QIODevice::ReadOnly);
+    IpcProtocol::setupStream(inToggle);
+    inToggle >> size >> req2;
+    QCOMPARE(req2.type, IpcProtocol::RequestType::ToggleWindow);
   }
 
   void testResponseEncodeDecode() {
@@ -220,6 +248,35 @@ private slots:
 
     // Still 1! Deduplicated.
     QCOMPARE(spyActivate.count(), 1);
+  }
+
+  void testVisibilityRequests() {
+    ApplicationRequestDispatcher dispatcher;
+
+    QSignalSpy spyActivate(
+        &dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
+    QSignalSpy spyShow(
+        &dispatcher, &ApplicationRequestDispatcher::showWindowRequested);
+    QSignalSpy spyHide(
+        &dispatcher, &ApplicationRequestDispatcher::hideWindowRequested);
+    QSignalSpy spyToggle(
+        &dispatcher, &ApplicationRequestDispatcher::toggleWindowRequested);
+
+    IpcProtocol::Request req;
+    req.requestId = "test-show";
+    req.type = IpcProtocol::RequestType::ShowWindow;
+    QCOMPARE(dispatcher.dispatch(req), IpcProtocol::ResponseStatus::Accepted);
+    QCOMPARE(spyShow.count(), 1);
+
+    req.requestId = "test-hide";
+    req.type = IpcProtocol::RequestType::HideWindow;
+    QCOMPARE(dispatcher.dispatch(req), IpcProtocol::ResponseStatus::Accepted);
+    QCOMPARE(spyHide.count(), 1);
+
+    req.requestId = "test-toggle";
+    req.type = IpcProtocol::RequestType::ToggleWindow;
+    QCOMPARE(dispatcher.dispatch(req), IpcProtocol::ResponseStatus::Accepted);
+    QCOMPARE(spyToggle.count(), 1);
   }
 
   void testUICompletionToken() {
@@ -890,7 +947,8 @@ private slots:
             nullptr); // short-lived launcher does not hold lock
     QCOMPARE(sysAction.spawnCount, 1);
     QCOMPARE(sysAction.spawnedProgram, QCoreApplication::applicationFilePath());
-    QCOMPARE(sysAction.spawnedArgs.size(), 0); // Must be empty
+    QCOMPARE(sysAction.spawnedArgs.size(), 1);
+    QCOMPARE(sysAction.spawnedArgs[0], QString("--hidden-primary"));
     QCOMPARE(sysAction.lastServerName, serverName);
 
     QCOMPARE(sysAction.sendRequestCount, 1);
@@ -898,6 +956,37 @@ private slots:
              IpcProtocol::RequestType::AddInputs);
     QCOMPARE(sysAction.lastSentRequest.payload.size(), 1);
     QCOMPARE(sysAction.lastSentRequest.payload[0], QString("A.torrent"));
+
+    // Test 1b: No primary exists, Action-bearing launch with --show succeeds
+    MockStartupSystem sysShow;
+    StartupCoordinator coordShow(serverName, &sysShow, {2, 1, 1, 0});
+    CoordinatorResult resShow =
+        coordShow.coordinate(QStringList() << "/dummy/path" << "--show");
+
+    QCOMPARE(resShow.action, CoordinatorAction::RequestDelivered);
+    QCOMPARE(sysShow.spawnCount, 1);
+    QCOMPARE(sysShow.spawnedArgs.size(), 1);
+    QCOMPARE(sysShow.spawnedArgs[0], QString("--hidden-primary"));
+    QCOMPARE(sysShow.sendRequestCount, 1);
+    QCOMPARE(sysShow.lastSentRequest.type, IpcProtocol::RequestType::ShowWindow);
+
+    // Test 1c: No primary exists, --hide should not spawn
+    MockStartupSystem sysHide;
+    StartupCoordinator coordHide(serverName, &sysHide, {2, 1, 1, 0});
+    CoordinatorResult resHide =
+        coordHide.coordinate(QStringList() << "/dummy/path" << "--hide");
+
+    QCOMPARE(resHide.action, CoordinatorAction::RequestDelivered);
+    QCOMPARE(sysHide.spawnCount, 0);
+    QCOMPARE(sysHide.sendRequestCount, 0);
+
+    // Test 1d: Conflicting flags fail
+    MockStartupSystem sysConflict;
+    StartupCoordinator coordConflict(serverName, &sysConflict, {2, 1, 1, 0});
+    CoordinatorResult resConflict =
+        coordConflict.coordinate(QStringList() << "/dummy/path" << "--show" << "--hide");
+    QCOMPARE(resConflict.action, CoordinatorAction::RequestFailed);
+    QCOMPARE(sysConflict.spawnCount, 0);
 
     // Test 2: Existing primary
     // Create a persistent primary lock here locally to simulate an existing
