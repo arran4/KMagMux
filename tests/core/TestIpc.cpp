@@ -251,7 +251,11 @@ private slots:
   }
 
   void testVisibilityRequests() {
+    QString serverName =
+        "test-server-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
     ApplicationRequestDispatcher dispatcher;
+    SingleInstanceServer server(serverName, &dispatcher);
+    QVERIFY(server.tryAcquire());
 
     QSignalSpy spyActivate(
         &dispatcher, &ApplicationRequestDispatcher::activateWindowRequested);
@@ -262,20 +266,22 @@ private slots:
     QSignalSpy spyToggle(&dispatcher,
                          &ApplicationRequestDispatcher::toggleWindowRequested);
 
+    SingleInstanceClient client(serverName);
+
     IpcProtocol::Request req;
     req.requestId = "test-show";
     req.type = IpcProtocol::RequestType::ShowWindow;
-    QCOMPARE(dispatcher.dispatch(req), IpcProtocol::ResponseStatus::Accepted);
+    QVERIFY(client.sendRequest(req, 1000, 1000).isSuccess());
     QCOMPARE(spyShow.count(), 1);
 
     req.requestId = "test-hide";
     req.type = IpcProtocol::RequestType::HideWindow;
-    QCOMPARE(dispatcher.dispatch(req), IpcProtocol::ResponseStatus::Accepted);
+    QVERIFY(client.sendRequest(req, 1000, 1000).isSuccess());
     QCOMPARE(spyHide.count(), 1);
 
     req.requestId = "test-toggle";
     req.type = IpcProtocol::RequestType::ToggleWindow;
-    QCOMPARE(dispatcher.dispatch(req), IpcProtocol::ResponseStatus::Accepted);
+    QVERIFY(client.sendRequest(req, 1000, 1000).isSuccess());
     QCOMPARE(spyToggle.count(), 1);
   }
 
