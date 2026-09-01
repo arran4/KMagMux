@@ -240,6 +240,13 @@ void MainWindow::setupActionsAndMenus() {
   connect(addItemsAction, &QAction::triggered, this, &MainWindow::onAddItems);
   actionCollection()->addAction("add_items", addItemsAction);
 
+  QAction *closeWindowAction =
+      new QAction(QIcon::fromTheme("window-close"), tr("Close"), this);
+  actionCollection()->setDefaultShortcut(closeWindowAction,
+                                         QKeySequence::Close);
+  connect(closeWindowAction, &QAction::triggered, this, &MainWindow::close);
+  actionCollection()->addAction("close_window", closeWindowAction);
+
   m_minimizeAction =
       new QAction(QIcon::fromTheme("go-down"), tr("Minimize to Tray"), this);
   connect(m_minimizeAction, &QAction::triggered, this,
