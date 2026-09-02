@@ -6,6 +6,7 @@
 #include <KAboutData>
 #include <KLocalizedString>
 #include <QApplication>
+#include <QCommandLineParser>
 #include <QDebug>
 #include <QMessageBox>
 #include <QPointer>
@@ -34,14 +35,51 @@ int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
 
   KLocalizedString::setApplicationDomain("kmagmux");
-  const KAboutData aboutData("kmagmux", i18n("KMagMux"), "0.1");
+  KAboutData aboutData("kmagmux", i18n("KMagMux"), "0.1");
   KAboutData::setApplicationData(aboutData);
 
+  QCommandLineParser parser;
+  aboutData.setupCommandLine(&parser);
+  parser.addOption(QCommandLineOption(
+      QStringList() << "show" << "open",
+      i18n("Restore and activate the main window (start if not running).")));
+  parser.addOption(QCommandLineOption(
+      QStringList() << "hide" << "close",
+      i18n("Hide the main window without quitting (no-op if not running).")));
+  parser.addOption(QCommandLineOption(
+      QStringList() << "toggle",
+      i18n("Toggle main window visibility (start if not running).")));
+  parser.addOption(QCommandLineOption(
+      "hidden-primary",
+      i18n("Internal flag to start primary process hidden.")));
+  parser.addPositionalArgument("inputs", i18n("Files or URLs to add"),
+                               "[inputs...]");
+  parser.process(app);
+  aboutData.processCommandLine(&parser);
+
   const QString serverName = setupApplication(app);
-  const QStringList args = QApplication::arguments();
+
+  // Reconstruct the parsed arguments and positional inputs for the coordinator
+  // This avoids passing the raw `QApplication::arguments()` which might contain
+  // KDE flags.
+  QStringList parsedArgs;
+  parsedArgs << QApplication::arguments().first(); // Program name
+  if (parser.isSet("show") || parser.isSet("open")) {
+    parsedArgs << "--show";
+  }
+  if (parser.isSet("hide") || parser.isSet("close")) {
+    parsedArgs << "--hide";
+  }
+  if (parser.isSet("toggle")) {
+    parsedArgs << "--toggle";
+  }
+  if (parser.isSet("hidden-primary")) {
+    parsedArgs << "--hidden-primary";
+  }
+  parsedArgs.append(parser.positionalArguments());
 
   StartupCoordinator coordinator(serverName);
-  CoordinatorResult coordResult = coordinator.coordinate(args);
+  CoordinatorResult coordResult = coordinator.coordinate(parsedArgs);
 
   switch (coordResult.action) {
   case CoordinatorAction::BecomePrimary:
@@ -70,11 +108,16 @@ int main(int argc, char *argv[]) {
   ApplicationRequestDispatcher dispatcher;
   QObject::connect(&dispatcher,
                    &ApplicationRequestDispatcher::activateWindowRequested,
-                   window, [window]() {
-                     window->show();
-                     window->raise();
-                     window->activateWindow();
-                   });
+                   window, &MainWindow::showMainWindow);
+  QObject::connect(&dispatcher,
+                   &ApplicationRequestDispatcher::showWindowRequested, window,
+                   &MainWindow::showMainWindow);
+  QObject::connect(&dispatcher,
+                   &ApplicationRequestDispatcher::hideWindowRequested, window,
+                   &MainWindow::hideMainWindow);
+  QObject::connect(&dispatcher,
+                   &ApplicationRequestDispatcher::toggleWindowRequested, window,
+                   &MainWindow::toggleMainWindow);
   QObject::connect(&dispatcher,
                    &ApplicationRequestDispatcher::processAddedLinesRequested,
                    window, &MainWindow::processAddedLines);
@@ -88,7 +131,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  window->show();
+  // Only show the window if it wasn't requested to start hidden.
+  bool startHidden = parsedArgs.contains("--hidden-primary");
+  if (!startHidden) {
+    window->show();
+  }
 
   return QApplication::exec();
 }

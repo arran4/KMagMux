@@ -12,7 +12,13 @@ const quint32 MAX_FRAME_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const quint16 VERSION = 1;
 
-enum class RequestType : quint16 { ActivateWindow = 1, AddInputs = 2 };
+enum class RequestType : quint16 {
+  ActivateWindow = 1,
+  AddInputs = 2,
+  ShowWindow = 3,
+  HideWindow = 4,
+  ToggleWindow = 5
+};
 
 enum class ResponseStatus : quint16 {
   Accepted = 0,
@@ -59,6 +65,11 @@ inline QDataStream &operator<<(QDataStream &out, const Response &res) {
 }
 
 enum class DecodeResult { Success, BadMagic, Truncated };
+
+inline bool isValidRequestType(quint16 type) {
+  return type >= static_cast<quint16>(RequestType::ActivateWindow) &&
+         type <= static_cast<quint16>(RequestType::ToggleWindow);
+}
 
 inline DecodeResult decodeRequest(QDataStream &in, Request &req) {
   quint32 magic = 0;

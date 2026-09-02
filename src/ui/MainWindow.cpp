@@ -544,16 +544,25 @@ void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
   }
 }
 
-void MainWindow::toggleShowHide() {
+void MainWindow::showMainWindow() {
+  showNormal();
+  raise();
+  activateWindow();
+}
+
+void MainWindow::hideMainWindow() { hide(); }
+
+void MainWindow::toggleMainWindow() {
   if (isVisible()) {
-    hide();
+    hideMainWindow();
   } else {
-    showNormal();
-    activateWindow();
+    showMainWindow();
   }
 }
 
-void MainWindow::minimizeToTray() { hide(); }
+void MainWindow::toggleShowHide() { toggleMainWindow(); }
+
+void MainWindow::minimizeToTray() { hideMainWindow(); }
 
 void MainWindow::applySettings() {
   QSettings settings;

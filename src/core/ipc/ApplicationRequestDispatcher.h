@@ -40,6 +40,9 @@ private:
 
 signals:
   void activateWindowRequested();
+  void showWindowRequested();
+  void hideWindowRequested();
+  void toggleWindowRequested();
   void processAddedLinesRequested(const QStringList &lines,
                                   const QString &tokenId);
 };

@@ -37,24 +37,48 @@ private:
 class TestEngine : public QObject {
   Q_OBJECT
   QTemporaryDir m_configDir;
+  QTemporaryDir m_dataDir;
 
 private slots:
   void initTestCase() {
     // Initialize Qt test framework if needed
     QCoreApplication::setOrganizationName("KMagMuxTest");
     QCoreApplication::setApplicationName("TestEngine");
+  }
 
-    // Ensure we can write to storage locally without test paths that fail
-    // creation
-    QString dataHome = QDir::currentPath() + "/xdg_data";
-    qputenv("XDG_DATA_HOME", dataHome.toLocal8Bit());
-    QDir().mkpath(dataHome + "/KMagMuxTest/TestEngine/data");
+  void init() {
+    // Each test gets a clean XDG_DATA_HOME and XDG_CONFIG_HOME.
+    // QTemporaryDir manages its own clean path automatically upon creation.
+    // However, since we re-use m_dataDir across tests, we should just recreate
+    // it or clean it. Let's explicitly recreate temporary directories.
+    // QTemporaryDir doesn't have a reset, so we re-allocate them per test or
+    // clean the contents.
 
-    qputenv("XDG_CONFIG_HOME", m_configDir.path().toLocal8Bit());
+    // Clear out the data dir to ensure a completely clean start for each test
+    QDir dir(m_dataDir.path());
+    dir.removeRecursively();
+    m_dataDir.isValid(); // This doesn't re-create it. We just use QTemporaryDir
+                         // as a scope.
+
+    // To ensure fresh paths for each test run without dealing with
+    // QTemporaryDir scoping in a class, we set XDG_DATA_HOME to a sub-folder
+    // unique to this run.
+    QString testSpecificDataHome =
+        m_dataDir.path() + "/data_" +
+        QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QDir().mkpath(testSpecificDataHome + "/KMagMuxTest/TestEngine/data");
+    qputenv("XDG_DATA_HOME", testSpecificDataHome.toLocal8Bit());
+
+    QString testSpecificConfigHome =
+        m_configDir.path() + "/config_" +
+        QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QDir().mkpath(testSpecificConfigHome);
+    qputenv("XDG_CONFIG_HOME", testSpecificConfigHome.toLocal8Bit());
   }
 
   void testEnginePluginLoading() {
     StorageManager storage;
+    QVERIFY(storage.init());
 
     QString appDir = QCoreApplication::applicationDirPath();
     qDebug() << "App Dir:" << appDir;
@@ -107,10 +131,7 @@ private slots:
 
   void testEngineDispatchLegacyDefaultFallback() {
     StorageManager storage;
-    storage.deleteItem("test-legacy");
-    storage.deleteItem("test-explicit-disabled");
-    storage.deleteItem("test-explicit");
-    storage.deleteItem("test-empty");
+    QVERIFY(storage.init());
     Engine engine(&storage);
 
     FakeConnector *qbt = new FakeConnector(Constants::QBittorrentConnectorId);
@@ -155,7 +176,7 @@ private slots:
 
   void testEngineActionMessageExactCountAndDisplayName() {
     StorageManager storage;
-    storage.deleteItem("test-msg");
+    QVERIFY(storage.init());
     Engine engine(&storage);
 
     FakeConnector *myConn = new FakeConnector("MyConnId");
@@ -193,10 +214,7 @@ private slots:
 
   void testEngineDispatchExplicitFailsIfDisabled() {
     StorageManager storage;
-    storage.deleteItem("test-legacy");
-    storage.deleteItem("test-explicit-disabled");
-    storage.deleteItem("test-explicit");
-    storage.deleteItem("test-empty");
+    QVERIFY(storage.init());
     Engine engine(&storage);
 
     FakeConnector *testConn = new FakeConnector("TestExplicitConnector");
@@ -226,10 +244,7 @@ private slots:
 
   void testEngineDispatchExplicitFailsIfMissing() {
     StorageManager storage;
-    storage.deleteItem("test-legacy");
-    storage.deleteItem("test-explicit-disabled");
-    storage.deleteItem("test-explicit");
-    storage.deleteItem("test-empty");
+    QVERIFY(storage.init());
     Engine engine(&storage);
 
     FakeConnector *qbt = new FakeConnector(Constants::QBittorrentConnectorId);
@@ -254,10 +269,7 @@ private slots:
 
   void testEngineDispatchEmptyIDFallsBackToQBittorrent() {
     StorageManager storage;
-    storage.deleteItem("test-legacy");
-    storage.deleteItem("test-explicit-disabled");
-    storage.deleteItem("test-explicit");
-    storage.deleteItem("test-empty");
+    QVERIFY(storage.init());
     Engine engine(&storage);
 
     FakeConnector *qbt = new FakeConnector(Constants::QBittorrentConnectorId);
