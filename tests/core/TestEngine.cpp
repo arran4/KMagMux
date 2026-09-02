@@ -49,16 +49,8 @@ private slots:
   void init() {
     // Each test gets a clean XDG_DATA_HOME and XDG_CONFIG_HOME.
     // QTemporaryDir manages its own clean path automatically upon creation.
-    // However, since we re-use m_dataDir across tests, we should just recreate
-    // it or clean it. Let's explicitly recreate temporary directories.
-    // QTemporaryDir doesn't have a reset, so we re-allocate them per test or
-    // clean the contents.
-
-    // Clear out the data dir to ensure a completely clean start for each test
-    QDir dir(m_dataDir.path());
-    dir.removeRecursively();
-    m_dataDir.isValid(); // This doesn't re-create it. We just use QTemporaryDir
-                         // as a scope.
+    // We use unique sub-directories under m_dataDir and m_configDir for each
+    // test to ensure isolation, rather than recreating the root directory.
 
     // To ensure fresh paths for each test run without dealing with
     // QTemporaryDir scoping in a class, we set XDG_DATA_HOME to a sub-folder
@@ -74,6 +66,18 @@ private slots:
         QUuid::createUuid().toString(QUuid::WithoutBraces);
     QDir().mkpath(testSpecificConfigHome);
     qputenv("XDG_CONFIG_HOME", testSpecificConfigHome.toLocal8Bit());
+
+    // Verify that the resolved AppDataLocation actually respects the XDG_DATA_HOME override
+    // and is completely empty to prevent test contamination.
+    QString appDataLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QVERIFY2(appDataLocation.startsWith(testSpecificDataHome), "QStandardPaths did not respect XDG_DATA_HOME!");
+
+    // Explicitly clean it just in case QStandardPaths somehow returned an old path or it isn't empty
+    QDir appDataDir(appDataLocation);
+    if (appDataDir.exists()) {
+        appDataDir.removeRecursively();
+    }
+    appDataDir.mkpath(".");
   }
 
   void testEnginePluginLoading() {
