@@ -4,6 +4,8 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QStandardPaths>
+#include <QUuid>
 #include <QtTest>
 
 class FakeConnector : public QObject, public Connector {
