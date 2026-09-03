@@ -418,15 +418,14 @@ jobs:
           path: build/kmagmux
   push-release-tag:
     name: Push release tag
-    needs: [prepare-release-tag]
+    needs: [prepare-release-tag, cpp-qt-test]
     if: ${{ github.event_name == 'workflow_dispatch' && startsWith(inputs.mode, 'release-') }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          token: ${{ secrets.TAG_PUSH_TOKEN || secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Push prepared tag (retry)
         env:
           TAG: ${{ needs.prepare-release-tag.outputs.release_tag }}
