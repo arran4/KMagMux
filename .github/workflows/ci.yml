@@ -422,10 +422,18 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && startsWith(inputs.mode, 'release-') }}
     runs-on: ubuntu-latest
     steps:
+      - name: Check for credential
+        env:
+          TAG_PUSH_TOKEN: ${{ secrets.TAG_PUSH_TOKEN }}
+        run: |
+          if [[ -z "$TAG_PUSH_TOKEN" ]]; then
+            echo "::error::TAG_PUSH_TOKEN secret is required to push release tags and trigger CI."
+            exit 1
+          fi
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.TAG_PUSH_TOKEN || secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.TAG_PUSH_TOKEN }}
       - name: Push prepared tag (retry)
         env:
           TAG: ${{ needs.prepare-release-tag.outputs.release_tag }}
