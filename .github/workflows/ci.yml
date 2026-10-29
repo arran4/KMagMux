@@ -269,6 +269,11 @@ jobs:
           options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
           run: |
             set -e
+            # The optional image package pins an older Qt private API and
+            # prevents installation of the current KDE development packages.
+            if rpm -q libkddockwidgets-qt6-3 >/dev/null 2>&1; then
+              zypper --no-refresh remove -y libkddockwidgets-qt6-3
+            fi
             for i in {1..5}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || { echo "zypper attempt $i failed"; if [ $i -lt 5 ]; then sleep 10; else exit 1; fi; }; done
             cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
             find src \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' \) -print0 | xargs -0 -r clang-format --dry-run --Werror
@@ -298,6 +303,11 @@ jobs:
           options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
           run: |
             set -e
+            # The optional image package pins an older Qt private API and
+            # prevents installation of the current KDE development packages.
+            if rpm -q libkddockwidgets-qt6-3 >/dev/null 2>&1; then
+              zypper --no-refresh remove -y libkddockwidgets-qt6-3
+            fi
             for i in {1..5}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || { echo "zypper attempt $i failed"; if [ $i -lt 5 ]; then sleep 10; else exit 1; fi; }; done
             cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
             cmake --build build -j$(nproc)
@@ -335,6 +345,11 @@ jobs:
           options: -v ${{ github.workspace }}:/workspace -w /workspace -e GITHUB_WORKSPACE=/workspace --user root
           run: |
             set -e
+            # The optional image package pins an older Qt private API and
+            # prevents installation of the current KDE development packages.
+            if rpm -q libkddockwidgets-qt6-3 >/dev/null 2>&1; then
+              zypper --no-refresh remove -y libkddockwidgets-qt6-3
+            fi
             for i in {1..5}; do zypper --no-gpg-checks refresh && zypper install -y --no-recommends --allow-vendor-change cmake gcc-c++ make kf6-kwallet-devel kf6-kxmlgui-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kconfig-devel kf6-kconfigwidgets-devel cppcheck clang-tools git && break || { echo "zypper attempt $i failed"; if [ $i -lt 5 ]; then sleep 10; else exit 1; fi; }; done
             cd build
             chmod +x tests/core/* || true
