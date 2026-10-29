@@ -21,6 +21,8 @@ public:
                          const QStringList &connectors,
                          QWidget *parent = nullptr);
 
+  enum Result { Process = QDialog::Accepted + 1 };
+
   const std::vector<Item> &getItems() const;
 
 private slots:
@@ -33,6 +35,7 @@ private:
   QTableWidget *m_itemsTable;
 
   void setupUi();
+  void finishSelection(int result);
 };
 
 #endif // ADDITEMDIALOG_H

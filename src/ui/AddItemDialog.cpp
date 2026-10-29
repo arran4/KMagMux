@@ -62,7 +62,10 @@ AddItemDialog::AddItemDialog(const std::vector<Item> &items,
     QTableWidgetItem *deleteItem = new QTableWidgetItem();
     deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     if (isLocalFile) {
-      deleteItem->setCheckState(Qt::Unchecked);
+      deleteItem->setCheckState(
+          m_items[i].metadata.value("delete_source_file").toBool()
+              ? Qt::Checked
+              : Qt::Unchecked);
     } else {
       deleteItem->setFlags(
           Qt::NoItemFlags); // Disable checkbox for non-local files
@@ -131,11 +134,16 @@ void AddItemDialog::setupUi() {
   connect(processBtn, &QPushButton::clicked, this,
           &AddItemDialog::onProcessClicked);
 
+  QPushButton *directProcessBtn = new QPushButton(tr("Process..."), this);
+  connect(directProcessBtn, &QPushButton::clicked, this,
+          [this]() { finishSelection(Process); });
+
   QPushButton *cancelBtn = new QPushButton("Cancel", this);
   connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
 
   btnLayout->addStretch();
   btnLayout->addWidget(processBtn);
+  btnLayout->addWidget(directProcessBtn);
   btnLayout->addWidget(cancelBtn);
 
   mainLayout->addLayout(btnLayout);
@@ -143,7 +151,9 @@ void AddItemDialog::setupUi() {
 
 const std::vector<Item> &AddItemDialog::getItems() const { return m_items; }
 
-void AddItemDialog::onProcessClicked() {
+void AddItemDialog::onProcessClicked() { finishSelection(QDialog::Accepted); }
+
+void AddItemDialog::finishSelection(int result) {
   std::vector<Item> processedItems;
 
   for (int i = 0; i < m_itemsTable->rowCount(); ++i) {
@@ -155,11 +165,8 @@ void AddItemDialog::onProcessClicked() {
       QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
       if (deleteItem != nullptr &&
           (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0u) {
-        if (deleteItem->checkState() == Qt::Checked) {
-          QJsonObject meta = item.metadata;
-          meta["delete_source_file"] = true;
-          item.metadata = meta;
-        }
+        item.metadata["delete_source_file"] =
+            deleteItem->checkState() == Qt::Checked;
       }
 
       processedItems.push_back(item);
@@ -167,7 +174,7 @@ void AddItemDialog::onProcessClicked() {
   }
 
   m_items = processedItems;
-  accept();
+  done(result);
 }
 
 void AddItemDialog::onCustomContextMenuRequested(const QPoint &pos) {

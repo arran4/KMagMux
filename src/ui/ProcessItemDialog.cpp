@@ -81,7 +81,10 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
     deleteItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
     if (isLocalFile) {
       hasLocalFiles = true;
-      deleteItem->setCheckState(Qt::Unchecked);
+      deleteItem->setCheckState(
+          m_items[i].metadata.value("delete_source_file").toBool()
+              ? Qt::Checked
+              : Qt::Unchecked);
     } else {
       deleteItem->setFlags(
           Qt::NoItemFlags); // Disable checkbox for non-local files
@@ -90,7 +93,10 @@ ProcessItemDialog::ProcessItemDialog(const std::vector<Item> &items,
 
     QTableWidgetItem *deleteWhenDoneItem = new QTableWidgetItem();
     deleteWhenDoneItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-    deleteWhenDoneItem->setCheckState(Qt::Unchecked);
+    deleteWhenDoneItem->setCheckState(
+        m_items[i].metadata.value("delete_once_submitted").toBool()
+            ? Qt::Checked
+            : Qt::Unchecked);
     m_itemsTable->setItem(i, 2, deleteWhenDoneItem);
 
     QString displayName = m_items[i].getDisplayName();
@@ -249,17 +255,10 @@ void ProcessItemDialog::onProcessClicked() {
 
       for (const QString &connectorId : selectedConnectors) {
         Item item = originalItem; // Duplicate the item for each connector
-        // For multiple connectors we need to generate unique IDs if it's more
-        // than one If it's more than one connector, we should really assign a
-        // new ID to the duplicates but since they all share the same source
-        // file, they might conflict if deleted source file is requested.
-        // Actually, let's keep the original item ID for the first one, and
-        // generate a new ID for the others
         if (connectorId != selectedConnectors.first()) {
           item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         }
 
-        const QString oldState = item.stateToString();
         item.state = selectedState;
         item.addHistory(
             QString("Processed and state set to %1").arg(item.stateToString()));
@@ -274,21 +273,15 @@ void ProcessItemDialog::onProcessClicked() {
         const QTableWidgetItem *const deleteItem = m_itemsTable->item(i, 1);
         if (deleteItem != nullptr &&
             (deleteItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
-          if (deleteItem->checkState() == Qt::Checked) {
-            QJsonObject meta = item.metadata;
-            meta["delete_source_file"] = true;
-            item.metadata = meta;
-          }
+          item.metadata["delete_source_file"] =
+              deleteItem->checkState() == Qt::Checked;
         }
 
         const QTableWidgetItem *deleteWhenDoneItem = m_itemsTable->item(i, 2);
         if (deleteWhenDoneItem != nullptr &&
             (deleteWhenDoneItem->flags() & Qt::ItemIsUserCheckable) != 0U) {
-          if (deleteWhenDoneItem->checkState() == Qt::Checked) {
-            QJsonObject meta = item.metadata;
-            meta["delete_once_submitted"] = true;
-            item.metadata = meta;
-          }
+          item.metadata["delete_once_submitted"] =
+              deleteWhenDoneItem->checkState() == Qt::Checked;
         }
 
         processedItems.push_back(item);

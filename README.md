@@ -14,8 +14,30 @@ The main window provides a clear overview of all your items categorized into dif
 You can easily add new Torrent files or Magnet links by pasting links, paths, or browsing files directly.
 ![Add Items](screenshots/04-add-items.png)
 
-Items added to the Inbox are ready to be reviewed before processing.
-![Add Items List](screenshots/05-add-items-list.png)
+A single self-contained file or magnet goes directly to Inbox. Batches open a
+review dialog, whether supplied through the command line, socket, clipboard,
+file picker or drag and drop. Webpage URLs keep the review step; extracted
+list/HTML results also keep review, including a single extracted result.
+Original local files are kept unless you explicitly select **Delete file**.
+Repeated additions remain separate items, as before.
+
+In batch review, check the items you want and choose **Add to Inbox**, or choose
+**Process...** to configure connectors and Queue, Hold or Archive immediately.
+Processing uses the same configuration dialog as Inbox processing. Cancelling
+either dialog saves nothing and leaves source files untouched.
+
+The status bar shows current **Inbox**, **Queue**, **Errors** and **Done** totals,
+independent of search filters. Queue includes queued, scheduled and held items;
+Archive is excluded. The clickable activity message still opens the Activity Log.
+
+Inactive tabs show a bold **(N new)** indicator for unseen incoming items. These
+are separate from the status-bar totals. Opening a tab clears its indicator;
+arrivals in the active tab are already seen. Existing items at startup and
+unchanged refreshes do not generate indicators. Unseen tracking lasts for the
+current application session.
+![Batch review with direct processing](screenshots/12-batch-review.png)
+
+![Status totals and unseen Inbox indicator](screenshots/11-state-indicators.png)
 
 ### Inbox
 The Inbox serves as a staging area. Here you can see the items you've added, verify their details, and select which ones you want to process.

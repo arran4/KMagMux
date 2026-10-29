@@ -7,7 +7,9 @@
 #include "MaxWidthDelegate.h"
 #include "PreferencesDialog.h"
 #include "ProcessItemDialog.h"
+#include "StatusCountsWidget.h"
 #include "TorrentInfoDialog.h"
+#include "UnseenTabTracker.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
@@ -21,7 +23,9 @@
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
+#include <QFuture>
 #include <QFutureWatcher>
+#include <QHash>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QKeyEvent>
@@ -30,6 +34,7 @@
 #include <QMimeData>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSet>
 #include <QSettings>
 #include <QSystemTrayIcon>
 #include <QTextStream>
@@ -70,6 +75,13 @@ MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
 
   setupUi();
   loadData();
+  // Attach after the initial population so existing records are the baseline.
+  auto *unseen = new UnseenTabTracker(m_tabWidget);
+  unseen->track(0, m_unprocessedModel);
+  unseen->track(1, m_queueModel);
+  unseen->track(2, m_doneModel);
+  unseen->track(3, m_archiveModel);
+  unseen->track(4, m_errorModel);
 
   connect(m_storage, &StorageManager::itemAdded, this,
           &MainWindow::onItemAdded);
@@ -167,49 +179,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
   }
 
   if (!lines.isEmpty() || !filesToRead.isEmpty()) {
-    auto *watcher = new QFutureWatcher<ParseResult>(this);
-
-    connect(watcher, &QFutureWatcher<ParseResult>::finished, this,
-            [this, watcher]() {
-              ParseResult res = watcher->result();
-              if (!res.items.empty()) {
-                m_storage->saveItems(res.items);
-              }
-              if (!res.rejectedInputs.empty()) {
-                QStringList messages;
-                for (const auto &rejected : res.rejectedInputs) {
-                  messages << QString("%1: %2").arg(rejected.input,
-                                                    rejected.reason);
-                }
-                QMessageBox::warning(this, "Some items failed to load",
-                                     messages.join("\n"));
-              }
-              // Switch to Inbox tab
-              m_tabWidget->setCurrentIndex(0);
-              watcher->deleteLater();
-            });
-
-    QFuture<ParseResult> future =
-        QtConcurrent::run([lines, filesToRead]() -> ParseResult {
-          QStringList finalLines = lines;
-          for (const QString &localPath : filesToRead) {
-            QFile file(localPath);
-            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-              QTextStream in(&file);
-              while (!in.atEnd()) {
-                QString line = in.readLine().trimmed();
-                if (!line.isEmpty()) {
-                  finalLines.append(line);
-                }
-              }
-            } else {
-              finalLines.append("file://" + localPath); // Fallback
-            }
-          }
-          return ItemParser::parseLines(finalLines);
-        });
-
-    watcher->setFuture(future);
+    ingestInputs(lines, {}, !filesToRead.isEmpty(), filesToRead);
   }
   event->acceptProposedAction();
 }
@@ -229,7 +199,9 @@ void MainWindow::setupUi() {
     ActivityLogWindow::instance()->raise();
     ActivityLogWindow::instance()->activateWindow();
   });
-  statusBar()->addWidget(m_statusLabel);
+  statusBar()->addWidget(m_statusLabel, 1);
+  statusBar()->addPermanentWidget(new StatusCountsWidget(
+      m_unprocessedModel, m_queueModel, m_errorModel, m_doneModel, this));
 }
 
 void MainWindow::setupActionsAndMenus() {
@@ -403,7 +375,7 @@ void MainWindow::setupTabs() {
 
   QVBoxLayout *layout = new QVBoxLayout(centralWidget);
 
-  m_tabWidget = new QTabWidget(this);
+  m_tabWidget = new UnseenTabWidget(this);
   layout->addWidget(m_tabWidget);
 
   auto setupView = [this](QTableView *view, ItemModel *model,
@@ -919,6 +891,7 @@ void MainWindow::onDeleteItems() {
 }
 
 void MainWindow::onAddItems() {
+  bool requireReview = false;
   QDialog dialog(this);
   dialog.setWindowTitle(tr("Add Items"));
   dialog.resize(500, 400);
@@ -965,7 +938,8 @@ void MainWindow::onAddItems() {
   });
 
   connect(
-      openListBtn, &QPushButton::clicked, this, [&dialog, textEdit, this]() {
+      openListBtn, &QPushButton::clicked, this,
+      [&dialog, &requireReview, textEdit, this]() {
         QDialog openDialog(&dialog);
         openDialog.setWindowTitle(tr("Open List/HTML"));
         QVBoxLayout *olLayout = new QVBoxLayout(&openDialog);
@@ -1007,6 +981,7 @@ void MainWindow::onAddItems() {
                                           &dialog);
             if (extractor.exec() == QDialog::Accepted) {
               if (extractor.wasModified()) {
+                requireReview = true;
                 QString expanded = extractor.getExpandedLines().join('\n');
                 if (!expanded.isEmpty()) {
                   QString currentText = textEdit->toPlainText();
@@ -1027,13 +1002,18 @@ void MainWindow::onAddItems() {
 
   if (dialog.exec() == QDialog::Accepted) {
     QStringList lines = textEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
-    processAddedLines(lines);
+    ingestInputs(lines, {}, requireReview);
   }
 }
 
 void MainWindow::processAddedLines(const QStringList &lines,
                                    const QString &tokenId) {
-  if (lines.isEmpty()) {
+  ingestInputs(lines, tokenId);
+}
+
+void MainWindow::ingestInputs(const QStringList &lines, const QString &tokenId,
+                              bool requireReview, const QStringList &lists) {
+  if (lines.isEmpty() && lists.isEmpty()) {
     emit processingCompleted(tokenId);
     return;
   }
@@ -1041,27 +1021,47 @@ void MainWindow::processAddedLines(const QStringList &lines,
   // Offload parsing to a background thread
   auto *watcher = new QFutureWatcher<ParseResult>(this);
 
-  connect(watcher, &QFutureWatcher<ParseResult>::finished, this,
-          [this, watcher, tokenId]() {
-            ParseResult res = watcher->result();
-            if (!res.items.empty()) {
-              openAddItemsDialog(res.items);
-            }
-            if (!res.rejectedInputs.empty()) {
-              QStringList messages;
-              for (const auto &rejected : res.rejectedInputs) {
-                messages << QString("%1: %2").arg(rejected.input,
-                                                  rejected.reason);
-              }
-              QMessageBox::warning(this, "Some items failed to load",
-                                   messages.join("\n"));
-            }
-            watcher->deleteLater();
-            emit processingCompleted(tokenId);
-          });
+  connect(
+      watcher, &QFutureWatcher<ParseResult>::finished, this,
+      [this, watcher, tokenId, requireReview]() {
+        ParseResult res = watcher->result();
+        if (!res.items.empty()) {
+          const Item &item = res.items.front();
+          const bool selfContained = item.sourcePath.startsWith("magnet:") ||
+                                     QFileInfo(item.sourcePath).isFile();
+          if (res.items.size() == 1 && selfContained && !requireReview) {
+            saveItemsFromDialog(res.items);
+          } else {
+            openAddItemsDialog(res.items);
+          }
+        }
+        if (!res.rejectedInputs.empty()) {
+          QStringList messages;
+          for (const auto &rejected : res.rejectedInputs) {
+            messages << QString("%1: %2").arg(rejected.input, rejected.reason);
+          }
+          QMessageBox::warning(this, "Some items failed to load",
+                               messages.join("\n"));
+        }
+        watcher->deleteLater();
+        emit processingCompleted(tokenId);
+      });
 
-  QFuture<ParseResult> future = QtConcurrent::run(
-      [lines]() -> ParseResult { return ItemParser::parseLines(lines); });
+  const QFuture<ParseResult> future = QtConcurrent::run([lines, lists]() {
+    QStringList expanded = lines;
+    for (const QString &path : lists) {
+      QFile file(path);
+      if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream stream(&file);
+        while (!stream.atEnd()) {
+          expanded.append(stream.readLine());
+        }
+      } else {
+        expanded.append(path);
+      }
+    }
+    return ItemParser::parseLines(expanded);
+  });
 
   watcher->setFuture(future);
 }
@@ -1100,17 +1100,35 @@ void MainWindow::saveItemsFromDialog(std::vector<Item> updatedItems) {
   std::vector<Item> itemsToSave;
   itemsToSave.reserve(updatedItems.size());
 
+  QHash<QString, int> sourceUses;
+  QSet<QString> retainedSources;
+  QSet<QString> copiedSources;
+  for (const Item &item : updatedItems) {
+    ++sourceUses[item.sourcePath];
+    if (!item.metadata.value("delete_source_file").toBool()) {
+      retainedSources.insert(item.sourcePath);
+    }
+  }
   for (Item &updatedItem : updatedItems) {
     bool success = true;
 
     if (updatedItem.metadata.value("delete_source_file").toBool(false)) {
       // Move logic
-      if (!m_storage->moveToManaged(updatedItem, true, true)) {
+      const QString source = updatedItem.sourcePath;
+      // Connector copies need independently owned payloads. Copy shared
+      // sources first, then remove the original only after all copies succeed.
+      const bool shared = sourceUses.value(source) > 1;
+      if (!m_storage->moveToManaged(updatedItem, !shared, true)) {
         QMessageBox::warning(
             this, "Error",
             QString("Failed to move original file to managed storage: %1")
                 .arg(updatedItem.sourcePath));
-        success = false; // Should we abort saving? Maybe just warn.
+        success = false;
+        retainedSources.insert(source);
+      } else if (shared) {
+        updatedItem.sourcePath =
+            updatedItem.metadata.value("managedFile").toString();
+        copiedSources.insert(source);
       }
 
       // Remove the temporary internal flag before saving
@@ -1125,6 +1143,13 @@ void MainWindow::saveItemsFromDialog(std::vector<Item> updatedItems) {
     }
   }
 
+  for (const QString &source : copiedSources - retainedSources) {
+    if (!QFile::remove(source)) {
+      QMessageBox::warning(
+          this, tr("Error"),
+          tr("Imported files, but could not delete original: %1").arg(source));
+    }
+  }
   if (!itemsToSave.empty()) {
     m_storage->saveItems(itemsToSave);
   }
@@ -1135,8 +1160,11 @@ void MainWindow::openAddItemsDialog(const std::vector<Item> &items) {
     return;
 
   AddItemDialog dialog(items, m_engine->getAvailableConnectors(), this);
-  if (dialog.exec() == QDialog::Accepted) {
+  const int result = dialog.exec();
+  if (result == QDialog::Accepted) {
     saveItemsFromDialog(dialog.getItems());
+  } else if (result == AddItemDialog::Process) {
+    openProcessItemDialog(dialog.getItems());
   }
 }
 

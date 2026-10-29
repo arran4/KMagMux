@@ -339,6 +339,7 @@ jobs:
             cd build
             chmod +x tests/core/* || true
             chmod +x tests/plugins/localprogram/* || true
+            chmod +x tests/ui/* || true
             QT_QPA_PLATFORM=offscreen ctest --output-on-failure
   autofix:
     name: Auto-format and open PR

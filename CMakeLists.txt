@@ -44,8 +44,9 @@ target_compile_definitions(KMagMuxCore PRIVATE KMAGMUX_REL_PLUGIN_DIR=\"${REL_PL
 
 set_target_properties(KMagMuxCore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-add_executable(KMagMux
-    src/main.cpp
+add_library(KMagMuxUi STATIC
+    src/ui/StatusCountsWidget.cpp
+    src/ui/UnseenTabTracker.cpp
     src/ui/MainWindow.cpp
     src/ui/AddItemDialog.cpp
     src/ui/ProcessItemDialog.cpp
@@ -57,11 +58,12 @@ add_executable(KMagMux
     src/ui/ActivityLogWindow.cpp
     src/ui/MaxWidthDelegate.h
     src/ui/utils/ClickableLabel.h
-    resources/resources.qrc
 )
 
-target_link_libraries(KMagMux PRIVATE KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::XmlGui KF6::I18n KF6::CoreAddons)
+target_link_libraries(KMagMuxUi PUBLIC KMagMuxCore Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent KF6::XmlGui KF6::I18n KF6::CoreAddons)
 
+add_executable(KMagMux src/main.cpp resources/resources.qrc)
+target_link_libraries(KMagMux PRIVATE KMagMuxUi)
 set_target_properties(KMagMux PROPERTIES OUTPUT_NAME kmagmux)
 
 add_subdirectory(src/plugins/qbittorrent)
