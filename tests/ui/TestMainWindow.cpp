@@ -14,6 +14,7 @@
 #include <QDateTimeEdit>
 #include <QFile>
 #include <QFileDialog>
+#include <QFutureWatcher>
 #include <QJsonArray>
 #include <QLineEdit>
 #include <QListWidget>
@@ -220,7 +221,7 @@ private slots:
     DialogObserver dialogs;
     QSignalSpy shown(&dialogs, &DialogObserver::shown);
     QSignalSpy completed(window.get(), &MainWindow::processingCompleted);
-    const QString first = file("first.torrent");
+    const QString first = file("first #%.torrent");
     const QString second = file("second.torrent");
     dialogs.respond = [&](QDialog *dialog) {
       auto *review = qobject_cast<AddItemDialog *>(dialog);
@@ -253,7 +254,11 @@ private slots:
     QApplication::clipboard()->setText("ordinary search text");
     QTest::keySequence(search, QKeySequence::Paste);
     QCOMPARE(search->text(), "ordinary search text");
+    // Parsing starts by creating a watcher synchronously. Check it as well
+    // as completion, so a slow accidental parse cannot evade this assertion.
+    QVERIFY(window->findChildren<QFutureWatcherBase *>().isEmpty());
     QCoreApplication::processEvents();
+    QVERIFY(window->findChildren<QFutureWatcherBase *>().isEmpty());
     QCOMPARE(shown.count(), 0);
     QCOMPARE(completed.count(), 0);
     QVERIFY(storage->loadAllItems().empty());
@@ -268,7 +273,7 @@ private slots:
     QFETCH(int, number);
     DialogObserver dialogs;
     QSignalSpy completed(window.get(), &MainWindow::processingCompleted);
-    const QString first = file("first.torrent");
+    const QString first = file("first #%.torrent");
     const QString second = file("second.torrent");
     int reviews = 0;
     dialogs.respond = [&](QDialog *dialog) {
@@ -301,7 +306,7 @@ private slots:
   void batchSelectedInbox() {
     DialogObserver dialogs;
     QSignalSpy completed(window.get(), &MainWindow::processingCompleted);
-    const QString first = file("first.torrent");
+    const QString first = file("first #%.torrent");
     const QString second = file("second.torrent");
     dialogs.respond = [&](QDialog *dialog) {
       QVERIFY(qobject_cast<AddItemDialog *>(dialog));
@@ -336,7 +341,7 @@ private slots:
     QFETCH(bool, keepSource);
     DialogObserver dialogs;
     QSignalSpy completed(window.get(), &MainWindow::processingCompleted);
-    const QString first = file("first.torrent");
+    const QString first = file("first #%.torrent");
     const QString second = file("second.torrent");
     int reviewCount = 0, processCount = 0;
     const QDateTime hold = QDateTime::currentDateTime().addDays(1);
@@ -389,7 +394,7 @@ private slots:
       QCOMPARE(items[0].connectorId, connector.getId());
       QCOMPARE(QFile::exists(first), keepSource);
       QVERIFY(QFile::exists(items[0].sourcePath));
-      QVERIFY(!items[0].metadata.value("delete_source_file").toBool());
+      QVERIFY(!items[0].metadata.contains("delete_source_file"));
       QCOMPARE(items[0].scheduledTime.isValid(), state == 1);
       if (state == 1) {
         QCOMPARE(items[0].scheduledTime.toSecsSinceEpoch(),
@@ -456,12 +461,10 @@ private slots:
     DialogObserver dialogs;
     QSignalSpy completed(window.get(), &MainWindow::processingCompleted);
     int warnings = 0;
-    QPointer<ProcessItemDialog> processing;
     dialogs.respond = [&](QDialog *dialog) {
       if (qobject_cast<AddItemDialog *>(dialog)) {
         click(dialog, "Process...");
       } else if (auto *process = qobject_cast<ProcessItemDialog *>(dialog)) {
-        processing = process;
         auto *list = process->findChild<QListWidget *>();
         for (int i = 0; i < list->count(); ++i)
           list->item(i)->setCheckState(Qt::Unchecked);
@@ -589,7 +592,7 @@ private slots:
     DialogObserver dialogs;
     QSignalSpy completed(window.get(), &MainWindow::processingCompleted);
     QSignalSpy shown(&dialogs, &DialogObserver::shown);
-    const QString first = file("first.torrent");
+    const QString first = file("first #%.torrent");
     const QString second = file("second.torrent");
     dialogs.respond = [&](QDialog *dialog) {
       auto *review = qobject_cast<AddItemDialog *>(dialog);

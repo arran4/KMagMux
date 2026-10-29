@@ -162,12 +162,12 @@ void MainWindow::dropEvent(QDropEvent *event) {
         QString localPath = url.toLocalFile();
         QFileInfo fileInfo(localPath);
         if (fileInfo.suffix().toLower() == "torrent") {
-          lines.append("file://" + localPath);
+          lines.append(QUrl::fromLocalFile(localPath).toString());
         } else if (fileInfo.suffix().toLower() == "txt" ||
                    fileInfo.suffix().isEmpty()) {
           filesToRead.append(localPath);
         } else {
-          lines.append("file://" + localPath);
+          lines.append(QUrl::fromLocalFile(localPath).toString());
         }
       } else {
         lines.append(url.toString());
@@ -929,10 +929,11 @@ void MainWindow::onAddItems() {
       if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
         currentText += '\n';
       }
-      currentText = std::accumulate(files.begin(), files.end(), currentText,
-                                    [](const QString &a, const QString &b) {
-                                      return a + "file://" + b + "\n";
-                                    });
+      currentText =
+          std::accumulate(files.begin(), files.end(), currentText,
+                          [](const QString &a, const QString &b) {
+                            return a + QUrl::fromLocalFile(b).toString() + "\n";
+                          });
       textEdit->setPlainText(currentText);
     }
   });
@@ -1130,12 +1131,9 @@ void MainWindow::saveItemsFromDialog(std::vector<Item> updatedItems) {
             updatedItem.metadata.value("managedFile").toString();
         copiedSources.insert(source);
       }
-
-      // Remove the temporary internal flag before saving
-      QJsonObject meta = updatedItem.metadata;
-      meta.remove("delete_source_file");
-      updatedItem.metadata = meta;
     }
+    // This choice only applies during import, including an unchecked choice.
+    updatedItem.metadata.remove("delete_source_file");
 
     if (success) {
       itemsToSave.push_back(updatedItem);
