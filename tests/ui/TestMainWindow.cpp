@@ -769,6 +769,17 @@ private slots:
     }
     QVERIFY(storage->deleteItem(item.id));
     QCOMPARE(tracker->unseenCount(3), 0);
+    // Deletions must refresh each status category, not only Archive.
+    const QList<ItemState> deletions = {ItemState::Unprocessed, ItemState::Held,
+                                        ItemState::Failed, ItemState::Done};
+    const QStringList categories = {"Inbox", "Queue", "Errors", "Done"};
+    for (int i = 0; i < deletions.size(); ++i) {
+      item.state = deletions[i];
+      QVERIFY(storage->saveItem(item));
+      QCOMPARE(count(categories[i]), categories[i] + " 1");
+      QVERIFY(storage->deleteItem(item.id));
+      QCOMPARE(count(categories[i]), categories[i] + " 0");
+    }
     auto *status = window->findChild<ClickableLabel *>();
     QVERIFY(status);
     window->findChild<Engine *>()->actionMessage("A transient status message");
