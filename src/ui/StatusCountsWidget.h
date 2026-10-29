@@ -2,6 +2,7 @@
 #define STATUSCOUNTSWIDGET_H
 
 #include <QWidget>
+#include <QtCore/qtmetamacros.h>
 
 class QAbstractItemModel;
 

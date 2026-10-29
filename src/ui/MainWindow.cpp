@@ -40,8 +40,9 @@
 #include <QTextStream>
 #include <QUrl>
 #include <QVBoxLayout>
-#include <QtConcurrent>
+#include <QtConcurrent/qtconcurrentrun.h>
 #include <algorithm>
+#include <numeric>
 
 MainWindow::MainWindow(StorageManager *storage, QWidget *parent)
     : KXmlGuiWindow(parent), m_storage(storage), m_engine(nullptr),
@@ -929,18 +930,18 @@ void MainWindow::onAddItems() {
       if (!currentText.isEmpty() && !currentText.endsWith('\n')) {
         currentText += '\n';
       }
-      currentText =
-          std::accumulate(files.begin(), files.end(), currentText,
-                          [](const QString &a, const QString &b) {
-                            return a + QUrl::fromLocalFile(b).toString() + "\n";
-                          });
+      currentText = std::accumulate(
+          files.begin(), files.end(), currentText,
+          [](const QString &text, const QString &path) {
+            return text + QUrl::fromLocalFile(path).toString() + "\n";
+          });
       textEdit->setPlainText(currentText);
     }
   });
 
   connect(
       openListBtn, &QPushButton::clicked, this,
-      [&dialog, &requireReview, textEdit, this]() {
+      [&dialog, &requireReview, textEdit, this] {
         QDialog openDialog(&dialog);
         openDialog.setWindowTitle(tr("Open List/HTML"));
         QVBoxLayout *olLayout = new QVBoxLayout(&openDialog);
@@ -1024,7 +1025,7 @@ void MainWindow::ingestInputs(const QStringList &lines, const QString &tokenId,
 
   connect(
       watcher, &QFutureWatcher<ParseResult>::finished, this,
-      [this, watcher, tokenId, requireReview]() {
+      [this, watcher, tokenId, requireReview] {
         ParseResult res = watcher->result();
         if (!res.items.empty()) {
           const Item &item = res.items.front();
@@ -1048,7 +1049,7 @@ void MainWindow::ingestInputs(const QStringList &lines, const QString &tokenId,
         emit processingCompleted(tokenId);
       });
 
-  const QFuture<ParseResult> future = QtConcurrent::run([lines, lists]() {
+  const QFuture<ParseResult> future = QtConcurrent::run([lines, lists] {
     QStringList expanded = lines;
     for (const QString &path : lists) {
       QFile file(path);

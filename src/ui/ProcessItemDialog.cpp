@@ -20,6 +20,7 @@
 #include <QTableWidget>
 #include <QUrlQuery>
 #include <QVBoxLayout>
+#include <QtCore/qnamespace.h>
 #include <cstddef>
 
 #include "../core/Constants.h"

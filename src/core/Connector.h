@@ -116,7 +116,7 @@ public:
       return;
     }
     // Keep reply cleanup consistent on every exit, including no callback.
-    const auto cleanup = qScopeGuard([reply]() { reply->deleteLater(); });
+    const auto cleanup = qScopeGuard([reply] { reply->deleteLater(); });
     if (!callback) {
       return;
     }

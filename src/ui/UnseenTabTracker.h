@@ -1,10 +1,16 @@
 #ifndef UNSEENTABTRACKER_H
 #define UNSEENTABTRACKER_H
 
+#include <QObject>
+#include <QPaintEvent>
 #include <QPointer>
 #include <QSet>
+#include <QSize>
+#include <QString>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QWidget>
+#include <QtCore/qtmetamacros.h>
 #include <vector>
 
 class ItemModel;

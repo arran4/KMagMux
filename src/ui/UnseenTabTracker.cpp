@@ -15,6 +15,7 @@
 #include <QWidget>
 #include <QtGlobal>
 #include <algorithm>
+#include <utility>
 
 void UnseenTabBar::setEmphasized(int index, bool emphasized) {
   if (emphasized) {
@@ -78,7 +79,7 @@ void UnseenTabTracker::track(int index, ItemModel *model) {
     entry.previous.insert(model->getItem(row).id);
   }
   m_entries.push_back(entry);
-  auto changed = [this, model]() {
+  const auto changed = [this, model] {
     for (auto &tracked : m_entries) {
       if (tracked.model == model) {
         refresh(tracked);
@@ -105,7 +106,7 @@ void UnseenTabTracker::refresh(Entry &entry) {
   } else {
     entry.unseen.unite(current - entry.previous);
   }
-  entry.previous = current;
+  entry.previous = std::move(current);
   present(entry);
 }
 

@@ -21,7 +21,7 @@ public:
                          const QStringList &connectors,
                          QWidget *parent = nullptr);
 
-  enum Result { Process = QDialog::Accepted + 1 };
+  static constexpr int Process = QDialog::Accepted + 1;
 
   const std::vector<Item> &getItems() const;
 

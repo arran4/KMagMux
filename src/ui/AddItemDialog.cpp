@@ -12,6 +12,7 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVBoxLayout>
+#include <QtCore/qnamespace.h>
 
 #include "TorrentInfoDialog.h"
 #include <QClipboard>
@@ -136,7 +137,7 @@ void AddItemDialog::setupUi() {
 
   QPushButton *directProcessBtn = new QPushButton(tr("Process..."), this);
   connect(directProcessBtn, &QPushButton::clicked, this,
-          [this]() { finishSelection(Process); });
+          [this] { finishSelection(Process); });
 
   QPushButton *cancelBtn = new QPushButton("Cancel", this);
   connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);

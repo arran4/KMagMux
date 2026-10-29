@@ -14,13 +14,14 @@ StatusCountsWidget::StatusCountsWidget(QAbstractItemModel *inbox,
   setAccessibleName(tr("Current item totals"));
   auto *layout = new QHBoxLayout(this);
   layout->setContentsMargins(4, 0, 4, 0);
-  auto bind = [this, layout](const QString &name, QAbstractItemModel *model) {
+  const auto bind = [this, layout](const QString &name,
+                                   QAbstractItemModel *model) {
     auto *label = new QLabel(this);
     label->setObjectName(name);
     label->setToolTip(
         tr("%1: current total (independent of search)").arg(name));
     layout->addWidget(label);
-    auto refresh = [label, model, name]() {
+    const auto refresh = [label, model, name] {
       label->setText(QStringLiteral("%1 %2").arg(name).arg(model->rowCount()));
       label->setAccessibleName(
           tr("%1: %2 items total").arg(name).arg(model->rowCount()));
