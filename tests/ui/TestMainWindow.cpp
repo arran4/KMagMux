@@ -22,6 +22,7 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPlainTextEdit>
+#include <QPointF>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QStandardPaths>
@@ -610,7 +611,12 @@ private slots:
     if (kind == 3)
       mime.setUrls({QUrl::fromLocalFile(
           file("list.txt", (first + "\n" + second).toUtf8()))});
-    QDragEnterEvent enter(QPoint(20, 20), Qt::CopyAction, &mime, Qt::LeftButton,
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+    const QPointF position(20, 20);
+#else
+    const QPoint position(20, 20);
+#endif
+    QDragEnterEvent enter(position, Qt::CopyAction, &mime, Qt::LeftButton,
                           Qt::NoModifier);
     QApplication::sendEvent(window.get(), &enter);
     QVERIFY(enter.isAccepted());
