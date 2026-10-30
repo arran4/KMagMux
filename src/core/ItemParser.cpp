@@ -13,6 +13,7 @@
 #include <QSslConfiguration>
 #include <QTextStream>
 #include <QUrl>
+#include <QUuid>
 #include <qcontainerfwd.h>
 #include <qjsonobject.h>
 #include <qnamespace.h>
@@ -22,8 +23,6 @@
 
 ParseResult ItemParser::parseLines(const QStringList &lines) {
   ParseResult result;
-  const qint64 now = QDateTime::currentMSecsSinceEpoch();
-  int idx = 0;
 
   QNetworkAccessManager manager; // Reused across lines for efficiency
 
@@ -35,8 +34,7 @@ ParseResult ItemParser::parseLines(const QStringList &lines) {
 
     QString pathToCheck = line;
     if (line.startsWith("file://")) {
-      const int filePrefixLen = 7;
-      pathToCheck = line.mid(filePrefixLen);
+      pathToCheck = QUrl(line).toLocalFile();
     }
 
     bool isMagnet = pathToCheck.startsWith("magnet:?");
@@ -57,7 +55,7 @@ ParseResult ItemParser::parseLines(const QStringList &lines) {
     }
 
     Item newItem;
-    newItem.id = QString::number(now) + "_" + QString::number(idx++) + "_item";
+    newItem.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     newItem.state = ItemState::Unprocessed;
 
     if ((pathToCheck.startsWith("http://", Qt::CaseInsensitive) ||
@@ -161,7 +159,10 @@ ParseResult ItemParser::parseLines(const QStringList &lines) {
           pathToCheck = tempPath;
         }
       }
-      reply->deleteLater();
+      if (reply != nullptr) {
+        reply->deleteLater();
+        reply = nullptr;
+      }
     }
 
     newItem.sourcePath = pathToCheck;

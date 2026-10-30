@@ -120,6 +120,8 @@ private:
   void loadData();
   QTableView *getCurrentView() const;
   ItemModel *getCurrentModel() const;
+  void ingestInputs(const QStringList &lines, const QString &tokenId,
+                    bool requireReview = false, const QStringList &lists = {});
   void openAddItemsDialog(const std::vector<Item> &items);
   void openProcessItemDialog(const std::vector<Item> &items);
   void saveItemsFromDialog(std::vector<Item> updatedItems);

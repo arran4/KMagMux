@@ -9,6 +9,7 @@
 #include <QMap>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QScopeGuard>
 #include <QString>
 #include <functional>
 
@@ -111,10 +112,12 @@ public:
                                const QJsonObject &metadata)> &callback,
       const std::function<bool(const QString &response, QString &errorMessage)>
           &successValidator = nullptr) {
-    if (reply == nullptr || !callback) {
-      if (reply) {
-        reply->deleteLater();
-      }
+    if (reply == nullptr) {
+      return;
+    }
+    // Keep reply cleanup consistent on every exit, including no callback.
+    const auto cleanup = qScopeGuard([reply] { reply->deleteLater(); });
+    if (!callback) {
       return;
     }
 
@@ -139,10 +142,6 @@ public:
       callback(itemId, false,
                "Network error: " + reply->errorString() + apiCallLog,
                extraMeta);
-    }
-
-    if (reply) {
-      reply->deleteLater();
     }
   }
 };

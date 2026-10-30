@@ -1,0 +1,6 @@
+foreach(test TestStateIndicators TestMainWindow)
+    add_executable(${test} ${test}.cpp ${PROJECT_SOURCE_DIR}/resources/resources.qrc)
+    target_link_libraries(${test} PRIVATE KMagMuxUi Qt6::Test)
+    add_test(NAME ${test} COMMAND ${test})
+    set_tests_properties(${test} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
+endforeach()
